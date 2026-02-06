@@ -92,6 +92,9 @@ export const COLORS = {
     green100: "#dcfce7",
     green50: "#f0fdf4",
 
+    // Modal Overlay
+    modalOverlay: "rgba(0, 0, 0, 0.5)",
+
     // Shadows
     shadowSm: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
     shadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",

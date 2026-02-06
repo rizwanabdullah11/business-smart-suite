@@ -1,49 +1,22 @@
-"use client";
+import * as React from "react"
 
-import { forwardRef } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"
 
-export interface InputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  error?: string;
-}
-
-const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, id, ...props }, ref) => {
-    const inputId = id ?? label?.toLowerCase().replace(/\s/g, "-");
-
+const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
+  ({ className, type, ...props }, ref) => {
     return (
-      <div className="w-full">
-        {label && (
-          <label
-            htmlFor={inputId}
-            className="mb-1.5 block text-sm font-medium text-[#343a40]"
-          >
-            {label}
-          </label>
+      <input
+        type={type}
+        className={cn(
+          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+          className
         )}
-        <input
-          ref={ref}
-          id={inputId}
-          className={cn(
-            "w-full rounded-xl border border-[#dee2e6] bg-[#f8f9fa] px-4 py-3 text-[#343a40] transition-all duration-200",
-            "placeholder:text-[#adb5bd]",
-            "hover:border-[#ced4da] hover:bg-white",
-            "focus:border-[#c92a2a] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#c92a2a]/20",
-            error && "border-red-500 focus:border-red-500 focus:ring-red-500/20",
-            className
-          )}
-          {...props}
-        />
-        {error && (
-          <p className="mt-1 text-sm text-red-500">{error}</p>
-        )}
-      </div>
-    );
+        ref={ref}
+        {...props}
+      />
+    )
   }
-);
+)
+Input.displayName = "Input"
 
-Input.displayName = "Input";
-
-export { Input };
+export { Input }

@@ -298,13 +298,14 @@ function ProductModal({ item, products, onClose }: ProductModalProps) {
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             onClick={onClose}
             style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.5)'
+                backgroundColor: COLORS.modalOverlay
             }}
         >
             <div 
-                className="relative bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+                className="relative rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col"
                 onClick={(e) => e.stopPropagation()}
                 style={{
+                    backgroundColor: COLORS.bgWhite,
                     boxShadow: COLORS.shadowXl
                 }}
             >
@@ -345,13 +346,14 @@ function ProductModal({ item, products, onClose }: ProductModalProps) {
                         onClick={onClose}
                         className="p-2 rounded-lg transition-all duration-200"
                         style={{
-                            color: COLORS.textSecondary
+                            color: COLORS.textSecondary,
+                            backgroundColor: COLORS.bgGray
                         }}
                         onMouseEnter={(e) => {
                             e.currentTarget.style.backgroundColor = COLORS.neutral200
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent'
+                            e.currentTarget.style.backgroundColor = COLORS.bgGray
                         }}
                     >
                         <X className="w-5 h-5" />
