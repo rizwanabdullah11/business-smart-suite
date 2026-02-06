@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -76,13 +77,21 @@ function LoginCard({ children, className }: LoginCardProps) {
 
 // LoginForm Component
 function LoginForm() {
+    const router = useRouter();
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [rememberMe, setRememberMe] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-    function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
-        // TODO: wire to auth
+        setIsLoading(true);
+        
+        // TODO: Add actual authentication logic here
+        // For now, redirect to dashboard after a brief delay
+        setTimeout(() => {
+            router.push(ROUTES.dashboard);
+        }, 500);
     }
 
     return (
@@ -120,8 +129,8 @@ function LoginForm() {
                 onChange={(e) => setRememberMe(e.target.checked)}
             />
 
-            <Button type="submit" fullWidth>
-                Login
+            <Button type="submit" fullWidth disabled={isLoading}>
+                {isLoading ? "Logging in..." : "Login"}
             </Button>
 
             <div
