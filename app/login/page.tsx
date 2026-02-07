@@ -3,214 +3,193 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Input } from "@/components/ui/Input";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
-import { APP, ROUTES } from "@/lib/constants";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
 import { COLORS } from "@/constant/colors";
-import { cn } from "@/lib/utils";
 
-// LoginBranding – logo + "Business Smart Suite" + "ISO 9001 Compliance Management System"
-function LoginBranding() {
-    return (
-        <div className="flex flex-col items-center gap-2 text-center">
-            <div className="flex items-center justify-center gap-4">
-                <div
-                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg text-white"
-                    style={{
-                        backgroundColor: COLORS.primary,
-                    }}
-                    aria-hidden
-                >
-                    <span className="text-2xl font-bold tracking-tight">B</span>
-                </div>
-                <div className="text-left">
-                    <h1
-                        className="text-xl font-bold tracking-tight"
-                        style={{ color: COLORS.primary }}
-                    >
-                        {APP.name}
-                    </h1>
-                    <p
-                        className="mt-0.5 text-sm tracking-wide"
-                        style={{ color: COLORS.textSecondary }}
-                    >
-                        {APP.tagline}
-                    </p>
-                </div>
-            </div>
-        </div>
-    );
-}
+// API Config
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api";
 
-interface LoginCardProps {
-    children: React.ReactNode;
-    className?: string;
-}
-
-function LoginCard({ children, className }: LoginCardProps) {
-    return (
-        <div
-            className={cn(
-                "relative w-full max-w-md overflow-hidden rounded-2xl",
-                "transition-shadow duration-300",
-                className
-            )}
-            style={{
-                backgroundColor: COLORS.bgWhite,
-                boxShadow: COLORS.loginCardShadow,
-                padding: "2rem",
-            }}
-        >
-            <div className="relative">{children}</div>
-        </div>
-    );
-}
-
-function LoginForm() {
+export default function LoginPage() {
     const router = useRouter();
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
-    const [rememberMe, setRememberMe] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+    const { toast } = useToast();
 
-    function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    // State for form inputs
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
+
+    async function handleLogin(e: React.FormEvent) {
         e.preventDefault();
         setIsLoading(true);
-        setTimeout(() => {
-            router.push(ROUTES.dashboard);
-        }, 500);
+
+        try {
+            const response = await fetch(`${API_URL}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Login failed");
+            }
+
+            // Success Logic
+            // 1. Store Token
+            if (data.token) {
+                localStorage.setItem("token", data.token);
+                // Also store user info if needed
+                if (data.user) {
+                    localStorage.setItem("user", JSON.stringify(data.user));
+                }
+
+                // simple cookie setting for middleware compatibility if needed
+                document.cookie = `token=${data.token}; path=/; max-age=86400; SameSite=Strict`;
+            }
+
+            toast({
+                title: "Welcome back!",
+                description: "Successfully logged in.",
+                variant: "default",
+            });
+
+            // 2. Redirect
+            router.push("/dashboard");
+
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Something went wrong",
+                variant: "destructive",
+            });
+        } finally {
+            setIsLoading(false);
+        }
     }
 
-    const inputStyle = {
-        backgroundColor: COLORS.bgGrayLight,
-        border: `1px solid ${COLORS.border}`,
-        borderRadius: "0.375rem",
-        color: COLORS.textPrimary,
-    };
-    const placeholderStyle = { color: COLORS.textMuted };
-
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-            <div
-                className="pb-5"
-                style={{ borderBottom: `1px solid ${COLORS.border}` }}
-            >
-                <h2
-                    className="text-xl font-bold tracking-tight"
-                    style={{ color: COLORS.textPrimary }}
-                >
-                    Login
-                </h2>
-                <p
-                    className="mt-1.5 text-sm"
-                    style={{ color: COLORS.textMuted }}
-                >
-                    Enter your credentials to access the portal
+        <div
+            className="min-h-screen w-full flex flex-col items-center justify-center p-4"
+            style={{ backgroundColor: "#fcfcfc" }}
+        >
+            {/* Branding Header */}
+            <div className="flex flex-col items-center mb-8 text-center space-y-2">
+                <div className="flex items-center justify-center gap-3 mb-2">
+                    <div
+                        className="h-12 w-12 rounded-lg flex items-center justify-center shadow-sm"
+                        style={{ backgroundColor: COLORS.primary }}
+                    >
+                        <span className="font-bold text-2xl text-white">B</span>
+                    </div>
+                    <h1 className="text-2xl font-bold text-black tracking-tight" style={{ color: '#000000' }}>
+                        Business Smart Suite
+                    </h1>
+                </div>
+                <p className="text-gray-600 text-sm font-medium">
+                    ISO 9001 Compliance Management System
                 </p>
             </div>
 
-            <div className="flex flex-col gap-2">
-                <label
-                    className="text-sm font-medium"
-                    style={{ color: COLORS.textPrimary }}
-                >
-                    Username
-                </label>
-                <Input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Enter your username"
-                    autoComplete="username"
-                    className="w-full rounded-md border px-3 py-2 text-sm"
-                    style={inputStyle}
-                />
-            </div>
-
-            <div className="flex flex-col gap-2">
-                <label
-                    className="text-sm font-medium"
-                    style={{ color: COLORS.textPrimary }}
-                >
-                    Password
-                </label>
-                <Input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    autoComplete="current-password"
-                    className="w-full rounded-md border px-3 py-2 text-sm"
-                    style={inputStyle}
-                />
-            </div>
-
-            <Checkbox
-                label="Remember me"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-            />
-
-            <Button
-                type="submit"
-                fullWidth
-                disabled={isLoading}
-                className="w-full rounded-md py-2.5 text-sm font-semibold text-white"
-                style={{
-                    backgroundColor: COLORS.primary,
-                    boxShadow: COLORS.shadowSm,
-                }}
-            >
-                {isLoading ? "Logging in..." : "Login"}
-            </Button>
-
+            {/* Login Card */}
             <div
-                className="flex flex-wrap items-center justify-between gap-2 pt-4 text-sm"
-                style={{ borderTop: `1px solid ${COLORS.border}` }}
+                className="w-full bg-white rounded-xl shadow-lg border border-gray-200 p-8"
+                style={{ maxWidth: '450px' }}
             >
-                <Link
-                    href={ROUTES.forgotPassword}
-                    className="font-medium transition-colors hover:underline"
-                    style={{ color: COLORS.textSecondary }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.color = COLORS.primary;
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.color = COLORS.textSecondary;
-                    }}
-                >
-                    Forgot password?
-                </Link>
-                <Link
-                    href={ROUTES.contactSupport}
-                    className="font-medium transition-colors hover:underline"
-                    style={{ color: COLORS.textSecondary }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.color = COLORS.primary;
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.color = COLORS.textSecondary;
-                    }}
-                >
-                    Contact support
-                </Link>
-            </div>
-        </form>
-    );
-}
+                <div className="mb-8">
+                    <h2 className="text-2xl font-bold text-black mb-2" style={{ color: '#000000' }}>Login</h2>
+                    <p className="text-gray-600 text-sm">
+                        Enter your credentials to access the portal
+                    </p>
+                </div>
 
-export default function LoginPage() {
-    return (
-        <div
-            className="relative flex min-h-screen flex-col items-center justify-center px-4 py-12"
-            style={{ backgroundColor: COLORS.bgGray }}
-        >
-            <div className="relative z-10 flex w-full max-w-md flex-col items-center gap-10">
-                <LoginBranding />
-                <LoginCard>
-                    <LoginForm />
-                </LoginCard>
+                <form onSubmit={handleLogin} className="space-y-6">
+                    <div className="space-y-4">
+                        {/* Username/Email Field */}
+                        <div className="space-y-2">
+                            <Label htmlFor="email" className="text-black font-semibold" style={{ color: '#000000' }}>
+                                Username
+                            </Label>
+                            <Input
+                                id="email"
+                                placeholder="Enter your username"
+                                type="text"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="h-11 bg-white border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary text-black placeholder:text-gray-400"
+                                style={{ color: '#000000' }}
+                                required
+                            />
+                        </div>
+
+                        {/* Password Field */}
+                        <div className="space-y-2">
+                            <Label htmlFor="password" className="text-black font-semibold" style={{ color: '#000000' }}>
+                                Password
+                            </Label>
+                            <Input
+                                id="password"
+                                placeholder="Enter your password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="h-11 bg-white border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary text-black placeholder:text-gray-400"
+                                style={{ color: '#000000' }}
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    {/* Remember Me */}
+                    <div className="flex items-center space-x-2">
+                        <Checkbox
+                            id="remember"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                            label="Remember me"
+                            className="border-gray-300 data-[state=checked]:bg-primary data-[state=checked]:text-white"
+                        />
+                    </div>
+
+                    {/* Submit Button */}
+                    <Button
+                        type="submit"
+                        className="w-full h-11 text-base font-bold shadow-md hover:shadow-lg transition-all mt-2"
+                        disabled={isLoading}
+                        style={{ backgroundColor: COLORS.primary, color: 'white' }}
+                    >
+                        {isLoading ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Authenticating...
+                            </>
+                        ) : (
+                            "Login"
+                        )}
+                    </Button>
+
+                    {/* Footer Links */}
+                    <div className="flex items-center justify-between pt-4 text-sm">
+                        <Link
+                            href="/forgot-password"
+                            className="text-gray-600 hover:text-black transition-colors font-medium"
+                        >
+                            Forgot password?
+                        </Link>
+                        <Link
+                            href="/support"
+                            className="text-gray-600 hover:text-black transition-colors font-medium"
+                        >
+                            Contact support
+                        </Link>
+                    </div>
+                </form>
             </div>
         </div>
     );
