@@ -11,6 +11,7 @@ export const APP = {
 
 export const ROUTES = {
   login: "/",
+  dashboard: "/dashboard",
   forgotPassword: "#",
   contactSupport: "#",
 } as const;

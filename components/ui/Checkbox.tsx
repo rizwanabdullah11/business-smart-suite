@@ -1,43 +1,54 @@
-"use client";
+"use client"
 
-import { forwardRef } from "react";
-import { cn } from "@/lib/utils";
+import * as React from "react"
+import { Check } from "lucide-react"
 
-export interface CheckboxProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> {
-  label?: string;
+import { cn } from "@/lib/utils"
+
+export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "checked" | "onChange"> {
+  checked?: boolean
+  onCheckedChange?: (checked: boolean) => void
+  label?: React.ReactNode
 }
 
-const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
-  ({ className, label, id, ...props }, ref) => {
-    const inputId = id ?? (label ? `checkbox-${label.replace(/\s/g, "-")}` : undefined);
+const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
+  ({ className, checked, onChange, onCheckedChange, label, id, ...props }, ref) => {
+    const inputId = id ?? React.useId()
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      onChange?.(e)
+      onCheckedChange?.(e.target.checked)
+    }
 
     return (
       <div className="flex items-center gap-2">
-        <input
-          ref={ref}
-          type="checkbox"
-          id={inputId}
+        <label
           className={cn(
-            "h-4 w-4 rounded border-2 border-[#dee2e6] text-[#c92a2a] transition-colors focus:ring-2 focus:ring-[#c92a2a]/30 focus:ring-offset-0",
-            "checked:border-[#c92a2a] hover:border-[#ced4da]",
+            "relative inline-flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+            checked && "bg-primary text-primary-foreground",
             className
           )}
-          {...props}
-        />
-        {label && (
-          <label
-            htmlFor={inputId}
-            className="text-sm font-medium text-[#495057] cursor-pointer select-none"
-          >
+          htmlFor={inputId}
+        >
+          <input
+            ref={ref}
+            id={inputId}
+            type="checkbox"
+            checked={checked}
+            onChange={handleChange}
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            {...props}
+          />
+          {checked ? <Check className="h-4 w-4" /> : null}
+        </label>
+        {label != null && (
+          <label htmlFor={inputId} className="cursor-pointer text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
             {label}
           </label>
         )}
       </div>
-    );
+    )
   }
-);
+)
+Checkbox.displayName = "Checkbox"
 
-Checkbox.displayName = "Checkbox";
-
-export { Checkbox };
+export { Checkbox }
