@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, ReactNode } from "react"
-import Link from "next/link"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import {
     BarChart,
     TrendingUp,
@@ -29,271 +29,76 @@ import {
     Truck,
     GraduationCap,
     Zap,
-    ChevronLeft,
+    Loader2
 } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import { useToast } from "@/components/ui/use-toast"
+import { BackgroundLayer } from "@/components/dashboard/BackgroundLayer"
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
+import { ExpandableNavigationCard } from "@/components/dashboard/ExpandableNavigationCard"
+import { SystemStatus } from "@/components/dashboard/SystemStatus"
 
-// ==================== REUSABLE COMPONENTS ====================
-
-// Background Layer Component
-function BackgroundLayer() {
-    return (
-        <div 
-            className="absolute inset-0"
-            style={{
-                background: COLORS.bgWhite
-            }}
-        />
-    )
-}
-
-// Dashboard Header Component
-interface DashboardHeaderProps {
-    onAddFolder: () => void
-}
-
-function DashboardHeader({ onAddFolder }: DashboardHeaderProps) {
-    return (
-        <div className="flex justify-between items-center mb-12">
-            <div>
-                <h1 
-                    className="text-4xl font-bold mb-2"
-                    style={{ color: COLORS.textPrimary }}
-                >
-                    Business Smart Suite
-                </h1>
-                <p 
-                    className="text-lg"
-                    style={{ color: COLORS.textSecondary }}
-                >
-                    A clean, modern portal for managing your business
-                </p>
-            </div>
-            <div className="flex items-center gap-4">
-                <Link href="/analytics">
-                    <button 
-                        className="font-semibold px-6 py-3 rounded-lg text-base transition-all duration-200 focus:outline-none focus:ring-2"
-                        style={{
-                            background: COLORS.blue500,
-                            color: COLORS.textWhite,
-                            boxShadow: COLORS.shadow
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = COLORS.blue600
-                            e.currentTarget.style.boxShadow = COLORS.shadowMd
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = COLORS.blue500
-                            e.currentTarget.style.boxShadow = COLORS.shadow
-                        }}
-                    >
-                        Analytics
-                    </button>
-                </Link>
-                <button 
-                    className="font-semibold px-6 py-3 rounded-lg text-base transition-all duration-200 focus:outline-none focus:ring-2 flex items-center gap-2"
-                    style={{
-                        background: COLORS.primary,
-                        color: COLORS.textWhite,
-                        boxShadow: COLORS.shadow
-                    }}
-                    onClick={onAddFolder}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.background = COLORS.primaryLight
-                        e.currentTarget.style.boxShadow = COLORS.shadowMd
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.background = COLORS.primary
-                        e.currentTarget.style.boxShadow = COLORS.shadow
-                    }}
-                >
-                    <Plus className="w-4 h-4" />
-                    Add Folder
-                </button>
-            </div>
-        </div>
-    )
-}
-
-// Expandable Navigation Card Component (Reusable)
-interface ExpandableNavigationCardProps {
-    title: string
-    description: string
-    icon: ReactNode
-    iconColor: string
-    items: Array<{
-        icon: ReactNode
-        label: string
-        href: string
-        description: string
-    }>
-}
-
-function ExpandableNavigationCard({ 
-    title, 
-    description, 
-    icon, 
-    iconColor, 
-    items
-}: ExpandableNavigationCardProps) {
-    const [isExpanded, setIsExpanded] = useState(false)
-
-    return (
-        <div
-            className="group relative rounded-xl border transition-all duration-300"
-            style={{
-                background: COLORS.bgWhite,
-                borderColor: isExpanded ? iconColor : COLORS.border,
-                boxShadow: isExpanded ? COLORS.shadowLg : COLORS.shadow
-            }}
-            onMouseEnter={() => setIsExpanded(true)}
-            onMouseLeave={() => setIsExpanded(false)}
-        >
-            {/* Section Header */}
-            <div className="p-6 border-b" style={{ borderColor: COLORS.border }}>
-                <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4 flex-1">
-                        <div 
-                            className="flex items-center justify-center w-12 h-12 rounded-lg flex-shrink-0"
-                            style={{
-                                backgroundColor: `${iconColor}15`,
-                                color: iconColor
-                            }}
-                        >
-                            {icon}
-                        </div>
-                        <div className="flex-1">
-                            <h3 
-                                className="text-xl font-bold mb-2"
-                                style={{ color: COLORS.textPrimary }}
-                            >
-                                {title}
-                            </h3>
-                            <p 
-                                className="text-sm"
-                                style={{ color: COLORS.textSecondary }}
-                            >
-                                {description}
-                            </p>
-                        </div>
-                    </div>
-                    <ChevronLeft 
-                        className={`w-5 h-5 flex-shrink-0 transition-transform duration-300 ${isExpanded ? 'rotate-90' : '-rotate-90'}`}
-                        style={{ color: COLORS.neutral400 }}
-                    />
-                </div>
-            </div>
-
-            {/* Expanded Items Grid */}
-            {isExpanded && (
-                <div className="p-6">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {items.map((item, index) => (
-                            <ItemCard
-                                key={index}
-                                icon={item.icon}
-                                label={item.label}
-                                description={item.description}
-                                href={item.href}
-                                iconColor={iconColor}
-                            />
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
-    )
-}
-
-// Item Card Component (Reusable)
-interface ItemCardProps {
-    icon: ReactNode
-    label: string
-    description: string
-    href: string
-    iconColor: string
-}
-
-function ItemCard({ icon, label, description, href, iconColor }: ItemCardProps) {
-    return (
-        <Link href={href}>
-            <div
-                className="group/item relative p-4 rounded-xl border transition-all duration-300 cursor-pointer"
-                style={{
-                    background: COLORS.bgWhite,
-                    borderColor: COLORS.border,
-                    boxShadow: COLORS.shadow
-                }}
-                onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = COLORS.shadowMd
-                    e.currentTarget.style.borderColor = iconColor
-                    e.currentTarget.style.background = `${iconColor}10`
-                }}
-                onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = COLORS.shadow
-                    e.currentTarget.style.borderColor = COLORS.border
-                    e.currentTarget.style.background = COLORS.bgWhite
-                }}
-            >
-                <div className="flex flex-col items-center text-center">
-                    <div 
-                        className="flex items-center justify-center w-12 h-12 rounded-lg mb-3"
-                        style={{
-                            backgroundColor: `${iconColor}15`,
-                            color: iconColor
-                        }}
-                    >
-                        {icon}
-                    </div>
-                    <h4 
-                        className="font-semibold mb-1 text-sm"
-                        style={{ color: COLORS.textPrimary }}
-                    >
-                        {label}
-                    </h4>
-                    <p 
-                        className="text-xs leading-tight"
-                        style={{ color: COLORS.textSecondary }}
-                    >
-                        {description}
-                    </p>
-                </div>
-            </div>
-        </Link>
-    )
-}
-
-// System Status Component
-function SystemStatus() {
-    return (
-        <div className="mt-8">
-            <div className="flex items-center gap-2">
-                <div 
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: COLORS.green500 }}
-                ></div>
-                <span 
-                    className="text-sm font-medium"
-                    style={{ color: COLORS.textPrimary }}
-                >
-                    System status: Optimal
-                </span>
-            </div>
-        </div>
-    )
-}
-
-// ==================== MAIN DASHBOARD PAGE ====================
+// API Config
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api";
 
 export default function DashboardPage() {
+    const router = useRouter()
+    const { toast } = useToast()
     const [customSections, setCustomSections] = useState<any[]>([])
-    
+    const [user, setUser] = useState<any>(null)
+    const [isLoading, setIsLoading] = useState(true)
+
     useEffect(() => {
-        fetch("/api/custom-sections")
-            .then(res => res.json())
-            .then(data => setCustomSections(data))
-            .catch(() => setCustomSections([]))
-    }, [])
+        const checkAuth = async () => {
+            const token = localStorage.getItem('token')
+
+            if (!token) {
+                router.push('/login')
+                return
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/auth/dashboard`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch dashboard data')
+                }
+
+                const data = await response.json()
+                setUser(data.user)
+
+            } catch (error) {
+                console.error('Auth error:', error)
+                toast({
+                    title: "Session Expired",
+                    description: "Please log in again.",
+                    variant: "destructive"
+                })
+                localStorage.removeItem('token')
+                localStorage.removeItem('user')
+                router.push('/login')
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
+        checkAuth()
+    }, [router, toast])
+
+    const handleLogout = () => {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        document.cookie = 'token=; path=/; max-age=0' // Clear cookie
+        router.push('/login')
+        toast({
+            title: "Logged out",
+            description: "See you next time!",
+        })
+    }
 
     const navigationSections = [
         {
@@ -378,6 +183,17 @@ export default function DashboardPage() {
         }))
     ]
 
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center" style={{ background: COLORS.bgWhite }}>
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="w-12 h-12 animate-spin" style={{ color: COLORS.primary }} />
+                    <p className="text-lg font-medium" style={{ color: COLORS.textSecondary }}>Loading Dashboard...</p>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className="min-h-screen relative">
             {/* Background */}
@@ -388,7 +204,11 @@ export default function DashboardPage() {
                 <div className="px-6 pt-12 pb-12">
                     <div className="max-w-7xl mx-auto">
                         {/* Header */}
-                        <DashboardHeader onAddFolder={handleAddFolder} />
+                        <DashboardHeader
+                            onAddFolder={handleAddFolder}
+                            user={user}
+                            onLogout={handleLogout}
+                        />
 
                         {/* Expandable Navigation Cards Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
