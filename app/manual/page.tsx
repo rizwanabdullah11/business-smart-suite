@@ -423,7 +423,7 @@ export default function ManualPage() {
                 <div
                   className="p-5 flex items-center justify-between cursor-pointer"
                   style={{
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    background: COLORS.primary,
                     color: COLORS.textWhite,
                   }}
                   onClick={() => toggleCategory(category.id)}
@@ -434,96 +434,117 @@ export default function ManualPage() {
                     ) : (
                       <ChevronRight className="w-5 h-5" />
                     )}
-                    {editingCategory === category.id ? (
+                    <h2 className="text-xl font-bold">{category.title}</h2>
+                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-white bg-opacity-20">
+                      {category.manuals.length} manuals
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        startEditCategory(category.id, category.title)
+                      }}
+                      className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
+                      title="Edit Category"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setAddingManualToCategory(category.id)
+                        if (!expandedCategories.includes(category.id)) {
+                          setExpandedCategories(prev => [...prev, category.id])
+                        }
+                      }}
+                      className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
+                      title="Add Manual"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                      }}
+                      className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
+                      title="Archive Category"
+                    >
+                      <Archive className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        deleteCategory(category.id)
+                      }}
+                      className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
+                      title="Delete Category"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Edit Category Form */}
+                {editingCategory === category.id && (
+                  <div
+                    className="p-5"
+                    style={{
+                      background: COLORS.bgGray,
+                      borderBottom: `1px solid ${COLORS.border}`,
+                    }}
+                  >
+                    <h3 className="text-lg font-semibold mb-4" style={{ color: COLORS.textPrimary }}>
+                      Edit Category Name
+                    </h3>
+                    <div className="flex gap-3">
                       <input
                         type="text"
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                        className="px-3 py-1.5 rounded-lg text-black font-semibold"
+                        placeholder="Enter category name..."
+                        className="flex-1 px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        style={{
+                          borderColor: COLORS.border,
+                          color: COLORS.textPrimary,
+                          background: COLORS.bgWhite,
+                        }}
                         onKeyPress={(e) => {
                           if (e.key === "Enter") {
                             saveEditCategory(category.id)
                           }
                         }}
+                        autoFocus
                       />
-                    ) : (
-                      <h2 className="text-xl font-bold">{category.title}</h2>
-                    )}
-                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-white bg-opacity-20">
-                      {category.manuals.length} manuals
-                    </span>
+                      <button
+                        onClick={() => saveEditCategory(category.id)}
+                        className="px-6 py-2.5 rounded-lg font-medium hover:shadow-md transition-all flex items-center gap-2"
+                        style={{
+                          background: COLORS.primary,
+                          color: COLORS.textWhite,
+                        }}
+                      >
+                        <Check className="w-4 h-4" />
+                        Save
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingCategory(null)
+                          setEditTitle("")
+                        }}
+                        className="px-6 py-2.5 rounded-lg font-medium hover:shadow-md transition-all flex items-center gap-2"
+                        style={{
+                          background: COLORS.bgWhite,
+                          color: COLORS.textPrimary,
+                          border: `1px solid ${COLORS.border}`,
+                        }}
+                      >
+                        <X className="w-4 h-4" />
+                        Cancel
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {editingCategory === category.id ? (
-                      <>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            saveEditCategory(category.id)
-                          }}
-                          className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
-                        >
-                          <Check className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setEditingCategory(null)
-                          }}
-                          className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            startEditCategory(category.id, category.title)
-                          }}
-                          className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
-                          title="Edit Category"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setAddingManualToCategory(category.id)
-                            if (!expandedCategories.includes(category.id)) {
-                              setExpandedCategories(prev => [...prev, category.id])
-                            }
-                          }}
-                          className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
-                          title="Add Manual"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                          }}
-                          className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
-                          title="Archive Category"
-                        >
-                          <Archive className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            deleteCategory(category.id)
-                          }}
-                          className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
-                          title="Delete Category"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
+                )}
 
                 {/* Manuals List */}
                 {isExpanded && (
@@ -658,10 +679,10 @@ export default function ManualPage() {
                         {sortedManuals.map((manual) => (
                           <div
                             key={manual.id}
-                            className="flex items-center gap-3 p-4 rounded-lg border hover:shadow-md transition-all"
+                            className="flex items-center gap-3 p-4 rounded-lg hover:shadow-md transition-all"
                             style={{
-                              borderColor: manual.highlighted ? COLORS.primary : COLORS.border,
                               background: manual.paused ? `${COLORS.warning}05` : manual.highlighted ? `${COLORS.primary}05` : COLORS.bgWhite,
+                              border: `1px solid ${COLORS.border}`,
                             }}
                           >
                             <button className="cursor-move hover:bg-gray-100 p-1 rounded">
@@ -688,83 +709,93 @@ export default function ManualPage() {
                                 </span>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => toggleHighlight(category.id, manual.id)}
-                                className="p-2.5 rounded-lg transition-all hover:scale-110"
-                                style={{
-                                  background: manual.highlighted ? COLORS.warning : COLORS.bgGray,
-                                  color: manual.highlighted ? COLORS.textWhite : COLORS.textSecondary,
-                                }}
-                                title={manual.highlighted ? "Remove Highlight" : "Highlight"}
-                              >
-                                <Star className={`w-4 h-4 ${manual.highlighted ? "fill-current" : ""}`} />
-                              </button>
-                              <button
-                                onClick={() => toggleApprove(category.id, manual.id)}
-                                className="p-2.5 rounded-lg transition-all hover:scale-110"
-                                style={{
-                                  background: manual.approved ? COLORS.green500 : COLORS.bgGray,
-                                  color: manual.approved ? COLORS.textWhite : COLORS.textSecondary,
-                                }}
-                                title={manual.approved ? "Unapprove" : "Approve"}
-                              >
-                                <Check className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => togglePause(category.id, manual.id)}
-                                className="p-2.5 rounded-lg transition-all hover:scale-110"
-                                style={{
-                                  background: manual.paused ? COLORS.warning : COLORS.bgGray,
-                                  color: manual.paused ? COLORS.textWhite : COLORS.textSecondary,
-                                }}
-                                title={manual.paused ? "Resume" : "Pause"}
-                              >
-                                <Pause className="w-4 h-4" />
-                              </button>
-                              <Link href={`/manual/${manual.id}/edit`}>
+                            <div className="flex items-center gap-1.5">
+                              {/* Primary Actions */}
+                              <div className="flex items-center gap-1 mr-2">
                                 <button
-                                  className="p-2.5 rounded-lg transition-all hover:scale-110"
+                                  onClick={() => toggleHighlight(category.id, manual.id)}
+                                  className="p-2 rounded-lg transition-all hover:scale-105"
                                   style={{
-                                    background: COLORS.bgGray,
-                                    color: COLORS.textSecondary,
+                                    background: manual.highlighted ? COLORS.warning : "#FEF3C7",
+                                    color: manual.highlighted ? COLORS.textWhite : "#92400E",
                                   }}
-                                  title="Edit"
+                                  title={manual.highlighted ? "Remove Highlight" : "Highlight"}
                                 >
-                                  <Edit className="w-4 h-4" />
+                                  <Star className={`w-4 h-4 ${manual.highlighted ? "fill-current" : ""}`} />
                                 </button>
-                              </Link>
-                              <button
-                                className="p-2.5 rounded-lg transition-all hover:scale-110"
-                                style={{
-                                  background: COLORS.bgGray,
-                                  color: COLORS.textSecondary,
-                                }}
-                                title="Duplicate"
-                              >
-                                <Copy className="w-4 h-4" />
-                              </button>
-                              <button
-                                className="p-2.5 rounded-lg transition-all hover:scale-110"
-                                style={{
-                                  background: COLORS.bgGray,
-                                  color: COLORS.textSecondary,
-                                }}
-                                title="Download"
-                              >
-                                <Download className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => deleteManual(category.id, manual.id)}
-                                className="p-2.5 rounded-lg transition-all hover:scale-110 hover:bg-red-50"
-                                style={{
-                                  background: COLORS.bgGray,
-                                  color: COLORS.danger,
-                                }}
-                                title="Delete"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                                <button
+                                  onClick={() => toggleApprove(category.id, manual.id)}
+                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  style={{
+                                    background: manual.approved ? COLORS.green500 : "#D1FAE5",
+                                    color: manual.approved ? COLORS.textWhite : "#065F46",
+                                  }}
+                                  title={manual.approved ? "Unapprove" : "Approve"}
+                                >
+                                  <Check className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => togglePause(category.id, manual.id)}
+                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  style={{
+                                    background: manual.paused ? COLORS.warning : "#FEF3C7",
+                                    color: manual.paused ? COLORS.textWhite : "#92400E",
+                                  }}
+                                  title={manual.paused ? "Resume" : "Pause"}
+                                >
+                                  <Pause className="w-4 h-4" />
+                                </button>
+                              </div>
+
+                              {/* Divider */}
+                              <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
+                              {/* Secondary Actions */}
+                              <div className="flex items-center gap-1">
+                                <Link href={`/manual/${manual.id}/edit`}>
+                                  <button
+                                    className="p-2 rounded-lg transition-all hover:scale-105"
+                                    style={{
+                                      background: "#DBEAFE",
+                                      color: "#1E40AF",
+                                    }}
+                                    title="Edit"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </button>
+                                </Link>
+                                <button
+                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  style={{
+                                    background: "#E5E7EB",
+                                    color: "#374151",
+                                  }}
+                                  title="Duplicate"
+                                >
+                                  <Copy className="w-4 h-4" />
+                                </button>
+                                <button
+                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  style={{
+                                    background: "#E0E7FF",
+                                    color: "#4338CA",
+                                  }}
+                                  title="Download"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => deleteManual(category.id, manual.id)}
+                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  style={{
+                                    background: "#FEE2E2",
+                                    color: "#991B1B",
+                                  }}
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ))}
