@@ -1,174 +1,121 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
+"use client"
+
+import { useState } from "react"
 import Link from "next/link"
-import prisma from "@/lib/prisma"
-import { redirect } from "next/navigation"
-import { getUser } from "@/lib/auth"
-import { hasPermission } from "@/lib/auth"
-import { notFound } from "next/navigation"
+import { ArrowLeft } from "lucide-react"
+import { COLORS } from "@/constant/colors"
 
-interface EditPageProps {
-  params: {
-    id: string
-  }
-}
-
-export default async function EditManualPage({ params }: EditPageProps) {
-  const resolvedParams = await params;
-  const manualId = resolvedParams.id;
-  
-  const canEdit = await hasPermission("write", "manuals")
-
-  if (!canEdit) {
-    redirect("/manual")
-  }
-
-  const manual = await prisma.manual.findUnique({
-    where: { id: manualId },
-    include: {
-      category: true,
-    },
-  })
-
-  if (!manual) {
-    notFound()
-  }
-
-  const categories = await prisma.manualCategory.findMany({
-    where: { archived: false },
-    orderBy: { order: "asc" },
-  })
-
-  async function updateManual(formData: FormData) {
-    "use server"
-
-    const user = await getUser()
-    if (!user) {
-      throw new Error("Unauthorized")
-    }
-
-    const title = formData.get("title") as string
-    const categoryId = formData.get("categoryId") as string
-    const version = formData.get("version") as string
-    const issueDate = formData.get("issueDate") as string
-    const location = formData.get("location") as string
-
-    if (!title || !categoryId || !version || !issueDate || !location) {
-      throw new Error("All fields are required")
-    }
-
-    await prisma.manual.update({
-      where: { id: manualId },
-      data: {
-        title,
-        categoryId,
-        version,
-        issueDate: new Date(issueDate),
-        location,
-        updatedById: user.id as string,
-      },
-    })
-
-    redirect(`/manual/${manualId}`)
-  }
+export default function EditManualPage({ params }: { params: { id: string } }) {
+  const [title, setTitle] = useState("Quality Manual")
+  const [version, setVersion] = useState("v2.1")
+  const [location, setLocation] = useState("QMS")
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <Button variant="outline" asChild>
-          <Link href={`/manual/${manualId}`} className="flex items-center">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Manual
-          </Link>
-        </Button>
+    <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
+      <div className="p-6">
+        <div className="max-w-4xl mx-auto">
+          {/* Back Button */}
+          <div className="mb-6">
+            <Link
+              href={`/manual/${params.id}`}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all"
+              style={{
+                background: COLORS.bgWhite,
+                color: COLORS.textPrimary,
+                border: `1px solid ${COLORS.border}`,
+              }}
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Manual
+            </Link>
+          </div>
+
+          {/* Edit Form */}
+          <div
+            className="rounded-lg p-6"
+            style={{
+              background: COLORS.bgWhite,
+              border: `1px solid ${COLORS.border}`,
+            }}
+          >
+            <h1 className="text-2xl font-bold mb-6" style={{ color: COLORS.textPrimary }}>
+              Edit Manual
+            </h1>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-3 py-2 rounded border"
+                  style={{
+                    borderColor: COLORS.border,
+                    color: COLORS.textPrimary,
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                  Version
+                </label>
+                <input
+                  type="text"
+                  value={version}
+                  onChange={(e) => setVersion(e.target.value)}
+                  className="w-full px-3 py-2 rounded border"
+                  style={{
+                    borderColor: COLORS.border,
+                    color: COLORS.textPrimary,
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                  Location
+                </label>
+                <input
+                  type="text"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="w-full px-3 py-2 rounded border"
+                  style={{
+                    borderColor: COLORS.border,
+                    color: COLORS.textPrimary,
+                  }}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <button
+                  className="px-6 py-2 rounded-lg font-medium"
+                  style={{
+                    background: COLORS.primary,
+                    color: COLORS.textWhite,
+                  }}
+                >
+                  Save Changes
+                </button>
+                <Link
+                  href={`/manual/${params.id}`}
+                  className="px-6 py-2 rounded-lg font-medium"
+                  style={{
+                    background: COLORS.bgGray,
+                    color: COLORS.textPrimary,
+                  }}
+                >
+                  Cancel
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Edit Manual</CardTitle>
-          <CardDescription>Update manual details</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form action={updateManual} className="space-y-4">
-            <div className="grid gap-2">
-              <label htmlFor="title" className="text-sm font-medium">
-                Title
-              </label>
-              <input
-                id="title"
-                name="title"
-                className="w-full p-2 border rounded"
-                defaultValue={manual.title}
-                required
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <label htmlFor="categoryId" className="text-sm font-medium">
-                Category
-              </label>
-              <select
-                id="categoryId"
-                name="categoryId"
-                className="w-full p-2 border rounded"
-                defaultValue={manual.categoryId}
-                required
-              >
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid gap-2">
-              <label htmlFor="version" className="text-sm font-medium">
-                Version
-              </label>
-              <input
-                id="version"
-                name="version"
-                className="w-full p-2 border rounded"
-                defaultValue={manual.version}
-                required
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <label htmlFor="issueDate" className="text-sm font-medium">
-                Issue Date
-              </label>
-              <input
-                id="issueDate"
-                name="issueDate"
-                type="date"
-                className="w-full p-2 border rounded"
-                defaultValue={new Date(manual.issueDate).toISOString().split("T")[0]}
-                required
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <label htmlFor="location" className="text-sm font-medium">
-                Location
-              </label>
-              <input
-                id="location"
-                name="location"
-                className="w-full p-2 border rounded"
-                defaultValue={manual.location}
-                required
-              />
-            </div>
-
-            <div className="flex justify-end">
-              <Button type="submit">Update Manual</Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
     </div>
   )
 }

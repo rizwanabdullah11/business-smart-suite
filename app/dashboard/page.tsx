@@ -7,9 +7,7 @@ import {
     TrendingUp,
     Shield,
     Settings,
-    ArrowRight,
     Plus,
-    ArrowLeft,
     BookOpen,
     FileText,
     ClipboardList,
@@ -31,7 +29,6 @@ import {
     Truck,
     GraduationCap,
     Zap,
-    X,
     ChevronLeft,
 } from "lucide-react"
 import { COLORS } from "@/constant/colors"
@@ -130,8 +127,6 @@ interface ExpandableNavigationCardProps {
         href: string
         description: string
     }>
-    onItemClick: (itemIndex: number) => void
-    selectedItemIndex: number | null
 }
 
 function ExpandableNavigationCard({ 
@@ -139,9 +134,7 @@ function ExpandableNavigationCard({
     description, 
     icon, 
     iconColor, 
-    items,
-    onItemClick,
-    selectedItemIndex
+    items
 }: ExpandableNavigationCardProps) {
     const [isExpanded, setIsExpanded] = useState(false)
 
@@ -201,9 +194,8 @@ function ExpandableNavigationCard({
                                 icon={item.icon}
                                 label={item.label}
                                 description={item.description}
-                                onClick={() => onItemClick(index)}
+                                href={item.href}
                                 iconColor={iconColor}
-                                isSelected={selectedItemIndex === index}
                             />
                         ))}
                     </div>
@@ -218,206 +210,56 @@ interface ItemCardProps {
     icon: ReactNode
     label: string
     description: string
-    onClick: () => void
+    href: string
     iconColor: string
-    isSelected?: boolean
 }
 
-function ItemCard({ icon, label, description, onClick, iconColor, isSelected }: ItemCardProps) {
+function ItemCard({ icon, label, description, href, iconColor }: ItemCardProps) {
     return (
-        <div
-            onClick={onClick}
-            className="group/item relative p-4 rounded-xl border transition-all duration-300 cursor-pointer"
-            style={{
-                background: isSelected ? `${iconColor}20` : COLORS.bgWhite,
-                borderColor: isSelected ? iconColor : COLORS.border,
-                boxShadow: COLORS.shadow
-            }}
-            onMouseEnter={(e) => {
-                if (!isSelected) {
+        <Link href={href}>
+            <div
+                className="group/item relative p-4 rounded-xl border transition-all duration-300 cursor-pointer"
+                style={{
+                    background: COLORS.bgWhite,
+                    borderColor: COLORS.border,
+                    boxShadow: COLORS.shadow
+                }}
+                onMouseEnter={(e) => {
                     e.currentTarget.style.boxShadow = COLORS.shadowMd
                     e.currentTarget.style.borderColor = iconColor
                     e.currentTarget.style.background = `${iconColor}10`
-                }
-            }}
-            onMouseLeave={(e) => {
-                if (!isSelected) {
+                }}
+                onMouseLeave={(e) => {
                     e.currentTarget.style.boxShadow = COLORS.shadow
                     e.currentTarget.style.borderColor = COLORS.border
                     e.currentTarget.style.background = COLORS.bgWhite
-                }
-            }}
-        >
-            <div className="flex flex-col items-center text-center">
-                <div 
-                    className="flex items-center justify-center w-12 h-12 rounded-lg mb-3"
-                    style={{
-                        backgroundColor: isSelected ? iconColor : `${iconColor}15`,
-                        color: isSelected ? COLORS.textWhite : iconColor
-                    }}
-                >
-                    {icon}
-                </div>
-                <h4 
-                    className="font-semibold mb-1 text-sm"
-                    style={{ color: COLORS.textPrimary }}
-                >
-                    {label}
-                </h4>
-                <p 
-                    className="text-xs leading-tight"
-                    style={{ color: COLORS.textSecondary }}
-                >
-                    {description}
-                </p>
-            </div>
-        </div>
-    )
-}
-
-// Product Modal Component
-interface ProductModalProps {
-    item: {
-        icon: ReactNode
-        label: string
-        description: string
-        iconColor: string
-    }
-    products: Array<{
-        id: string
-        name: string
-        description: string
-        status?: string
-    }>
-    onClose: () => void
-}
-
-function ProductModal({ item, products, onClose }: ProductModalProps) {
-    return (
-        <div 
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            onClick={onClose}
-            style={{
-                backgroundColor: COLORS.modalOverlay
-            }}
-        >
-            <div 
-                className="relative rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col"
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                    backgroundColor: COLORS.bgWhite,
-                    boxShadow: COLORS.shadowXl
                 }}
             >
-                {/* Modal Header */}
-                <div 
-                    className="p-6 border-b flex items-center justify-between"
-                    style={{
-                        borderColor: COLORS.border,
-                        backgroundColor: COLORS.bgGray
-                    }}
-                >
-                    <div className="flex items-center gap-4">
-                        <div 
-                            className="flex items-center justify-center w-12 h-12 rounded-xl"
-                            style={{
-                                backgroundColor: `${item.iconColor}15`,
-                                color: item.iconColor
-                            }}
-                        >
-                            {item.icon}
-                        </div>
-                        <div>
-                            <h2 
-                                className="text-2xl font-bold"
-                                style={{ color: COLORS.textPrimary }}
-                            >
-                                {item.label}
-                            </h2>
-                            <p 
-                                className="text-sm mt-1"
-                                style={{ color: COLORS.textSecondary }}
-                            >
-                                {item.description}
-                            </p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="p-2 rounded-lg transition-all duration-200"
+                <div className="flex flex-col items-center text-center">
+                    <div 
+                        className="flex items-center justify-center w-12 h-12 rounded-lg mb-3"
                         style={{
-                            color: COLORS.textSecondary,
-                            backgroundColor: COLORS.bgGray
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = COLORS.neutral200
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = COLORS.bgGray
+                            backgroundColor: `${iconColor}15`,
+                            color: iconColor
                         }}
                     >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-
-                {/* Modal Content */}
-                <div className="p-6 overflow-y-auto flex-1">
-                    <div className="mb-4">
-                        <h3 
-                            className="text-lg font-semibold mb-2"
-                            style={{ color: COLORS.textPrimary }}
-                        >
-                            All Products ({products.length})
-                        </h3>
+                        {icon}
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {products.map((product) => (
-                            <div
-                                key={product.id}
-                                className="p-4 rounded-xl border transition-all duration-200 cursor-pointer"
-                                style={{
-                                    background: COLORS.bgWhite,
-                                    borderColor: COLORS.border,
-                                    boxShadow: COLORS.shadow
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.boxShadow = COLORS.shadowMd
-                                    e.currentTarget.style.borderColor = item.iconColor
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.boxShadow = COLORS.shadow
-                                    e.currentTarget.style.borderColor = COLORS.border
-                                }}
-                            >
-                                <h4 
-                                    className="font-semibold mb-1"
-                                    style={{ color: COLORS.textPrimary }}
-                                >
-                                    {product.name}
-                                </h4>
-                                <p 
-                                    className="text-sm mb-2"
-                                    style={{ color: COLORS.textSecondary }}
-                                >
-                                    {product.description}
-                                </p>
-                                {product.status && (
-                                    <span 
-                                        className="text-xs px-2 py-1 rounded"
-                                        style={{
-                                            backgroundColor: `${COLORS.green500}15`,
-                                            color: COLORS.green600
-                                        }}
-                                    >
-                                        {product.status}
-                                    </span>
-                                )}
-                            </div>
-                        ))}
-                    </div>
+                    <h4 
+                        className="font-semibold mb-1 text-sm"
+                        style={{ color: COLORS.textPrimary }}
+                    >
+                        {label}
+                    </h4>
+                    <p 
+                        className="text-xs leading-tight"
+                        style={{ color: COLORS.textSecondary }}
+                    >
+                        {description}
+                    </p>
                 </div>
             </div>
-        </div>
+        </Link>
     )
 }
 
@@ -445,13 +287,6 @@ function SystemStatus() {
 
 export default function DashboardPage() {
     const [customSections, setCustomSections] = useState<any[]>([])
-    const [selectedItemIndex, setSelectedItemIndex] = useState<{sectionIndex: number, itemIndex: number} | null>(null)
-    const [selectedItem, setSelectedItem] = useState<{
-        icon: ReactNode
-        label: string
-        description: string
-        iconColor: string
-    } | null>(null)
     
     useEffect(() => {
         fetch("/api/custom-sections")
@@ -459,106 +294,6 @@ export default function DashboardPage() {
             .then(data => setCustomSections(data))
             .catch(() => setCustomSections([]))
     }, [])
-
-    // Sample products data for each item
-    const getProductsForItem = (sectionTitle: string, itemLabel: string) => {
-        // Sample products - in real app, this would come from API
-        const sampleProducts: Record<string, Record<string, Array<{id: string, name: string, description: string, status?: string}>>> = {
-            "Core Management": {
-                "Manual": [
-                    { id: "1", name: "Employee Handbook", description: "Complete guide for all employees", status: "Active" },
-                    { id: "2", name: "Safety Manual", description: "Workplace safety guidelines", status: "Active" },
-                    { id: "3", name: "Quality Manual", description: "Quality management procedures", status: "Active" },
-                    { id: "4", name: "Operations Manual", description: "Daily operations guide", status: "Draft" },
-                ],
-                "Policies": [
-                    { id: "1", name: "HR Policy", description: "Human resources policies", status: "Active" },
-                    { id: "2", name: "IT Policy", description: "Information technology policies", status: "Active" },
-                    { id: "3", name: "Security Policy", description: "Security and access policies", status: "Active" },
-                    { id: "4", name: "Privacy Policy", description: "Data privacy and protection", status: "Active" },
-                    { id: "5", name: "Code of Conduct", description: "Employee code of conduct", status: "Active" },
-                ],
-                "Procedures": [
-                    { id: "1", name: "Onboarding Procedure", description: "New employee onboarding", status: "Active" },
-                    { id: "2", name: "Incident Reporting", description: "How to report incidents", status: "Active" },
-                    { id: "3", name: "Document Control", description: "Document management process", status: "Active" },
-                ],
-                "Forms": [
-                    { id: "1", name: "Leave Request Form", description: "Request time off", status: "Active" },
-                    { id: "2", name: "Expense Report", description: "Submit expenses", status: "Active" },
-                    { id: "3", name: "Purchase Order", description: "Request purchases", status: "Active" },
-                ],
-                "Certificates": [
-                    { id: "1", name: "ISO 9001 Certificate", description: "Quality management certification", status: "Valid" },
-                    { id: "2", name: "ISO 14001 Certificate", description: "Environmental management", status: "Valid" },
-                ]
-            },
-            "Compliance & Risk": {
-                "Business Continuity": [
-                    { id: "1", name: "BCP Plan 2024", description: "Business continuity plan", status: "Active" },
-                    { id: "2", name: "Disaster Recovery", description: "IT disaster recovery plan", status: "Active" },
-                ],
-                "Risk Assessments": [
-                    { id: "1", name: "Workplace Risk Assessment", description: "Office safety assessment", status: "Active" },
-                    { id: "2", name: "IT Security Assessment", description: "Cybersecurity evaluation", status: "Active" },
-                ],
-                "Management Reviews": [
-                    { id: "1", name: "Q1 2024 Review", description: "First quarter management review", status: "Completed" },
-                    { id: "2", name: "Q2 2024 Review", description: "Second quarter management review", status: "Scheduled" },
-                ],
-                "Job Descriptions": [
-                    { id: "1", name: "Software Engineer", description: "Development team role", status: "Active" },
-                    { id: "2", name: "Project Manager", description: "Project management role", status: "Active" },
-                ],
-                "Work Instructions": [
-                    { id: "1", name: "Assembly Procedure", description: "Product assembly steps", status: "Active" },
-                    { id: "2", name: "Quality Check Process", description: "Quality inspection steps", status: "Active" },
-                ],
-                "COSHH": [
-                    { id: "1", name: "Chemical Safety Assessment", description: "Hazardous substances evaluation", status: "Active" },
-                ],
-                "Technical File": [
-                    { id: "1", name: "Product Specifications", description: "Technical documentation", status: "Active" },
-                ],
-                "IMS Aspects & Impacts": [
-                    { id: "1", name: "Environmental Impact Assessment", description: "Environmental aspects evaluation", status: "Active" },
-                ]
-            },
-            "Registers & Records": {
-                "Audit Schedule": [
-                    { id: "1", name: "Internal Audit Q1", description: "First quarter internal audit", status: "Scheduled" },
-                    { id: "2", name: "External Audit 2024", description: "Annual external audit", status: "Planned" },
-                ],
-                "Interested Parties": [
-                    { id: "1", name: "Stakeholder Register", description: "List of all stakeholders", status: "Active" },
-                ],
-                "Objectives": [
-                    { id: "1", name: "Quality Improvement Goal", description: "Reduce defects by 20%", status: "In Progress" },
-                    { id: "2", name: "Customer Satisfaction Target", description: "Achieve 95% satisfaction", status: "Active" },
-                ],
-                "Suppliers": [
-                    { id: "1", name: "Supplier A", description: "Raw materials supplier", status: "Approved" },
-                    { id: "2", name: "Supplier B", description: "Equipment supplier", status: "Approved" },
-                ],
-                "Training": [
-                    { id: "1", name: "Safety Training Program", description: "Workplace safety training", status: "Active" },
-                    { id: "2", name: "Quality Training", description: "Quality management training", status: "Active" },
-                ]
-            },
-            "Administration": {
-                "Permissions": [
-                    { id: "1", name: "Admin Users", description: "Administrator access", status: "Active" },
-                    { id: "2", name: "Manager Role", description: "Manager permissions", status: "Active" },
-                ]
-            }
-        }
-
-        return sampleProducts[sectionTitle]?.[itemLabel] || [
-            { id: "1", name: "Sample Product 1", description: "Product description", status: "Active" },
-            { id: "2", name: "Sample Product 2", description: "Product description", status: "Active" },
-            { id: "3", name: "Sample Product 3", description: "Product description", status: "Draft" },
-        ]
-    }
 
     const navigationSections = [
         {
@@ -625,23 +360,6 @@ export default function DashboardPage() {
         console.log("Add folder clicked")
     }
 
-    const handleItemClick = (sectionIndex: number, itemIndex: number) => {
-        const section = allSections[sectionIndex]
-        const item = section.items[itemIndex]
-        setSelectedItemIndex({ sectionIndex, itemIndex })
-        setSelectedItem({
-            icon: item.icon,
-            label: item.label,
-            description: item.description,
-            iconColor: section.iconColor
-        })
-    }
-
-    const handleCloseModal = () => {
-        setSelectedItem(null)
-        setSelectedItemIndex(null)
-    }
-
     const allSections = [
         ...navigationSections,
         ...customSections.map((section) => ({
@@ -659,10 +377,6 @@ export default function DashboardPage() {
             ]
         }))
     ]
-
-    const products = selectedItem && selectedItemIndex
-        ? getProductsForItem(allSections[selectedItemIndex.sectionIndex].title, selectedItem.label)
-        : []
 
     return (
         <div className="min-h-screen relative">
@@ -686,12 +400,6 @@ export default function DashboardPage() {
                                     icon={section.icon}
                                     iconColor={section.iconColor}
                                     items={section.items}
-                                    onItemClick={(itemIndex) => handleItemClick(index, itemIndex)}
-                                    selectedItemIndex={
-                                        selectedItemIndex?.sectionIndex === index 
-                                            ? selectedItemIndex.itemIndex 
-                                            : null
-                                    }
                                 />
                             ))}
                         </div>
@@ -701,15 +409,6 @@ export default function DashboardPage() {
                     </div>
                 </div>
             </div>
-
-            {/* Product Modal */}
-            {selectedItem && (
-                <ProductModal
-                    item={selectedItem}
-                    products={products}
-                    onClose={handleCloseModal}
-                />
-            )}
         </div>
     )
 }
