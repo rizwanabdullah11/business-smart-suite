@@ -1,9 +1,9 @@
 export const COLORS = {
     // Primary Brand Colors
-    primary: "#c92a2a",
-    primaryLight: "#e03131",
-    primaryDark: "#a61e1e",
-    primaryShadow: "rgba(201, 42, 42, 0.25)",
+    primary: "#2563eb",
+    primaryLight: "#3b82f6",
+    primaryDark: "#1d4ed8",
+    primaryShadow: "rgba(37, 99, 235, 0.25)",
 
     // Text Colors
     textPrimary: "#1a1d21",

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useEffect } from "react"
 import { 
   FileText, 
   Plus, 
@@ -24,31 +25,32 @@ import {
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
 
-// Sample data
-const initialCategories = [
-  {
-    id: "1",
-    title: "General Manuals",
-    manuals: [
-      { id: "1-1", title: "Quality Manual", version: "v2.1", issueDate: "2024-01-15", location: "QMS", highlighted: false, approved: true, paused: false },
-      { id: "1-2", title: "Safety Manual", version: "v3.0", issueDate: "2024-02-01", location: "HSE", highlighted: true, approved: true, paused: false },
-      { id: "1-3", title: "Operations Manual", version: "v4.2", issueDate: "2024-02-05", location: "OPS", highlighted: false, approved: false, paused: false },
-    ]
-  },
-  {
-    id: "2",
-    title: "Technical Documentation",
-    manuals: [
-      { id: "2-1", title: "Technical Specifications", version: "v1.5", issueDate: "2024-01-20", location: "TECH", highlighted: false, approved: true, paused: false },
-      { id: "2-2", title: "Product Manual", version: "v2.3", issueDate: "2024-01-25", location: "PROD", highlighted: false, approved: true, paused: true },
-    ]
-  },
-]
+// // Sample data
+// const initialCategories = [
+//   {
+//     id: "1",
+//     title: "General Manuals",
+//     manuals: [
+//       { id: "1-1", title: "Quality Manual", version: "v2.1", issueDate: "2024-01-15", location: "QMS", highlighted: false, approved: true, paused: false },
+//       { id: "1-2", title: "Safety Manual", version: "v3.0", issueDate: "2024-02-01", location: "HSE", highlighted: true, approved: true, paused: false },
+//       { id: "1-3", title: "Operations Manual", version: "v4.2", issueDate: "2024-02-05", location: "OPS", highlighted: false, approved: false, paused: false },
+//     ]
+//   },
+//   {
+//     id: "2",
+//     title: "Technical Documentation",
+//     manuals: [
+//       { id: "2-1", title: "Technical Specifications", version: "v1.5", issueDate: "2024-01-20", location: "TECH", highlighted: false, approved: true, paused: false },
+//       { id: "2-2", title: "Product Manual", version: "v2.3", issueDate: "2024-01-25", location: "PROD", highlighted: false, approved: true, paused: true },
+//     ]
+//   },
+// ]
 
 type SortType = "name" | "date"
 
 export default function ManualPage() {
-  const [categories, setCategories] = useState(initialCategories)
+  const [categories, setCategories] = useState([])
+  const [archivedCategories, setArchivedCategories] = useState([])
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1"])
   const [editingCategory, setEditingCategory] = useState<string | null>(null)
@@ -58,12 +60,92 @@ export default function ManualPage() {
   const [sortType, setSortType] = useState<SortType>("name")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
   const [addingManualToCategory, setAddingManualToCategory] = useState<string | null>(null)
+  const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [newManualData, setNewManualData] = useState({
     title: "",
     version: "",
     location: "",
     issueDate: new Date().toISOString().split('T')[0]
   })
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      const token = localStorage.getItem("token")
+
+      // 1) Get categories
+      const catRes = await fetch("http://localhost:5000/api/categories", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      const categoriesData = await catRes.json()
+
+      // 2) Get active manuals
+      const manRes = await fetch("http://localhost:5000/api/manuals", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      const manualsData = await manRes.json()
+
+      // 3) Get archived manuals
+      const archivedRes = await fetch("http://localhost:5000/api/manuals/archived/all", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      const archivedData = archivedRes.ok ? await archivedRes.json() : []
+
+      // 4) Merge active manuals inside categories
+      const merged = categoriesData
+        .filter((cat: any) => !cat.archived)
+        .map((cat: any) => ({
+          id: cat._id,
+          title: cat.name,
+          manuals: manualsData
+            .filter((m: any) => m.category?._id === cat._id && !m.archived)
+            .map((m: any) => ({
+              id: m._id,
+              title: m.title,
+              version: m.version,
+              issueDate: m.issueDate,
+              location: m.location,
+              highlighted: m.highlighted || false,
+              approved: m.approved || false,
+              paused: m.paused || false
+            }))
+        }))
+
+      // 5) Merge archived manuals inside archived categories
+      const mergedArchived = categoriesData
+        .filter((cat: any) => cat.archived)
+        .map((cat: any) => ({
+          id: cat._id,
+          title: cat.name,
+          manuals: archivedData
+            .filter((m: any) => m.category?._id === cat._id)
+            .map((m: any) => ({
+              id: m._id,
+              title: m.title,
+              version: m.version,
+              issueDate: m.issueDate,
+              location: m.location,
+              highlighted: m.highlighted || false,
+              approved: m.approved || false,
+              paused: m.paused || false
+            }))
+        }))
+
+      setCategories(merged)
+      setArchivedCategories(mergedArchived)
+    } catch (err) {
+      console.log(err)
+    }
+  }
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories(prev =>
@@ -73,75 +155,315 @@ export default function ManualPage() {
     )
   }
 
-  const toggleHighlight = (categoryId: string, manualId: string) => {
-    setCategories(prev =>
-      prev.map(cat =>
-        cat.id === categoryId
-          ? {
-              ...cat,
-              manuals: cat.manuals.map(manual =>
-                manual.id === manualId
-                  ? { ...manual, highlighted: !manual.highlighted }
-                  : manual
-              )
-            }
-          : cat
-      )
-    )
-  }
+  const toggleHighlight = async (categoryId: string, manualId: string) => {
+    try {
+      setLoadingAction(`highlight-${manualId}`)
+      const token = localStorage.getItem("token")
+      const manual = categories
+        .find(c => c.id === categoryId)
+        ?.manuals.find(m => m.id === manualId)
+      
+      if (!manual) return
 
-  const toggleApprove = (categoryId: string, manualId: string) => {
-    setCategories(prev =>
-      prev.map(cat =>
-        cat.id === categoryId
-          ? {
-              ...cat,
-              manuals: cat.manuals.map(manual =>
-                manual.id === manualId
-                  ? { ...manual, approved: !manual.approved }
-                  : manual
-              )
-            }
-          : cat
-      )
-    )
-  }
+      const response = await fetch(`http://localhost:5000/api/manuals/${manualId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ highlighted: !manual.highlighted })
+      })
 
-  const togglePause = (categoryId: string, manualId: string) => {
-    setCategories(prev =>
-      prev.map(cat =>
-        cat.id === categoryId
-          ? {
-              ...cat,
-              manuals: cat.manuals.map(manual =>
-                manual.id === manualId
-                  ? { ...manual, paused: !manual.paused }
-                  : manual
-              )
-            }
-          : cat
-      )
-    )
-  }
+      if (!response.ok) throw new Error("Failed to update highlight")
 
-  const deleteManual = (categoryId: string, manualId: string) => {
-    if (confirm("Are you sure you want to delete this manual?")) {
       setCategories(prev =>
         prev.map(cat =>
           cat.id === categoryId
             ? {
                 ...cat,
-                manuals: cat.manuals.filter(manual => manual.id !== manualId)
+                manuals: cat.manuals.map(m =>
+                  m.id === manualId
+                    ? { ...m, highlighted: !m.highlighted }
+                    : m
+                )
               }
             : cat
         )
       )
+    } catch (err) {
+      console.error("Error toggling highlight:", err)
+      alert("Failed to update highlight status")
+    } finally {
+      setLoadingAction(null)
     }
   }
 
-  const deleteCategory = (categoryId: string) => {
-    if (confirm("Are you sure you want to delete this category?")) {
-      setCategories(prev => prev.filter(cat => cat.id !== categoryId))
+  const toggleApprove = async (categoryId: string, manualId: string) => {
+    try {
+      setLoadingAction(`approve-${manualId}`)
+      const token = localStorage.getItem("token")
+      const manual = categories
+        .find(c => c.id === categoryId)
+        ?.manuals.find(m => m.id === manualId)
+      
+      if (!manual) return
+
+      const response = await fetch(`http://localhost:5000/api/manuals/${manualId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ approved: !manual.approved })
+      })
+
+      if (!response.ok) throw new Error("Failed to update approval")
+
+      setCategories(prev =>
+        prev.map(cat =>
+          cat.id === categoryId
+            ? {
+                ...cat,
+                manuals: cat.manuals.map(m =>
+                  m.id === manualId
+                    ? { ...m, approved: !m.approved }
+                    : m
+                )
+              }
+            : cat
+        )
+      )
+    } catch (err) {
+      console.error("Error toggling approve:", err)
+      alert("Failed to update approval status")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const togglePause = async (categoryId: string, manualId: string) => {
+    try {
+      setLoadingAction(`pause-${manualId}`)
+      const token = localStorage.getItem("token")
+      const manual = categories
+        .find(c => c.id === categoryId)
+        ?.manuals.find(m => m.id === manualId)
+      
+      if (!manual) return
+
+      const response = await fetch(`http://localhost:5000/api/manuals/${manualId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ paused: !manual.paused })
+      })
+
+      if (!response.ok) throw new Error("Failed to update pause status")
+
+      setCategories(prev =>
+        prev.map(cat =>
+          cat.id === categoryId
+            ? {
+                ...cat,
+                manuals: cat.manuals.map(m =>
+                  m.id === manualId
+                    ? { ...m, paused: !m.paused }
+                    : m
+                )
+              }
+            : cat
+        )
+      )
+    } catch (err) {
+      console.error("Error toggling pause:", err)
+      alert("Failed to update pause status")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const archiveManual = async (categoryId: string, manualId: string) => {
+    try {
+      setLoadingAction(`archive-${manualId}`)
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/manuals/${manualId}/archive`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) throw new Error("Failed to archive manual")
+
+      await loadData()
+    } catch (err) {
+      console.error("Error archiving manual:", err)
+      alert("Failed to archive manual")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const unarchiveManual = async (categoryId: string, manualId: string) => {
+    try {
+      setLoadingAction(`unarchive-${manualId}`)
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/manuals/${manualId}/unarchive`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) throw new Error("Failed to unarchive manual")
+
+      await loadData()
+    } catch (err) {
+      console.error("Error unarchiving manual:", err)
+      alert("Failed to unarchive manual")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const archiveCategory = async (categoryId: string) => {
+    if (!confirm("Archive this category?")) return
+
+    try {
+      setLoadingAction(`archive-category-${categoryId}`)
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ archived: true })
+      })
+
+      if (!response.ok) throw new Error("Failed to archive category")
+
+      await loadData()
+    } catch (err) {
+      console.error("Error archiving category:", err)
+      alert("Failed to archive category")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const copyManual = async (categoryId: string, manualId: string) => {
+    try {
+      setLoadingAction(`copy-${manualId}`)
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/manuals/${manualId}/copy`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) throw new Error("Failed to copy manual")
+
+      await loadData()
+      alert("Manual copied successfully")
+    } catch (err) {
+      console.error("Error copying manual:", err)
+      alert("Failed to copy manual")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const downloadManual = async (manualId: string, manualTitle: string) => {
+    try {
+      const token = localStorage.getItem("token")
+      
+      // Fetch the manual document
+      const response = await fetch(`http://localhost:5000/api/manuals/${manualId}/download`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        // If no document endpoint, show message
+        alert("No document attached to this manual yet")
+        return
+      }
+
+      // Create blob from response
+      const blob = await response.blob()
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = manualTitle.replace(/\s+/g, "_") + ".pdf"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error("Error downloading manual:", err)
+      alert("No document available for download")
+    }
+  }
+
+  const deleteManual = async (categoryId: any, manualId: any) => {
+    if (!confirm("Are you sure you want to delete this manual?")) return
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/manuals/${manualId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete manual")
+      }
+
+      await loadData()
+    } catch (err) {
+      console.error("Error deleting manual:", err)
+      alert("Failed to delete manual")
+    }
+  }
+
+  const deleteCategory = async (categoryId: any) => {
+    if (!confirm("Are you sure you want to delete this category?")) return
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete category")
+      }
+
+      await loadData()
+    } catch (err) {
+      console.error("Error deleting category:", err)
+      alert("Failed to delete category")
     }
   }
 
@@ -150,59 +472,104 @@ export default function ManualPage() {
     setEditTitle(currentTitle)
   }
 
-  const saveEditCategory = (categoryId: string) => {
-    if (editTitle.trim()) {
+  const saveEditCategory = async (categoryId: string) => {
+    if (!editTitle.trim()) return
+
+    try {
+      const token = localStorage.getItem("token")
+
+      await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: editTitle.trim() })
+      })
+
       setCategories(prev =>
         prev.map(cat =>
           cat.id === categoryId ? { ...cat, title: editTitle.trim() } : cat
         )
       )
+    } catch (err) {
+      console.error("Error updating category:", err)
     }
+
     setEditingCategory(null)
     setEditTitle("")
   }
 
-  const addCategory = () => {
-    if (newCategoryTitle.trim()) {
-      const newCategory = {
-        id: Date.now().toString(),
-        title: newCategoryTitle.trim(),
-        manuals: []
+  const addCategory = async () => {
+    if (!newCategoryTitle.trim()) {
+      alert("Please enter a category name")
+      return
+    }
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch("http://localhost:5000/api/categories", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: newCategoryTitle })
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to add category")
       }
-      setCategories(prev => [...prev, newCategory])
+
       setNewCategoryTitle("")
       setShowAddCategory(false)
+      await loadData()
+    } catch (err) {
+      console.error("Error adding category:", err)
+      alert("Failed to add category")
     }
   }
 
-  const addManualToCategory = (categoryId: string) => {
-    if (newManualData.title.trim()) {
-      const newManual = {
-        id: `${categoryId}-${Date.now()}`,
-        title: newManualData.title.trim(),
-        version: newManualData.version.trim() || "v1.0",
-        location: newManualData.location.trim() || "N/A",
-        issueDate: newManualData.issueDate,
-        highlighted: false,
-        approved: false,
-        paused: false
+  const addManualToCategory = async (categoryId: any) => {
+    if (!newManualData.title.trim()) {
+      alert("Please enter a manual title")
+      return
+    }
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch("http://localhost:5000/api/manuals", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: newManualData.title,
+          version: newManualData.version || "v1.0",
+          location: newManualData.location || "QMS",
+          issueDate: newManualData.issueDate,
+          category: categoryId
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to add manual")
       }
-      
-      setCategories(prev =>
-        prev.map(cat =>
-          cat.id === categoryId
-            ? { ...cat, manuals: [...cat.manuals, newManual] }
-            : cat
-        )
-      )
-      
+
+      setAddingManualToCategory(null)
       setNewManualData({
         title: "",
         version: "",
         location: "",
         issueDate: new Date().toISOString().split('T')[0]
       })
-      setAddingManualToCategory(null)
+      await loadData()
+    } catch (err) {
+      console.error("Error adding manual:", err)
+      alert("Failed to add manual")
     }
   }
 
@@ -362,7 +729,7 @@ export default function ManualPage() {
               }}
               onClick={() => setShowArchived(true)}
             >
-              Archived (0)
+              Archived ({archivedCategories.reduce((acc, cat) => acc + cat.manuals.length, 0)})
             </button>
           </div>
         </div>
@@ -406,7 +773,7 @@ export default function ManualPage() {
 
         {/* Categories */}
         <div className="space-y-4">
-          {categories.map((category) => {
+          {(showArchived ? archivedCategories : categories).map((category) => {
             const sortedManuals = sortManuals(category.manuals)
             const isExpanded = expandedCategories.includes(category.id)
             
@@ -466,6 +833,7 @@ export default function ManualPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
+                        archiveCategory(category.id)
                       }}
                       className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
                       title="Archive Category"
@@ -714,7 +1082,8 @@ export default function ManualPage() {
                               <div className="flex items-center gap-1 mr-2">
                                 <button
                                   onClick={() => toggleHighlight(category.id, manual.id)}
-                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  disabled={loadingAction === `highlight-${manual.id}`}
+                                  className={`p-2 rounded-lg transition-all hover:scale-105 ${loadingAction === `highlight-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
                                   style={{
                                     background: manual.highlighted ? COLORS.warning : "#FEF3C7",
                                     color: manual.highlighted ? COLORS.textWhite : "#92400E",
@@ -725,7 +1094,8 @@ export default function ManualPage() {
                                 </button>
                                 <button
                                   onClick={() => toggleApprove(category.id, manual.id)}
-                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  disabled={loadingAction === `approve-${manual.id}`}
+                                  className={`p-2 rounded-lg transition-all hover:scale-105 ${loadingAction === `approve-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
                                   style={{
                                     background: manual.approved ? COLORS.green500 : "#D1FAE5",
                                     color: manual.approved ? COLORS.textWhite : "#065F46",
@@ -736,7 +1106,8 @@ export default function ManualPage() {
                                 </button>
                                 <button
                                   onClick={() => togglePause(category.id, manual.id)}
-                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  disabled={loadingAction === `pause-${manual.id}`}
+                                  className={`p-2 rounded-lg transition-all hover:scale-105 ${loadingAction === `pause-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
                                   style={{
                                     background: manual.paused ? COLORS.warning : "#FEF3C7",
                                     color: manual.paused ? COLORS.textWhite : "#92400E",
@@ -765,7 +1136,9 @@ export default function ManualPage() {
                                   </button>
                                 </Link>
                                 <button
-                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  onClick={() => copyManual(category.id, manual.id)}
+                                  disabled={loadingAction === `copy-${manual.id}`}
+                                  className={`p-2 rounded-lg transition-all hover:scale-105 ${loadingAction === `copy-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
                                   style={{
                                     background: "#E5E7EB",
                                     color: "#374151",
@@ -775,7 +1148,9 @@ export default function ManualPage() {
                                   <Copy className="w-4 h-4" />
                                 </button>
                                 <button
-                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  onClick={() => downloadManual(manual.id, manual.title)}
+                                  disabled={loadingAction === `download-${manual.id}`}
+                                  className={`p-2 rounded-lg transition-all hover:scale-105 ${loadingAction === `download-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
                                   style={{
                                     background: "#E0E7FF",
                                     color: "#4338CA",
@@ -784,6 +1159,33 @@ export default function ManualPage() {
                                 >
                                   <Download className="w-4 h-4" />
                                 </button>
+                                {!showArchived ? (
+                                  <button
+                                    onClick={() => archiveManual(category.id, manual.id)}
+                                    disabled={loadingAction === `archive-${manual.id}`}
+                                    className={`p-2 rounded-lg transition-all hover:scale-105 ${loadingAction === `archive-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
+                                    style={{
+                                      background: "#FEF3C7",
+                                      color: "#92400E",
+                                    }}
+                                    title="Archive"
+                                  >
+                                    <Archive className="w-4 h-4" />
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => unarchiveManual(category.id, manual.id)}
+                                    disabled={loadingAction === `unarchive-${manual.id}`}
+                                    className={`p-2 rounded-lg transition-all hover:scale-105 ${loadingAction === `unarchive-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
+                                    style={{
+                                      background: "#D1FAE5",
+                                      color: "#065F46",
+                                    }}
+                                    title="Unarchive"
+                                  >
+                                    <Archive className="w-4 h-4" />
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => deleteManual(category.id, manual.id)}
                                   className="p-2 rounded-lg transition-all hover:scale-105"

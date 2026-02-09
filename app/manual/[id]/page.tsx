@@ -1,51 +1,50 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useParams } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Download, Edit, FileText } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 
-// Sample manual data
-const sampleManuals: Record<string, any> = {
-  "1-1": {
-    id: "1-1",
-    title: "Quality Manual",
-    version: "v2.1",
-    issueDate: "2024-01-15",
-    location: "QMS",
-    description: "Comprehensive quality management system documentation",
-    content: "This manual outlines the quality management procedures and standards...",
-  },
-  "1-2": {
-    id: "1-2",
-    title: "Safety Manual",
-    version: "v3.0",
-    issueDate: "2024-02-01",
-    location: "HSE",
-    description: "Health, Safety, and Environment guidelines",
-    content: "This manual covers all safety procedures and protocols...",
-  },
-  "1-3": {
-    id: "1-3",
-    title: "Operations Manual",
-    version: "v4.2",
-    issueDate: "2024-02-05",
-    location: "OPS",
-    description: "Standard operating procedures",
-    content: "This manual details the operational procedures...",
-  },
+interface Manual {
+  id: string
+  title: string
+  version: string
+  issueDate: string
+  location: string
+  description: string
+  content: string
 }
 
-export default function ManualDetailPage({ params }: { params: { id: string } }) {
-  const [manual] = useState(sampleManuals[params.id] || {
-    id: params.id,
-    title: "Manual Not Found",
-    version: "N/A",
-    issueDate: "N/A",
-    location: "N/A",
-    description: "This manual does not exist",
-    content: "No content available",
-  })
+export default function ManualDetailPage() {
+  const params = useParams()
+  const id = params?.id as string
+
+  const [manual, setManual] = useState<Manual | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!id) return
+
+    const fetchManual = async () => {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/manuals/${id}`
+        )
+        const data = await res.json()
+        setManual(data)
+      } catch (error) {
+        console.error("Failed to fetch manual:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchManual()
+  }, [id])
+
+  if (loading) return <div className="p-6">Loading...</div>
+  if (!manual) return <div className="p-6">Manual not found</div>
 
   return (
     <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
@@ -66,7 +65,7 @@ export default function ManualDetailPage({ params }: { params: { id: string } })
           </Link>
         </div>
 
-        {/* Manual Header */}
+        {/* Header */}
         <div
           className="rounded-lg p-6 mb-6"
           style={{
@@ -85,6 +84,7 @@ export default function ManualDetailPage({ params }: { params: { id: string } })
               >
                 <FileText className="w-6 h-6" />
               </div>
+
               <div>
                 <h1 className="text-3xl font-bold mb-2" style={{ color: COLORS.textPrimary }}>
                   {manual.title}
@@ -94,9 +94,11 @@ export default function ManualDetailPage({ params }: { params: { id: string } })
                 </p>
               </div>
             </div>
+
             <div className="flex gap-2">
-              <button
-                className="px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2"
+              <Link
+                href={`/manual/${id}/edit`}
+                className="px-4 py-2 rounded-lg font-medium flex items-center gap-2"
                 style={{
                   background: COLORS.bgWhite,
                   color: COLORS.textPrimary,
@@ -105,9 +107,15 @@ export default function ManualDetailPage({ params }: { params: { id: string } })
               >
                 <Edit className="w-4 h-4" />
                 Edit
-              </button>
+              </Link>
+
               <button
-                className="px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2"
+                onClick={() =>
+                  window.open(
+                    `${process.env.NEXT_PUBLIC_API_URL}/manuals/download/${manual.id}`
+                  )
+                }
+                className="px-4 py-2 rounded-lg font-medium flex items-center gap-2"
                 style={{
                   background: COLORS.primary,
                   color: COLORS.textWhite,
@@ -119,7 +127,7 @@ export default function ManualDetailPage({ params }: { params: { id: string } })
             </div>
           </div>
 
-          {/* Manual Info */}
+          {/* Info */}
           <div className="grid grid-cols-3 gap-4 pt-4 border-t" style={{ borderColor: COLORS.border }}>
             <div>
               <p className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>
@@ -129,6 +137,7 @@ export default function ManualDetailPage({ params }: { params: { id: string } })
                 {manual.version}
               </p>
             </div>
+
             <div>
               <p className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>
                 Issue Date
@@ -137,6 +146,7 @@ export default function ManualDetailPage({ params }: { params: { id: string } })
                 {manual.issueDate}
               </p>
             </div>
+
             <div>
               <p className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>
                 Location
@@ -145,48 +155,6 @@ export default function ManualDetailPage({ params }: { params: { id: string } })
                 {manual.location}
               </p>
             </div>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="mb-4">
-          <div className="flex gap-2 border-b" style={{ borderColor: COLORS.border }}>
-            <button
-              className="px-4 py-2 font-medium border-b-2"
-              style={{
-                borderColor: COLORS.primary,
-                color: COLORS.primary,
-              }}
-            >
-              Overview
-            </button>
-            <button
-              className="px-4 py-2 font-medium border-b-2"
-              style={{
-                borderColor: "transparent",
-                color: COLORS.textSecondary,
-              }}
-            >
-              Versions
-            </button>
-            <button
-              className="px-4 py-2 font-medium border-b-2"
-              style={{
-                borderColor: "transparent",
-                color: COLORS.textSecondary,
-              }}
-            >
-              Reviews
-            </button>
-            <button
-              className="px-4 py-2 font-medium border-b-2"
-              style={{
-                borderColor: "transparent",
-                color: COLORS.textSecondary,
-              }}
-            >
-              Audits
-            </button>
           </div>
         </div>
 
@@ -203,10 +171,6 @@ export default function ManualDetailPage({ params }: { params: { id: string } })
           </h2>
           <div className="prose max-w-none" style={{ color: COLORS.textSecondary }}>
             <p>{manual.content}</p>
-            <p className="mt-4">
-              This is a static preview of the manual. In a production environment, this would display
-              the full manual content with proper formatting, sections, and navigation.
-            </p>
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, use } from "react"
 import Link from "next/link"
 import { ArrowLeft, Download, Edit, FileText } from "lucide-react"
 import { COLORS } from "@/constant/colors"
@@ -54,9 +54,10 @@ const samplePolicies: Record<string, any> = {
   },
 }
 
-export default function PolicyDetailPage({ params }: { params: { id: string } }) {
-  const [policy] = useState(samplePolicies[params.id] || {
-    id: params.id,
+export default function PolicyDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
+  const [policy] = useState(samplePolicies[id] || {
+    id: id,
     title: "Policy Not Found",
     version: "N/A",
     issueDate: "N/A",

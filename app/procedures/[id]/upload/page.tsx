@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, use } from "react"
 import Link from "next/link"
 import { ArrowLeft, Upload } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 
-export default function UploadProcedurePage({ params }: { params: { id: string } }) {
+export default function UploadProcedurePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
   return (
@@ -15,7 +16,7 @@ export default function UploadProcedurePage({ params }: { params: { id: string }
           {/* Back Button */}
           <div className="mb-6">
             <Link
-              href={`/procedures/${params.id}`}
+              href={`/procedures/${id}`}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all"
               style={{
                 background: COLORS.bgWhite,
@@ -93,7 +94,7 @@ export default function UploadProcedurePage({ params }: { params: { id: string }
                 Upload
               </button>
               <Link
-                href={`/procedures/${params.id}`}
+                href={`/procedures/${id}`}
                 className="px-6 py-2 rounded-lg font-medium"
                 style={{
                   background: COLORS.bgGray,
