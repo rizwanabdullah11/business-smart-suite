@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, use } from "react"
 import Link from "next/link"
 import { ArrowLeft, Download, Edit, List } from "lucide-react"
 import { COLORS } from "@/constant/colors"
@@ -27,9 +27,10 @@ const sampleProcedures: Record<string, any> = {
   },
 }
 
-export default function ProcedureDetailPage({ params }: { params: { id: string } }) {
-  const [proc] = useState(sampleProcedures[params.id] || {
-    id: params.id,
+export default function ProcedureDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
+  const [proc] = useState(sampleProcedures[id] || {
+    id: id,
     title: "Procedure Not Found",
     version: "N/A",
     issueDate: "N/A",
@@ -86,7 +87,7 @@ export default function ProcedureDetailPage({ params }: { params: { id: string }
               </div>
             </div>
             <div className="flex gap-2">
-              <Link href={`/procedures/${params.id}/edit`}>
+              <Link href={`/procedures/${id}/edit`}>
                 <button
                   className="px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2"
                   style={{
