@@ -1,6 +1,6 @@
-export { Button } from "./Button";
-export type { ButtonProps } from "./Button";
-export { Input } from "./Input";
-export type { InputProps } from "./Input";
-export { Checkbox } from "./Checkbox";
-export type { CheckboxProps } from "./Checkbox";
+export { Button } from "./button";
+export type { ButtonProps } from "./button";
+export { Input } from "./input";
+export type { InputProps } from "./input";
+export { Checkbox } from "./checkbox";
+export type { CheckboxProps } from "./checkbox";
