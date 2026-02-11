@@ -316,7 +316,7 @@ export default function PoliciesPage() {
               />
               <button
                 onClick={addCategory}
-                className="px-6 py-2.5 rounded-lg font-medium hover:shadow-md transition-all"
+                className="px-6 py-3 rounded-lg font-medium hover:shadow-md transition-all"
                 style={{
                   background: COLORS.primary,
                   color: COLORS.textWhite,
@@ -329,7 +329,7 @@ export default function PoliciesPage() {
                   setShowAddCategory(false)
                   setNewCategoryTitle("")
                 }}
-                className="px-6 py-2.5 rounded-lg font-medium hover:shadow-md transition-all"
+                className="px-6 py-2.5 rounded-lg font-medium hover:shadow-md transition-all "
                 style={{
                   background: COLORS.bgGray,
                   color: COLORS.textPrimary,
