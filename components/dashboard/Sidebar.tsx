@@ -160,19 +160,21 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                         <span className="font-bold text-xl text-white">B</span>
                     </div>
                 )}
-
-                {/* Toggle Button */}
-                {!isCollapsed && (
-                    <button
-                        onClick={onToggle}
-                        className="p-2 rounded-lg transition-all duration-200 hover:bg-gray-100"
-                        style={{ color: COLORS.textSecondary }}
-                        title="Collapse sidebar"
-                    >
-                        <ChevronLeft className="w-5 h-5" />
-                    </button>
-                )}
             </div>
+
+            {/* Floating Toggle Button */}
+            <button
+                onClick={onToggle}
+                className="absolute -right-3 top-24 w-6 h-6 rounded-full border shadow-sm flex items-center justify-center transition-all duration-200 hover:scale-110 z-50"
+                style={{
+                    background: COLORS.bgWhite,
+                    borderColor: COLORS.border,
+                    color: COLORS.textSecondary
+                }}
+                title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+                {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </button>
 
             {/* Navigation */}
             <nav className="flex-1 overflow-y-auto py-6 px-3">

@@ -16,19 +16,19 @@ export function TopNavbar({ user, isCollapsed, onLogout, onAddFolder }: TopNavba
         <header
             className="fixed top-0 left-0 right-0 h-20 border-b z-30 flex items-center justify-between backdrop-blur-md transition-all duration-300"
             style={{
-                background: `linear-gradient(135deg, ${COLORS.indigo600} 0%, ${COLORS.purple600} 50%, ${COLORS.pink600} 100%)`,
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
+                background: COLORS.bgWhite,
+                borderColor: COLORS.border,
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
                 paddingLeft: isCollapsed ? '112px' : '312px', // Sidebar width (80/280) + 32px (main padding)
                 paddingRight: '2rem'
             }}
         >
             {/* Left Section - Welcome Message */}
             <div className="hidden xl:block">
-                <h1 className="text-xl font-bold text-white">
+                <h1 className="text-xl font-bold" style={{ color: COLORS.textPrimary }}>
                     {user ? `Welcome back, ${user.name}` : 'Welcome back'}
                 </h1>
-                <p className="text-sm text-white opacity-90">
+                <p className="text-sm" style={{ color: COLORS.textSecondary }}>
                     Here is an overview of your compliance status
                 </p>
             </div>
@@ -40,14 +40,16 @@ export function TopNavbar({ user, isCollapsed, onLogout, onAddFolder }: TopNavba
                     <input
                         type="text"
                         placeholder="Search..."
-                        className="pl-10 pr-4 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-white transition-all w-48 text-white placeholder-white"
+                        className="pl-10 pr-4 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all w-48"
                         style={{
-                            borderColor: 'rgba(255, 255, 255, 0.3)',
-                            background: 'rgba(255, 255, 255, 0.15)',
+                            borderColor: COLORS.border,
+                            background: COLORS.bgGrayLight,
+                            color: COLORS.textPrimary
                         }}
                     />
                     <Search
-                        className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white opacity-75"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+                        style={{ color: COLORS.textSecondary }}
                     />
                 </div>
 
@@ -82,10 +84,9 @@ export function TopNavbar({ user, isCollapsed, onLogout, onAddFolder }: TopNavba
 
                 {/* Notifications */}
                 <button
-                    className="relative p-2 rounded-lg transition-all duration-200 hover:bg-white hover:bg-opacity-20"
+                    className="relative p-2 rounded-lg transition-all duration-200 hover:bg-gray-100"
                     style={{
-                        background: 'rgba(255, 255, 255, 0.15)',
-                        color: 'white'
+                        color: COLORS.textSecondary
                     }}
                 >
                     <Bell className="w-4 h-4" />
@@ -96,19 +97,20 @@ export function TopNavbar({ user, isCollapsed, onLogout, onAddFolder }: TopNavba
                 </button>
 
                 {/* User Profile & Logout */}
-                <div className="flex items-center gap-2 pl-2 border-l border-white border-opacity-30">
+                <div className="flex items-center gap-2 pl-2 border-l" style={{ borderColor: COLORS.border }}>
                     <div className="hidden xl:block text-right">
-                        <p className="text-sm font-bold text-white">
+                        <p className="text-sm font-bold" style={{ color: COLORS.textPrimary }}>
                             {user?.name || 'User'}
                         </p>
-                        <p className="text-xs text-white opacity-75">
+                        <p className="text-xs" style={{ color: COLORS.textSecondary }}>
                             {user?.role || 'Administrator'}
                         </p>
                     </div>
                     <button
                         onClick={onLogout}
-                        className="p-2 rounded-lg transition-all duration-200 hover:bg-white hover:bg-opacity-20 text-white"
+                        className="p-2 rounded-lg transition-all duration-200 hover:bg-gray-100"
                         title="Logout"
+                        style={{ color: COLORS.textSecondary }}
                     >
                         <LogOut className="w-5 h-5" />
                     </button>
