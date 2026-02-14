@@ -2,41 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import {
-    BarChart,
-    TrendingUp,
-    Shield,
-    Settings,
-    Plus,
-    BookOpen,
-    FileText,
-    ClipboardList,
-    FileInput,
-    Award,
-    Briefcase,
-    Users,
-    FileIcon as FileDescription,
-    FileWarning,
-    AlertOctagon,
-    FileCode,
-    AlertTriangle,
-    Calendar,
-    Target,
-    PenTool,
-    BarChart2,
-    FileCheck,
-    Scale,
-    Truck,
-    GraduationCap,
-    Zap,
-    Loader2
-} from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 import { useToast } from "@/components/ui/use-toast"
-import { BackgroundLayer } from "@/components/dashboard/BackgroundLayer"
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
-import { ExpandableNavigationCard } from "@/components/dashboard/ExpandableNavigationCard"
-import { SystemStatus } from "@/components/dashboard/SystemStatus"
+import { Sidebar } from "@/components/dashboard/Sidebar"
+import { TopNavbar } from "@/components/dashboard/TopNavbar"
+import { DashboardContent } from "@/components/dashboard/DashboardContent"
+import { Footer } from "@/components/dashboard/Footer"
 
 // API Config
 const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api";
@@ -44,9 +16,9 @@ const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/a
 export default function DashboardPage() {
     const router = useRouter()
     const { toast } = useToast()
-    const [customSections, setCustomSections] = useState<any[]>([])
     const [user, setUser] = useState<any>(null)
     const [isLoading, setIsLoading] = useState(true)
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -100,88 +72,17 @@ export default function DashboardPage() {
         })
     }
 
-    const navigationSections = [
-        {
-            title: "Core Management",
-            description: "Essential business operations and compliance",
-            icon: <Shield className="w-6 h-6" />,
-            iconColor: COLORS.blue500,
-            items: [
-                { icon: <BookOpen className="w-5 h-5" />, label: "Manual", href: "/manual", description: "Company policies and procedures" },
-                { icon: <FileText className="w-5 h-5" />, label: "Policies", href: "/policies", description: "Organizational policies" },
-                { icon: <ClipboardList className="w-5 h-5" />, label: "Procedures", href: "/procedures", description: "Standard operating procedures" },
-                { icon: <FileInput className="w-5 h-5" />, label: "Forms", href: "/forms", description: "Business forms and templates" },
-                { icon: <Award className="w-5 h-5" />, label: "Certificates", href: "/certificate", description: "Certifications and licenses" },
-            ]
-        },
-        {
-            title: "Compliance & Risk",
-            description: "Risk management and regulatory compliance",
-            icon: <TrendingUp className="w-6 h-6" />,
-            iconColor: COLORS.emerald500,
-            items: [
-                { icon: <Briefcase className="w-5 h-5" />, label: "Business Continuity", href: "/business-continuity", description: "Business continuity planning" },
-                { icon: <Users className="w-5 h-5" />, label: "Management Reviews", href: "/management-reviews", description: "Management review processes" },
-                { icon: <FileDescription className="w-5 h-5" />, label: "Job Descriptions", href: "/job-descriptions", description: "Role definitions and responsibilities" },
-                { icon: <FileWarning className="w-5 h-5" />, label: "Work Instructions", href: "/work-instructions", description: "Detailed work procedures" },
-                { icon: <AlertOctagon className="w-5 h-5" />, label: "Risk Assessments", href: "/risk-assessments", description: "Risk evaluation and mitigation" },
-                { icon: <AlertOctagon className="w-5 h-5" />, label: "COSHH", href: "/coshh", description: "Control of substances hazardous to health" },
-                { icon: <FileCode className="w-5 h-5" />, label: "Technical File", href: "/technical-file", description: "Technical documentation" },
-                { icon: <AlertTriangle className="w-5 h-5" />, label: "IMS Aspects & Impacts", href: "/ims-aspects-impacts", description: "Environmental and H&S risk management" },
-            ]
-        },
-        {
-            title: "Registers & Records",
-            description: "Documentation and record keeping",
-            icon: <BarChart className="w-6 h-6" />,
-            iconColor: COLORS.orange500,
-            items: [
-                { icon: <Calendar className="w-5 h-5" />, label: "Audit Schedule", href: "/audit-schedule", description: "Audit planning and scheduling" },
-                { icon: <Users className="w-5 h-5" />, label: "Interested Parties", href: "/interested-parties", description: "Stakeholder management" },
-                { icon: <FileText className="w-5 h-5" />, label: "Organisational Context", href: "/organisational-context", description: "Organizational structure" },
-                { icon: <Target className="w-5 h-5" />, label: "Objectives", href: "/objectives", description: "Strategic objectives and goals" },
-                { icon: <PenTool className="w-5 h-5" />, label: "Maintenance", href: "/maintenance", description: "Maintenance schedules and records" },
-                { icon: <BarChart2 className="w-5 h-5" />, label: "Improvement Register", href: "/improvement-register", description: "Continuous improvement tracking" },
-                { icon: <FileCheck className="w-5 h-5" />, label: "Statement of Applicability", href: "/statement-of-applicability", description: "ISO compliance statements" },
-                { icon: <Scale className="w-5 h-5" />, label: "Legal Register", href: "/legal-register", description: "Legal requirements and compliance" },
-                { icon: <Truck className="w-5 h-5" />, label: "Suppliers", href: "/suppliers", description: "Supplier management and evaluation" },
-                { icon: <GraduationCap className="w-5 h-5" />, label: "Training", href: "/training", description: "Training records and development" },
-                { icon: <Zap className="w-5 h-5" />, label: "Energy Consumption", href: "/energy-consumption", description: "Track and analyze energy usage and environmental impact" },
-            ]
-        },
-        {
-            title: "Administration",
-            description: "System administration and settings",
-            icon: <Settings className="w-6 h-6" />,
-            iconColor: COLORS.neutral600,
-            items: [
-                { icon: <Users className="w-5 h-5" />, label: "Permissions", href: "/admin/permissions", description: "User access management" },
-            ]
-        }
-    ]
-
     const handleAddFolder = () => {
         // TODO: Implement add folder functionality
-        console.log("Add folder clicked")
+        toast({
+            title: "Coming Soon",
+            description: "Add folder functionality will be available soon.",
+        })
     }
 
-    const allSections = [
-        ...navigationSections,
-        ...customSections.map((section) => ({
-            title: section.title,
-            description: section.description || "Custom section",
-            icon: <Shield className="w-6 h-6" />,
-            iconColor: COLORS.neutral500,
-            items: [
-                {
-                    icon: <Shield className="w-5 h-5" />,
-                    label: section.title,
-                    href: `/custom-sections/${section.id}`,
-                    description: section.description || "Custom section"
-                }
-            ]
-        }))
-    ]
+    const toggleSidebar = () => {
+        setIsSidebarCollapsed(!isSidebarCollapsed)
+    }
 
     if (isLoading) {
         return (
@@ -195,39 +96,32 @@ export default function DashboardPage() {
     }
 
     return (
-        <div className="min-h-screen relative">
-            {/* Background */}
-            <BackgroundLayer />
+        <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
+            {/* Sidebar */}
+            <Sidebar isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
 
-            {/* Content */}
-            <div className="relative z-10">
-                <div className="px-6 pt-12 pb-12">
-                    <div className="max-w-7xl mx-auto">
-                        {/* Header */}
-                        <DashboardHeader
-                            onAddFolder={handleAddFolder}
-                            user={user}
-                            onLogout={handleLogout}
-                        />
+            {/* Main Content Area */}
+            <div
+                className="transition-all duration-300"
+                style={{
+                    marginLeft: isSidebarCollapsed ? '80px' : '280px'
+                }}
+            >
+                {/* Top Navbar */}
+                <TopNavbar
+                    user={user}
+                    isCollapsed={isSidebarCollapsed}
+                    onLogout={handleLogout}
+                    onAddFolder={handleAddFolder}
+                />
 
-                        {/* Expandable Navigation Cards Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {allSections.map((section, index) => (
-                                <ExpandableNavigationCard
-                                    key={index}
-                                    title={section.title}
-                                    description={section.description}
-                                    icon={section.icon}
-                                    iconColor={section.iconColor}
-                                    items={section.items}
-                                />
-                            ))}
-                        </div>
+                {/* Page Content */}
+                <main className="pt-24 px-8 pb-8">
+                    <DashboardContent />
+                </main>
 
-                        {/* System Status */}
-                        <SystemStatus />
-                    </div>
-                </div>
+                {/* Footer */}
+                <Footer />
             </div>
         </div>
     )
