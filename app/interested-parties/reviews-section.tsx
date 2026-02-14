@@ -1,0 +1,16 @@
+"use client"
+
+// Placeholder for Reviews Section
+// This component will be implemented with API calls instead of Prisma
+
+export function ReviewsSection({
+    partyId,
+    reviews,
+    canEdit
+}: {
+    partyId: string
+    reviews: any[]
+    canEdit: boolean
+}) {
+    return null
+}
