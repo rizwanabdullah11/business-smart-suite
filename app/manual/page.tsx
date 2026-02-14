@@ -2,15 +2,15 @@
 
 import { useState } from "react"
 import { useEffect } from "react"
-import { 
-  FileText, 
-  Plus, 
-  Archive, 
-  Edit, 
-  Trash2, 
-  Check, 
-  X, 
-  GripVertical, 
+import {
+  FileText,
+  Plus,
+  Archive,
+  Edit,
+  Trash2,
+  Check,
+  X,
+  GripVertical,
   Star,
   Pause,
   ArrowUpDown,
@@ -162,7 +162,7 @@ export default function ManualPage() {
       const manual = categories
         .find(c => c.id === categoryId)
         ?.manuals.find(m => m.id === manualId)
-      
+
       if (!manual) return
 
       const response = await fetch(`http://localhost:5000/api/manuals/${manualId}`, {
@@ -180,13 +180,13 @@ export default function ManualPage() {
         prev.map(cat =>
           cat.id === categoryId
             ? {
-                ...cat,
-                manuals: cat.manuals.map(m =>
-                  m.id === manualId
-                    ? { ...m, highlighted: !m.highlighted }
-                    : m
-                )
-              }
+              ...cat,
+              manuals: cat.manuals.map(m =>
+                m.id === manualId
+                  ? { ...m, highlighted: !m.highlighted }
+                  : m
+              )
+            }
             : cat
         )
       )
@@ -205,7 +205,7 @@ export default function ManualPage() {
       const manual = categories
         .find(c => c.id === categoryId)
         ?.manuals.find(m => m.id === manualId)
-      
+
       if (!manual) return
 
       const response = await fetch(`http://localhost:5000/api/manuals/${manualId}`, {
@@ -223,13 +223,13 @@ export default function ManualPage() {
         prev.map(cat =>
           cat.id === categoryId
             ? {
-                ...cat,
-                manuals: cat.manuals.map(m =>
-                  m.id === manualId
-                    ? { ...m, approved: !m.approved }
-                    : m
-                )
-              }
+              ...cat,
+              manuals: cat.manuals.map(m =>
+                m.id === manualId
+                  ? { ...m, approved: !m.approved }
+                  : m
+              )
+            }
             : cat
         )
       )
@@ -248,7 +248,7 @@ export default function ManualPage() {
       const manual = categories
         .find(c => c.id === categoryId)
         ?.manuals.find(m => m.id === manualId)
-      
+
       if (!manual) return
 
       const response = await fetch(`http://localhost:5000/api/manuals/${manualId}`, {
@@ -266,13 +266,13 @@ export default function ManualPage() {
         prev.map(cat =>
           cat.id === categoryId
             ? {
-                ...cat,
-                manuals: cat.manuals.map(m =>
-                  m.id === manualId
-                    ? { ...m, paused: !m.paused }
-                    : m
-                )
-              }
+              ...cat,
+              manuals: cat.manuals.map(m =>
+                m.id === manualId
+                  ? { ...m, paused: !m.paused }
+                  : m
+              )
+            }
             : cat
         )
       )
@@ -387,7 +387,7 @@ export default function ManualPage() {
   const downloadManual = async (manualId: string, manualTitle: string) => {
     try {
       const token = localStorage.getItem("token")
-      
+
       // Fetch the manual document
       const response = await fetch(`http://localhost:5000/api/manuals/${manualId}/download`, {
         headers: {
@@ -403,7 +403,7 @@ export default function ManualPage() {
 
       // Create blob from response
       const blob = await response.blob()
-      
+
       // Create download link
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement("a")
@@ -645,7 +645,7 @@ export default function ManualPage() {
               <button
                 className="px-5 py-2.5 rounded-lg font-medium transition-all hover:shadow-lg flex items-center gap-2"
                 style={{
-                  background: COLORS.primary,
+                  background: COLORS.primaryGradient,
                   color: COLORS.textWhite,
                 }}
               >
@@ -685,7 +685,7 @@ export default function ManualPage() {
                 onClick={addCategory}
                 className="px-6 py-2.5 rounded-lg font-medium hover:shadow-md transition-all"
                 style={{
-                  background: COLORS.primary,
+                  background: COLORS.primaryGradient,
                   color: COLORS.textWhite,
                 }}
               >
@@ -743,7 +743,7 @@ export default function ManualPage() {
             onClick={() => toggleSort("name")}
             className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2"
             style={{
-              background: sortType === "name" ? COLORS.primary : COLORS.bgWhite,
+              background: sortType === "name" ? COLORS.primaryGradient : COLORS.bgWhite,
               color: sortType === "name" ? COLORS.textWhite : COLORS.textPrimary,
               border: `1px solid ${sortType === "name" ? COLORS.primary : COLORS.border}`,
             }}
@@ -758,7 +758,7 @@ export default function ManualPage() {
             onClick={() => toggleSort("date")}
             className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2"
             style={{
-              background: sortType === "date" ? COLORS.primary : COLORS.bgWhite,
+              background: sortType === "date" ? COLORS.primaryGradient : COLORS.bgWhite,
               color: sortType === "date" ? COLORS.textWhite : COLORS.textPrimary,
               border: `1px solid ${sortType === "date" ? COLORS.primary : COLORS.border}`,
             }}
@@ -776,7 +776,7 @@ export default function ManualPage() {
           {(showArchived ? archivedCategories : categories).map((category) => {
             const sortedManuals = sortManuals(category.manuals)
             const isExpanded = expandedCategories.includes(category.id)
-            
+
             return (
               <div
                 key={category.id}
@@ -790,7 +790,7 @@ export default function ManualPage() {
                 <div
                   className="p-5 flex items-center justify-between cursor-pointer"
                   style={{
-                    background: COLORS.primary,
+                    background: COLORS.primaryGradient,
                     color: COLORS.textWhite,
                   }}
                   onClick={() => toggleCategory(category.id)}
@@ -1083,38 +1083,41 @@ export default function ManualPage() {
                                 <button
                                   onClick={() => toggleHighlight(category.id, manual.id)}
                                   disabled={loadingAction === `highlight-${manual.id}`}
-                                  className={`p-2 rounded-lg transition-all hover:scale-105 ${loadingAction === `highlight-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
+                                  className={`p-2.5 rounded-lg transition-all hover:scale-105 ${loadingAction === `highlight-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
                                   style={{
-                                    background: manual.highlighted ? COLORS.warning : "#FEF3C7",
-                                    color: manual.highlighted ? COLORS.textWhite : "#92400E",
+                                    background: manual.highlighted ? "#FEF9C3" : "#FFFBEB",
+                                    color: manual.highlighted ? "#854D0E" : "#D97706",
+                                    border: `1px solid ${manual.highlighted ? "#FEF08A" : "transparent"}`
                                   }}
                                   title={manual.highlighted ? "Remove Highlight" : "Highlight"}
                                 >
-                                  <Star className={`w-4 h-4 ${manual.highlighted ? "fill-current" : ""}`} />
+                                  <Star className={`w-5 h-5 ${manual.highlighted ? "fill-current" : ""}`} />
                                 </button>
                                 <button
                                   onClick={() => toggleApprove(category.id, manual.id)}
                                   disabled={loadingAction === `approve-${manual.id}`}
-                                  className={`p-2 rounded-lg transition-all hover:scale-105 ${loadingAction === `approve-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
+                                  className={`p-2.5 rounded-lg transition-all hover:scale-105 ${loadingAction === `approve-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
                                   style={{
-                                    background: manual.approved ? COLORS.green500 : "#D1FAE5",
-                                    color: manual.approved ? COLORS.textWhite : "#065F46",
+                                    background: manual.approved ? "#DCFCE7" : "#F0FDF4",
+                                    color: manual.approved ? "#166534" : "#15803D",
+                                    border: `1px solid ${manual.approved ? "#BBF7D0" : "transparent"}`
                                   }}
                                   title={manual.approved ? "Unapprove" : "Approve"}
                                 >
-                                  <Check className="w-4 h-4" />
+                                  <Check className="w-5 h-5" />
                                 </button>
                                 <button
                                   onClick={() => togglePause(category.id, manual.id)}
                                   disabled={loadingAction === `pause-${manual.id}`}
-                                  className={`p-2 rounded-lg transition-all hover:scale-105 ${loadingAction === `pause-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
+                                  className={`p-2.5 rounded-lg transition-all hover:scale-105 ${loadingAction === `pause-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
                                   style={{
-                                    background: manual.paused ? COLORS.warning : "#FEF3C7",
-                                    color: manual.paused ? COLORS.textWhite : "#92400E",
+                                    background: manual.paused ? "#FFEDD5" : "#FFF7ED",
+                                    color: manual.paused ? "#9A3412" : "#C2410C",
+                                    border: `1px solid ${manual.paused ? "#FED7AA" : "transparent"}`
                                   }}
                                   title={manual.paused ? "Resume" : "Pause"}
                                 >
-                                  <Pause className="w-4 h-4" />
+                                  <Pause className="w-5 h-5" />
                                 </button>
                               </div>
 
@@ -1125,77 +1128,77 @@ export default function ManualPage() {
                               <div className="flex items-center gap-1">
                                 <Link href={`/manual/${manual.id}/edit`}>
                                   <button
-                                    className="p-2 rounded-lg transition-all hover:scale-105"
+                                    className="p-2.5 rounded-lg transition-all hover:scale-105"
                                     style={{
                                       background: "#DBEAFE",
                                       color: "#1E40AF",
                                     }}
                                     title="Edit"
                                   >
-                                    <Edit className="w-4 h-4" />
+                                    <Edit className="w-5 h-5" />
                                   </button>
                                 </Link>
                                 <button
                                   onClick={() => copyManual(category.id, manual.id)}
                                   disabled={loadingAction === `copy-${manual.id}`}
-                                  className={`p-2 rounded-lg transition-all hover:scale-105 ${loadingAction === `copy-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
+                                  className={`p-2.5 rounded-lg transition-all hover:scale-105 ${loadingAction === `copy-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
                                   style={{
-                                    background: "#E5E7EB",
+                                    background: "#F3F4F6",
                                     color: "#374151",
                                   }}
                                   title="Duplicate"
                                 >
-                                  <Copy className="w-4 h-4" />
+                                  <Copy className="w-5 h-5" />
                                 </button>
                                 <button
                                   onClick={() => downloadManual(manual.id, manual.title)}
                                   disabled={loadingAction === `download-${manual.id}`}
-                                  className={`p-2 rounded-lg transition-all hover:scale-105 ${loadingAction === `download-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
+                                  className={`p-2.5 rounded-lg transition-all hover:scale-105 ${loadingAction === `download-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
                                   style={{
                                     background: "#E0E7FF",
                                     color: "#4338CA",
                                   }}
                                   title="Download"
                                 >
-                                  <Download className="w-4 h-4" />
+                                  <Download className="w-5 h-5" />
                                 </button>
                                 {!showArchived ? (
                                   <button
                                     onClick={() => archiveManual(category.id, manual.id)}
                                     disabled={loadingAction === `archive-${manual.id}`}
-                                    className={`p-2 rounded-lg transition-all hover:scale-105 ${loadingAction === `archive-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
+                                    className={`p-2.5 rounded-lg transition-all hover:scale-105 ${loadingAction === `archive-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
                                     style={{
                                       background: "#FEF3C7",
                                       color: "#92400E",
                                     }}
                                     title="Archive"
                                   >
-                                    <Archive className="w-4 h-4" />
+                                    <Archive className="w-5 h-5" />
                                   </button>
                                 ) : (
                                   <button
                                     onClick={() => unarchiveManual(category.id, manual.id)}
                                     disabled={loadingAction === `unarchive-${manual.id}`}
-                                    className={`p-2 rounded-lg transition-all hover:scale-105 ${loadingAction === `unarchive-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
+                                    className={`p-2.5 rounded-lg transition-all hover:scale-105 ${loadingAction === `unarchive-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
                                     style={{
                                       background: "#D1FAE5",
                                       color: "#065F46",
                                     }}
                                     title="Unarchive"
                                   >
-                                    <Archive className="w-4 h-4" />
+                                    <Archive className="w-5 h-5" />
                                   </button>
                                 )}
                                 <button
                                   onClick={() => deleteManual(category.id, manual.id)}
-                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  className="p-2.5 rounded-lg transition-all hover:scale-105"
                                   style={{
                                     background: "#FEE2E2",
                                     color: "#991B1B",
                                   }}
                                   title="Delete"
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  <Trash2 className="w-5 h-5" />
                                 </button>
                               </div>
                             </div>

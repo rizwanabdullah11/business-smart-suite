@@ -1,6 +1,7 @@
 export const COLORS = {
     // Primary Brand Colors
-    primary: "#2563eb",
+    primary: "#4f46e5",
+    primaryGradient: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
     primaryLight: "#3b82f6",
     primaryDark: "#1d4ed8",
     primaryShadow: "rgba(37, 99, 235, 0.25)",
