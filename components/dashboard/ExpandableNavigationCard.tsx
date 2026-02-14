@@ -37,7 +37,7 @@ function ItemCard({ icon, label, description, href, iconColor }: ItemCardProps) 
             >
                 <div className="flex flex-col items-center text-center">
                     <div
-                        className="flex items-center justify-center w-12 h-12 rounded-lg mb-3"
+                        className="flex items-center justify-center w-14 h-14 rounded-lg mb-3"
                         style={{
                             backgroundColor: `${iconColor}15`,
                             color: iconColor
@@ -46,13 +46,13 @@ function ItemCard({ icon, label, description, href, iconColor }: ItemCardProps) 
                         {icon}
                     </div>
                     <h4
-                        className="font-semibold mb-1 text-sm"
+                        className="font-bold mb-2 text-base"
                         style={{ color: COLORS.textPrimary }}
                     >
                         {label}
                     </h4>
                     <p
-                        className="text-xs leading-tight"
+                        className="text-sm leading-snug"
                         style={{ color: COLORS.textSecondary }}
                     >
                         {description}
@@ -98,11 +98,11 @@ export function ExpandableNavigationCard({
             onMouseLeave={() => setIsExpanded(false)}
         >
             {/* Section Header */}
-            <div className="p-6 border-b" style={{ borderColor: COLORS.border }}>
+            <div className="p-8 border-b" style={{ borderColor: COLORS.border }}>
                 <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4 flex-1">
+                    <div className="flex items-start gap-5 flex-1">
                         <div
-                            className="flex items-center justify-center w-12 h-12 rounded-lg flex-shrink-0"
+                            className="flex items-center justify-center w-16 h-16 rounded-lg flex-shrink-0"
                             style={{
                                 backgroundColor: `${iconColor}15`,
                                 color: iconColor
@@ -112,13 +112,13 @@ export function ExpandableNavigationCard({
                         </div>
                         <div className="flex-1">
                             <h3
-                                className="text-xl font-bold mb-2"
+                                className="text-2xl font-bold mb-3"
                                 style={{ color: COLORS.textPrimary }}
                             >
                                 {title}
                             </h3>
                             <p
-                                className="text-sm"
+                                className="text-base leading-relaxed"
                                 style={{ color: COLORS.textSecondary }}
                             >
                                 {description}
@@ -126,7 +126,7 @@ export function ExpandableNavigationCard({
                         </div>
                     </div>
                     <ChevronLeft
-                        className={`w-5 h-5 flex-shrink-0 transition-transform duration-300 ${isExpanded ? 'rotate-90' : '-rotate-90'}`}
+                        className={`w-6 h-6 flex-shrink-0 transition-transform duration-300 ${isExpanded ? 'rotate-90' : '-rotate-90'}`}
                         style={{ color: COLORS.neutral400 }}
                     />
                 </div>
@@ -134,8 +134,8 @@ export function ExpandableNavigationCard({
 
             {/* Expanded Items Grid */}
             {isExpanded && (
-                <div className="p-6">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="p-8">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
                         {items.map((item, index) => (
                             <ItemCard
                                 key={index}

@@ -2,14 +2,14 @@ import { COLORS } from "@/constant/colors"
 
 export function SystemStatus() {
     return (
-        <div className="mt-8">
-            <div className="flex items-center gap-2">
+        <div className="mt-12">
+            <div className="flex items-center gap-3">
                 <div
-                    className="w-2 h-2 rounded-full"
+                    className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: COLORS.green500 }}
                 ></div>
                 <span
-                    className="text-sm font-medium"
+                    className="text-base font-semibold"
                     style={{ color: COLORS.textPrimary }}
                 >
                     System status: Optimal

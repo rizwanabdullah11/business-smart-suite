@@ -92,6 +92,66 @@ export const COLORS = {
     green100: "#dcfce7",
     green50: "#f0fdf4",
 
+    // Purple/Violet Colors (for premium accents)
+    purple900: "#581c87",
+    purple800: "#6b21a8",
+    purple700: "#7c3aed",
+    purple600: "#9333ea",
+    purple500: "#a855f7",
+    purple400: "#c084fc",
+    purple300: "#d8b4fe",
+    purple200: "#e9d5ff",
+    purple100: "#f3e8ff",
+    purple50: "#faf5ff",
+
+    // Pink Colors (for vibrant accents)
+    pink900: "#831843",
+    pink800: "#9f1239",
+    pink700: "#be123c",
+    pink600: "#e11d48",
+    pink500: "#f43f5e",
+    pink400: "#fb7185",
+    pink300: "#fda4af",
+    pink200: "#fecdd3",
+    pink100: "#ffe4e6",
+    pink50: "#fff1f2",
+
+    // Indigo Colors (for professional accents)
+    indigo900: "#312e81",
+    indigo800: "#3730a3",
+    indigo700: "#4338ca",
+    indigo600: "#4f46e5",
+    indigo500: "#6366f1",
+    indigo400: "#818cf8",
+    indigo300: "#a5b4fc",
+    indigo200: "#c7d2fe",
+    indigo100: "#e0e7ff",
+    indigo50: "#eef2ff",
+
+    // Cyan Colors (for modern accents)
+    cyan900: "#164e63",
+    cyan800: "#155e75",
+    cyan700: "#0e7490",
+    cyan600: "#0891b2",
+    cyan500: "#06b6d4",
+    cyan400: "#22d3ee",
+    cyan300: "#67e8f9",
+    cyan200: "#a5f3fc",
+    cyan100: "#cffafe",
+    cyan50: "#ecfeff",
+
+    // Gradient Definitions
+    gradientBlue: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    gradientPurple: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)",
+    gradientOrange: "linear-gradient(135deg, #f97316 0%, #fb923c 100%)",
+    gradientGreen: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
+    gradientCyan: "linear-gradient(135deg, #06b6d4 0%, #22d3ee 100%)",
+    gradientIndigo: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+    gradientSunset: "linear-gradient(135deg, #f97316 0%, #ec4899 100%)",
+    gradientOcean: "linear-gradient(135deg, #0891b2 0%, #3b82f6 100%)",
+    gradientForest: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+    gradientRoyal: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+
     // Modal Overlay
     modalOverlay: "rgba(0, 0, 0, 0.5)",
 
@@ -103,6 +163,13 @@ export const COLORS = {
     shadowXl: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
     loginCardShadow: "0 10px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)",
     loginCardShadowHover: "0 20px 60px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.06)",
+
+    // Colored Shadows for vibrant effects
+    shadowBlue: "0 10px 25px -5px rgba(59, 130, 246, 0.3)",
+    shadowPurple: "0 10px 25px -5px rgba(168, 85, 247, 0.3)",
+    shadowPink: "0 10px 25px -5px rgba(236, 72, 153, 0.3)",
+    shadowGreen: "0 10px 25px -5px rgba(16, 185, 129, 0.3)",
+    shadowOrange: "0 10px 25px -5px rgba(249, 115, 22, 0.3)",
 } as const;
 
 // CSS Custom Properties for use in Tailwind classes
