@@ -37,26 +37,27 @@ import {
 import { COLORS } from "@/constant/colors"
 
 interface SidebarProps {
-    isCollapsed: boolean
-    onToggle: () => void
+    isExpanded: boolean
+    onHover: (isHovered: boolean) => void
 }
 
-interface NavItem {
-    icon: any
-    label: string
-    href: string
-    badge?: string
-}
-
-interface NavSection {
-    title: string
-    icon: any
-    items: NavItem[]
-}
-
-export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
+export function Sidebar({ isExpanded, onHover }: SidebarProps) {
     const pathname = usePathname()
     const [expandedSection, setExpandedSection] = useState<string | null>("Core Management")
+    // Removed local isHovered state in favor of props
+
+    interface NavItem {
+        icon: any
+        label: string
+        href: string
+        badge?: string
+    }
+
+    interface NavSection {
+        title: string
+        icon: any
+        items: NavItem[]
+    }
 
     const navigationSections: NavSection[] = [
         {
@@ -111,7 +112,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     ]
 
     const toggleSection = (title: string) => {
-        if (isCollapsed) return
+        if (!isExpanded) return
         setExpandedSection(expandedSection === title ? null : title)
     }
 
@@ -121,18 +122,20 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         <aside
             className="fixed left-0 top-0 h-screen border-r transition-all duration-300 flex flex-col"
             style={{
-                width: isCollapsed ? '80px' : '280px',
+                width: isExpanded ? '280px' : '80px',
                 background: COLORS.bgWhite,
                 borderColor: COLORS.border,
                 zIndex: 50
             }}
+            onMouseEnter={() => onHover(true)}
+            onMouseLeave={() => onHover(false)}
         >
             {/* Sidebar Header */}
             <div
                 className="flex items-center justify-between p-6 border-b"
                 style={{ borderColor: COLORS.border }}
             >
-                {!isCollapsed && (
+                {isExpanded ? (
                     <div className="flex items-center gap-3">
                         <div
                             className="h-12 w-12 rounded-lg flex items-center justify-center"
@@ -149,13 +152,10 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                             </p>
                         </div>
                     </div>
-                )}
-                {isCollapsed && (
+                ) : (
                     <div
-                        className="h-10 w-10 rounded-lg flex items-center justify-center mx-auto cursor-pointer"
+                        className="h-10 w-10 rounded-lg flex items-center justify-center mx-auto"
                         style={{ background: COLORS.gradientIndigo }}
-                        onClick={onToggle}
-                        title="Expand sidebar"
                     >
                         <span className="font-bold text-xl text-white">B</span>
                     </div>
@@ -163,19 +163,6 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             </div>
 
             {/* Floating Toggle Button */}
-            <button
-                onClick={onToggle}
-                className="absolute -right-3 top-24 w-6 h-6 rounded-full border shadow-sm flex items-center justify-center transition-all duration-200 hover:scale-110 z-50"
-                style={{
-                    background: COLORS.bgWhite,
-                    borderColor: COLORS.border,
-                    color: COLORS.textSecondary
-                }}
-                title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-                {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-            </button>
-
             {/* Navigation */}
             <nav className="flex-1 overflow-y-auto py-6 px-3">
                 {/* Dashboard Link */}
@@ -189,14 +176,14 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                         }}
                     >
                         <LayoutDashboard className="w-6 h-6 flex-shrink-0" />
-                        {!isCollapsed && <span className="text-base">Dashboard</span>}
+                        {isExpanded && <span className="text-base">Dashboard</span>}
                     </div>
                 </Link>
 
                 {/* Navigation Sections */}
                 {navigationSections.map((section) => {
                     const SectionIcon = section.icon
-                    const isExpanded = expandedSection === section.title
+                    const isSectionExpanded = expandedSection === section.title
 
                     return (
                         <div key={section.title} className="mb-2">
@@ -205,20 +192,20 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                                 onClick={() => toggleSection(section.title)}
                                 className="w-full flex items-center justify-between px-4 py-3.5 rounded-lg transition-all duration-200 hover:bg-opacity-50"
                                 style={{
-                                    background: isExpanded && !isCollapsed ? `${COLORS.neutral100}` : 'transparent',
+                                    background: isSectionExpanded && isExpanded ? `${COLORS.neutral100}` : 'transparent',
                                     color: COLORS.textPrimary
                                 }}
-                                title={isCollapsed ? section.title : ''}
+                                title={!isExpanded ? section.title : ''}
                             >
                                 <div className="flex items-center gap-3">
                                     <SectionIcon className="w-6 h-6 flex-shrink-0" />
-                                    {!isCollapsed && (
+                                    {isExpanded && (
                                         <span className="text-base font-bold">{section.title}</span>
                                     )}
                                 </div>
-                                {!isCollapsed && (
+                                {isExpanded && (
                                     <ChevronRight
-                                        className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''
+                                        className={`w-4 h-4 transition-transform duration-200 ${isSectionExpanded ? 'rotate-90' : ''
                                             }`}
                                         style={{ color: COLORS.textSecondary }}
                                     />
@@ -226,7 +213,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                             </button>
 
                             {/* Section Items */}
-                            {isExpanded && !isCollapsed && (
+                            {isSectionExpanded && isExpanded && (
                                 <div className="mt-2 ml-4 space-y-1">
                                     {section.items.map((item) => {
                                         const ItemIcon = item.icon
@@ -263,36 +250,6 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                                     })}
                                 </div>
                             )}
-
-                            {/* Collapsed Mode - Show items on hover */}
-                            {isCollapsed && (
-                                <div className="hidden group-hover:block absolute left-full top-0 ml-2 w-64 bg-white rounded-lg shadow-lg border p-2">
-                                    <div className="font-semibold text-sm mb-2 px-2" style={{ color: COLORS.textPrimary }}>
-                                        {section.title}
-                                    </div>
-                                    {section.items.map((item) => {
-                                        const ItemIcon = item.icon
-                                        return (
-                                            <Link key={item.href} href={item.href}>
-                                                <div
-                                                    className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer transition-all duration-200"
-                                                    style={{
-                                                        background: isActive(item.href)
-                                                            ? `${COLORS.primary}15`
-                                                            : 'transparent',
-                                                        color: isActive(item.href)
-                                                            ? COLORS.primary
-                                                            : COLORS.textSecondary
-                                                    }}
-                                                >
-                                                    <ItemIcon className="w-4 h-4" />
-                                                    <span className="text-sm">{item.label}</span>
-                                                </div>
-                                            </Link>
-                                        )
-                                    })}
-                                </div>
-                            )}
                         </div>
                     )
                 })}
@@ -303,7 +260,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                 className="p-4 border-t"
                 style={{ borderColor: COLORS.border }}
             >
-                {!isCollapsed ? (
+                {isExpanded ? (
                     <div className="flex items-center gap-2">
                         <div
                             className="w-2 h-2 rounded-full"

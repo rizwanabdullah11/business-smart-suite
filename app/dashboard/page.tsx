@@ -18,7 +18,7 @@ export default function DashboardPage() {
     const { toast } = useToast()
     const [user, setUser] = useState<any>(null)
     const [isLoading, setIsLoading] = useState(true)
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+    const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -80,10 +80,6 @@ export default function DashboardPage() {
         })
     }
 
-    const toggleSidebar = () => {
-        setIsSidebarCollapsed(!isSidebarCollapsed)
-    }
-
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center" style={{ background: COLORS.bgWhite }}>
@@ -98,19 +94,22 @@ export default function DashboardPage() {
     return (
         <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
             {/* Sidebar */}
-            <Sidebar isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
+            <Sidebar
+                isExpanded={isSidebarExpanded}
+                onHover={setIsSidebarExpanded}
+            />
 
             {/* Main Content Area */}
             <div
                 className="transition-all duration-300"
                 style={{
-                    marginLeft: isSidebarCollapsed ? '80px' : '280px'
+                    marginLeft: isSidebarExpanded ? '280px' : '80px'
                 }}
             >
                 {/* Top Navbar */}
                 <TopNavbar
                     user={user}
-                    isCollapsed={isSidebarCollapsed}
+                    isCollapsed={!isSidebarExpanded}
                     onLogout={handleLogout}
                     onAddFolder={handleAddFolder}
                 />
