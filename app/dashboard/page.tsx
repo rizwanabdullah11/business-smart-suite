@@ -9,6 +9,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar"
 import { TopNavbar } from "@/components/dashboard/TopNavbar"
 import { DashboardContent } from "@/components/dashboard/DashboardContent"
 import { Footer } from "@/components/dashboard/Footer"
+import { CreateSectionDialog } from "@/components/dashboard/CreateSectionDialog"
 
 // API Config
 const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api";
@@ -19,6 +20,7 @@ export default function DashboardPage() {
     const [user, setUser] = useState<any>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
+    const [isCreateSectionOpen, setIsCreateSectionOpen] = useState(false)
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -73,11 +75,7 @@ export default function DashboardPage() {
     }
 
     const handleAddFolder = () => {
-        // TODO: Implement add folder functionality
-        toast({
-            title: "Coming Soon",
-            description: "Add folder functionality will be available soon.",
-        })
+        setIsCreateSectionOpen(true)
     }
 
     if (isLoading) {
@@ -121,6 +119,11 @@ export default function DashboardPage() {
 
                 {/* Footer */}
                 <Footer />
+
+                <CreateSectionDialog
+                    open={isCreateSectionOpen}
+                    onOpenChange={setIsCreateSectionOpen}
+                />
             </div>
         </div>
     )
