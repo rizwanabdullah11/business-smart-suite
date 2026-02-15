@@ -370,14 +370,14 @@ function ManualItem({
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-6 w-6 cursor-grab"
+                  className="h-8 w-8 cursor-grab"
                   {...attributes}
                   {...listeners}
                   disabled={loadingAction === 'move'}
                   onMouseDown={() => setLoadingAction('move')}
                   onMouseUp={() => setLoadingAction(null)}
                 >
-                  {loadingAction === 'move' ? <Loader size="sm" ariaLabel="Moving..." /> : <GripVertical className="h-3 w-3" />}
+                  {loadingAction === 'move' ? <Loader size="sm" ariaLabel="Moving..." /> : <GripVertical className="h-4 w-4" />}
                 </Button>
                 <MoveEntryDialog
                   entryId={manual.id}
@@ -399,7 +399,7 @@ function ManualItem({
               <Button
                 variant="outline"
                 size="icon"
-                className="h-6 w-6 bg-green-600 text-white border-none"
+                className="h-8 w-8 bg-green-600 text-white border-none hover:bg-green-700"
                 onClick={async () => {
                   setLoadingAction('unarchive')
                   await onUnarchive(manual.id)
@@ -408,13 +408,13 @@ function ManualItem({
                 title="Unarchive"
                 disabled={loadingAction === 'unarchive'}
               >
-                {loadingAction === 'unarchive' ? <Loader size="sm" ariaLabel="Unarchiving..." /> : <RefreshCw className="h-3 w-3" />}
+                {loadingAction === 'unarchive' ? <Loader size="sm" ariaLabel="Unarchiving..." /> : <RefreshCw className="h-4 w-4" />}
               </Button>
             ) : (
               <Button
                 variant="outline"
                 size="icon"
-                className="h-6 w-6"
+                className="h-8 w-8 bg-gray-500 text-white border-none hover:bg-gray-600"
                 onClick={async () => {
                   setLoadingAction('archive')
                   await onArchive(manual.id)
@@ -423,7 +423,7 @@ function ManualItem({
                 title="Archive"
                 disabled={loadingAction === 'archive'}
               >
-                {loadingAction === 'archive' ? <Loader size="sm" ariaLabel="Archiving..." /> : <Archive className="h-3 w-3" />}
+                {loadingAction === 'archive' ? <Loader size="sm" ariaLabel="Archiving..." /> : <Archive className="h-4 w-4" />}
               </Button>
             )}
 
@@ -431,7 +431,7 @@ function ManualItem({
               <Button
                 variant="outline"
                 size="icon"
-                className="h-6 w-6 bg-red-500 text-white border-none"
+                className="h-8 w-8 bg-red-500 text-white border-none hover:bg-red-600"
                 onClick={async () => {
                   if (confirm("Are you sure you want to delete this manual? This action cannot be undone.")) {
                     setLoadingAction('delete')
@@ -441,7 +441,7 @@ function ManualItem({
                 }}
                 disabled={loadingAction === 'delete'}
               >
-                {loadingAction === 'delete' ? <Loader size="sm" ariaLabel="Deleting..." /> : <X className="h-3 w-3" />}
+                {loadingAction === 'delete' ? <Loader size="sm" ariaLabel="Deleting..." /> : <X className="h-4 w-4" />}
               </Button>
             )}
 
@@ -450,7 +450,7 @@ function ManualItem({
                 <Button
                   variant="outline"
                   size="icon"
-                  className={`h-6 w-6 ${manual.highlighted ? "bg-gray-200" : "bg-yellow-500 text-white"} border-none`}
+                  className={`h-8 w-8 ${manual.highlighted ? "bg-gray-200" : "bg-yellow-500 text-white hover:bg-yellow-600"} border-none`}
                   onClick={async () => {
                     setLoadingAction('highlight')
                     await onHighlight(manual.id)
@@ -458,12 +458,12 @@ function ManualItem({
                   }}
                   disabled={loadingAction === 'highlight'}
                 >
-                  {loadingAction === 'highlight' ? <Loader size="sm" ariaLabel="Highlighting..." /> : <div className="h-3 w-3 bg-yellow-500"></div>}
+                  {loadingAction === 'highlight' ? <Loader size="sm" ariaLabel="Highlighting..." /> : <div className="h-4 w-4 bg-yellow-500 rounded-sm"></div>}
                 </Button>
                 <Button
                   variant="outline"
                   size="icon"
-                  className={`h-6 w-6 ${manual.approved ? "bg-gray-200" : "bg-green-500 text-white"} border-none`}
+                  className={`h-8 w-8 ${manual.approved ? "bg-gray-200" : "bg-green-500 text-white hover:bg-green-600"} border-none`}
                   onClick={async () => {
                     setLoadingAction('approve')
                     await onApprove(manual.id, manual.approved)
@@ -471,7 +471,7 @@ function ManualItem({
                   }}
                   disabled={loadingAction === 'approve'}
                 >
-                  {loadingAction === 'approve' ? <Loader size="sm" ariaLabel="Approving..." /> : <Check className="h-3 w-3" />}
+                  {loadingAction === 'approve' ? <Loader size="sm" ariaLabel="Approving..." /> : <Check className="h-4 w-4" />}
                 </Button>
               </>
             )}
@@ -701,7 +701,7 @@ function CategorySection({
               <Button
                 variant="outline"
                 size="icon"
-                className="h-6 w-6 bg-green-600 text-white border-none"
+                className="h-8 w-8 bg-green-600 text-white border-none hover:bg-green-700"
                 onClick={async () => {
                   setCategoryLoadingAction('unarchive')
                   if (onUnarchiveCategory) {
@@ -712,13 +712,13 @@ function CategorySection({
                 title="Unarchive"
                 disabled={categoryLoadingAction === 'unarchive'}
               >
-                {categoryLoadingAction === 'unarchive' ? <Loader size="sm" ariaLabel="Unarchiving..." /> : <RefreshCw className="h-3 w-3" />}
+                {categoryLoadingAction === 'unarchive' ? <Loader size="sm" ariaLabel="Unarchiving..." /> : <RefreshCw className="h-4 w-4" />}
               </Button>
             ) : (
               <Button
                 variant="outline"
                 size="icon"
-                className="h-6 w-6 bg-gray-600 text-white border-none"
+                className="h-8 w-8 bg-gray-600 text-white border-none hover:bg-gray-700"
                 onClick={async () => {
                   setCategoryLoadingAction('archive')
                   if (onArchiveCategory) {
@@ -729,7 +729,7 @@ function CategorySection({
                 title="Archive"
                 disabled={categoryLoadingAction === 'archive'}
               >
-                {categoryLoadingAction === 'archive' ? <Loader size="sm" ariaLabel="Archiving..." /> : <Archive className="h-3 w-3" />}
+                {categoryLoadingAction === 'archive' ? <Loader size="sm" ariaLabel="Archiving..." /> : <Archive className="h-4 w-4" />}
               </Button>
             )}
 
@@ -737,7 +737,7 @@ function CategorySection({
               <Button
                 variant="outline"
                 size="icon"
-                className={`h-6 w-6 ${category.highlighted ? "bg-gray-600" : "bg-yellow-500"} text-white border-none`}
+                className={`h-8 w-8 ${category.highlighted ? "bg-gray-600 hover:bg-gray-700" : "bg-yellow-500 hover:bg-yellow-600"} text-white border-none`}
                 onClick={async () => {
                   setCategoryLoadingAction('highlight')
                   if (onCategoryHighlight) {
@@ -747,7 +747,7 @@ function CategorySection({
                 }}
                 disabled={categoryLoadingAction === 'highlight'}
               >
-                {categoryLoadingAction === 'highlight' ? <Loader size="sm" ariaLabel="Highlighting..." /> : <div className="h-3 w-3 bg-yellow-500"></div>}
+                {categoryLoadingAction === 'highlight' ? <Loader size="sm" ariaLabel="Highlighting..." /> : <div className="h-4 w-4 bg-yellow-500 rounded-sm"></div>}
               </Button>
             )}
 
@@ -755,7 +755,7 @@ function CategorySection({
               <Button
                 variant="outline"
                 size="icon"
-                className="h-6 w-6 bg-red-500 text-white border-none"
+                className="h-8 w-8 bg-red-500 text-white border-none hover:bg-red-600"
                 onClick={async () => {
                   if (
                     confirm(
@@ -771,7 +771,7 @@ function CategorySection({
                 }}
                 disabled={categoryLoadingAction === 'delete'}
               >
-                {categoryLoadingAction === 'delete' ? <Loader size="sm" ariaLabel="Deleting..." /> : <X className="h-3 w-3" />}
+                {categoryLoadingAction === 'delete' ? <Loader size="sm" ariaLabel="Deleting..." /> : <X className="h-4 w-4" />}
               </Button>
             )}
           </div>
@@ -895,8 +895,8 @@ function EditCategoryDialog({ category, onEditCategory }: { category: any, onEdi
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="icon" className="h-6 w-6 bg-gray-600 text-white border-none">
-          <Edit className="h-3 w-3" />
+        <Button variant="outline" size="icon" className="h-8 w-8 bg-gray-600 text-white border-none hover:bg-gray-700">
+          <Edit className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -941,10 +941,10 @@ function AddManualDialog({ categoryId, onManualCreated }: { categoryId: string, 
         <Button
           variant="outline"
           size="icon"
-          className="h-6 w-6 bg-green-500 text-white border-none"
+          className="h-8 w-8 bg-green-500 text-white border-none hover:bg-green-600"
           aria-label="Add new Manual"
         >
-          <Plus className="h-3 w-3" aria-hidden="true" />
+          <Plus className="h-4 w-4" aria-hidden="true" />
         </Button>
       </DialogTrigger>
       <DialogContent>

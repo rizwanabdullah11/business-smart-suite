@@ -13,11 +13,12 @@ interface Category {
 
 export default function NewManualPage() {
   const router = useRouter()
-  
+
   const [title, setTitle] = useState("")
   const [version, setVersion] = useState("")
   const [location, setLocation] = useState("")
   const [category, setCategory] = useState("")
+  const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingCategories, setLoadingCategories] = useState(true)
@@ -28,7 +29,12 @@ export default function NewManualPage() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch("/api/categories")
+        const token = localStorage.getItem("token")
+        const response = await fetch("http://localhost:5000/api/categories", {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
         if (!response.ok) throw new Error("Failed to fetch categories")
         const data = await response.json()
         setCategories(data)
@@ -47,7 +53,7 @@ export default function NewManualPage() {
   }, [])
 
   const handleCreate = async () => {
-    if (!title.trim() || !version.trim() || !location.trim() || !category) {
+    if (!title.trim() || !version.trim() || !location.trim() || !category || !issueDate) {
       setError("All fields are required")
       return
     }
@@ -68,7 +74,7 @@ export default function NewManualPage() {
           version: version.trim(),
           location: location.trim(),
           category: category,
-          issueDate: new Date().toISOString().split("T")[0],
+          issueDate: issueDate,
         }),
       })
 
@@ -77,9 +83,7 @@ export default function NewManualPage() {
         throw new Error(errorData.error || errorData.message || `Failed to create manual: ${response.statusText}`)
       }
 
-      const newManual = await response.json()
       setSuccess(true)
-      
       setTimeout(() => {
         router.push(`/manual`)
       }, 500)
@@ -93,61 +97,65 @@ export default function NewManualPage() {
 
   return (
     <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
-      <div className="p-6">
-        <div className="max-w-4xl mx-auto">
+      <div className="p-8">
+        <div className="max-w-3xl mx-auto">
           {/* Back Button */}
-          <div className="mb-6">
+          <div className="mb-8">
             <Link
               href="/manual"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold transition-all hover:bg-white hover:shadow-md"
               style={{
                 background: COLORS.bgWhite,
                 color: COLORS.textPrimary,
                 border: `1px solid ${COLORS.border}`,
               }}
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-5 h-5" />
               Back to Manuals
             </Link>
           </div>
 
           {/* Create Form */}
           <div
-            className="rounded-lg p-6"
+            className="rounded-2xl p-8 shadow-sm"
             style={{
               background: COLORS.bgWhite,
               border: `1px solid ${COLORS.border}`,
             }}
           >
-            <h1 className="text-2xl font-bold mb-6" style={{ color: COLORS.textPrimary }}>
-              Create New Manual
-            </h1>
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold mb-2" style={{ color: COLORS.textPrimary }}>
+                Create New Manual
+              </h1>
+              <p className="text-gray-500 font-medium">Add a new documentation to your system</p>
+            </div>
 
             {error && (
-              <div className="mb-4 p-4 rounded-lg" style={{ background: "#FEE2E2", color: "#991B1B" }}>
+              <div className="mb-6 p-4 rounded-xl font-medium" style={{ background: "#FEE2E2", color: "#991B1B", border: "1px solid #FECACA" }}>
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="mb-4 p-4 rounded-lg" style={{ background: "#DCFCE7", color: "#15803D" }}>
+              <div className="mb-6 p-4 rounded-xl font-medium shadow-sm" style={{ background: "#DCFCE7", color: "#15803D", border: "1px solid #BBF7D0" }}>
                 Manual created successfully! Redirecting...
               </div>
             )}
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                  Category
+                <label className="block text-base font-bold mb-2.5" style={{ color: COLORS.textPrimary }}>
+                  Category <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   disabled={loading || loadingCategories}
-                  className="w-full px-3 py-2 rounded border disabled:opacity-50"
+                  className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all disabled:opacity-50 text-lg cursor-pointer"
                   style={{
                     borderColor: COLORS.border,
                     color: COLORS.textPrimary,
+                    background: COLORS.bgGrayLight,
                   }}
                 >
                   <option value="">
@@ -162,8 +170,8 @@ export default function NewManualPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                  Title
+                <label className="block text-base font-bold mb-2.5" style={{ color: COLORS.textPrimary }}>
+                  Manual Title <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -171,35 +179,57 @@ export default function NewManualPage() {
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Enter manual title..."
                   disabled={loading}
-                  className="w-full px-3 py-2 rounded border disabled:opacity-50"
+                  className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all disabled:opacity-50 text-lg"
                   style={{
                     borderColor: COLORS.border,
                     color: COLORS.textPrimary,
+                    background: COLORS.bgGrayLight,
                   }}
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                  Version
-                </label>
-                <input
-                  type="text"
-                  value={version}
-                  onChange={(e) => setVersion(e.target.value)}
-                  placeholder="e.g., v1.0"
-                  disabled={loading}
-                  className="w-full px-3 py-2 rounded border disabled:opacity-50"
-                  style={{
-                    borderColor: COLORS.border,
-                    color: COLORS.textPrimary,
-                  }}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-base font-bold mb-2.5" style={{ color: COLORS.textPrimary }}>
+                    Version <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={version}
+                    onChange={(e) => setVersion(e.target.value)}
+                    placeholder="e.g., v1.0"
+                    disabled={loading}
+                    className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all disabled:opacity-50 text-lg"
+                    style={{
+                      borderColor: COLORS.border,
+                      color: COLORS.textPrimary,
+                      background: COLORS.bgGrayLight,
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-base font-bold mb-2.5" style={{ color: COLORS.textPrimary }}>
+                    Issue Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={issueDate}
+                    onChange={(e) => setIssueDate(e.target.value)}
+                    disabled={loading}
+                    className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all disabled:opacity-50 text-lg"
+                    style={{
+                      borderColor: COLORS.border,
+                      color: COLORS.textPrimary,
+                      background: COLORS.bgGrayLight,
+                    }}
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                  Location
+                <label className="block text-base font-bold mb-2.5" style={{ color: COLORS.textPrimary }}>
+                  Location <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -207,28 +237,29 @@ export default function NewManualPage() {
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="e.g., QMS"
                   disabled={loading}
-                  className="w-full px-3 py-2 rounded border disabled:opacity-50"
+                  className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all disabled:opacity-50 text-lg"
                   style={{
                     borderColor: COLORS.border,
                     color: COLORS.textPrimary,
+                    background: COLORS.bgGrayLight,
                   }}
                 />
               </div>
 
-              <div className="flex gap-2 pt-4">
+              <div className="flex gap-4 pt-6">
                 <button
                   onClick={handleCreate}
                   disabled={loading || !category}
-                  className="px-6 py-2 rounded-lg font-medium transition-all inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-8 py-4 rounded-xl font-bold transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
                   style={{
-                    background: COLORS.primary,
+                    background: COLORS.primaryGradient,
                     color: COLORS.textWhite,
                   }}
                 >
                   {loading ? (
                     <>
-                      <Loader className="w-4 h-4 animate-spin" />
-                      Creating...
+                      <Loader className="w-5 h-5 animate-spin" />
+                      Creating Manual...
                     </>
                   ) : (
                     "Create Manual"
@@ -236,7 +267,7 @@ export default function NewManualPage() {
                 </button>
                 <Link
                   href="/manual"
-                  className="px-6 py-2 rounded-lg font-medium transition-all"
+                  className="px-8 py-4 rounded-xl font-bold transition-all hover:bg-gray-200 text-lg"
                   style={{
                     background: COLORS.bgGray,
                     color: COLORS.textPrimary,
