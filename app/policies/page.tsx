@@ -703,7 +703,7 @@ export default function PoliciesPage() {
                             }}
                           >
                             <button className="cursor-move hover:bg-gray-100 p-1 rounded">
-                              <GripVertical className="w-4 h-4" style={{ color: COLORS.textSecondary }} />
+                              <GripVertical className="w-5 h-5" style={{ color: COLORS.textSecondary }} />
                             </button>
                             <div className="flex-1">
                               <Link
@@ -738,7 +738,7 @@ export default function PoliciesPage() {
                                   }}
                                   title={policy.highlighted ? "Remove Highlight" : "Highlight"}
                                 >
-                                  <Star className={`w-4 h-4 ${policy.highlighted ? "fill-current" : ""}`} />
+                                  <Star className={`w-5 h-5 ${policy.highlighted ? "fill-current" : ""}`} />
                                 </button>
                                 <button
                                   onClick={() => toggleApprove(category.id, policy.id)}
@@ -749,7 +749,7 @@ export default function PoliciesPage() {
                                   }}
                                   title={policy.approved ? "Unapprove" : "Approve"}
                                 >
-                                  <Check className="w-4 h-4" />
+                                  <Check className="w-5 h-5" />
                                 </button>
                                 <button
                                   onClick={() => togglePause(category.id, policy.id)}
@@ -760,7 +760,7 @@ export default function PoliciesPage() {
                                   }}
                                   title={policy.paused ? "Resume" : "Pause"}
                                 >
-                                  <Pause className="w-4 h-4" />
+                                  <Pause className="w-5 h-5" />
                                 </button>
                               </div>
 
@@ -778,7 +778,7 @@ export default function PoliciesPage() {
                                     }}
                                     title="Edit"
                                   >
-                                    <Edit className="w-4 h-4" />
+                                    <Edit className="w-5 h-5" />
                                   </button>
                                 </Link>
                                 <button
@@ -789,7 +789,7 @@ export default function PoliciesPage() {
                                   }}
                                   title="Duplicate"
                                 >
-                                  <Copy className="w-4 h-4" />
+                                  <Copy className="w-5 h-5" />
                                 </button>
                                 <button
                                   className="p-2 rounded-lg transition-all hover:scale-105"
@@ -799,7 +799,7 @@ export default function PoliciesPage() {
                                   }}
                                   title="Download"
                                 >
-                                  <Download className="w-4 h-4" />
+                                  <Download className="w-5 h-5" />
                                 </button>
                                 <button
                                   onClick={() => deletePolicy(category.id, policy.id)}
@@ -810,7 +810,7 @@ export default function PoliciesPage() {
                                   }}
                                   title="Delete"
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  <Trash2 className="w-5 h-5" />
                                 </button>
                               </div>
                             </div>

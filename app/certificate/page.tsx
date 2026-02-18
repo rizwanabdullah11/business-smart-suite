@@ -621,7 +621,7 @@ export default function CertificatePage() {
                             }}
                           >
                             <button className="cursor-move hover:bg-gray-100 p-1 rounded">
-                              <GripVertical className="w-4 h-4" style={{ color: COLORS.textSecondary }} />
+                              <GripVertical className="w-5 h-5" style={{ color: COLORS.textSecondary }} />
                             </button>
                             <div className="flex-1">
                               <Link
@@ -651,16 +651,16 @@ export default function CertificatePage() {
                             <div className="flex items-center gap-1.5">
                               {/* Actions */}
                               <div className="flex items-center gap-1 mr-2">
-                                <button onClick={() => toggleHighlight(category.id, cert.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: cert.highlighted ? COLORS.warning : "#FEF3C7", color: cert.highlighted ? COLORS.textWhite : "#92400E" }}><Star className="w-4 h-4" /></button>
-                                <button onClick={() => toggleApprove(category.id, cert.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: cert.approved ? COLORS.green500 : "#D1FAE5", color: cert.approved ? COLORS.textWhite : "#065F46" }}><Check className="w-4 h-4" /></button>
-                                <button onClick={() => togglePause(category.id, cert.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: cert.paused ? COLORS.warning : "#FEF3C7", color: cert.paused ? COLORS.textWhite : "#92400E" }}><Pause className="w-4 h-4" /></button>
+                                <button onClick={() => toggleHighlight(category.id, cert.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: cert.highlighted ? COLORS.warning : "#FEF3C7", color: cert.highlighted ? COLORS.textWhite : "#92400E" }}><Star className="w-5 h-5" /></button>
+                                <button onClick={() => toggleApprove(category.id, cert.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: cert.approved ? COLORS.green500 : "#D1FAE5", color: cert.approved ? COLORS.textWhite : "#065F46" }}><Check className="w-5 h-5" /></button>
+                                <button onClick={() => togglePause(category.id, cert.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: cert.paused ? COLORS.warning : "#FEF3C7", color: cert.paused ? COLORS.textWhite : "#92400E" }}><Pause className="w-5 h-5" /></button>
                               </div>
                               <div className="w-px h-6 bg-gray-300 mx-1"></div>
                               <div className="flex items-center gap-1">
-                                <Link href={`/certificate/${cert.id}/edit`}><button className="p-2 rounded-lg hover:scale-105" style={{ background: "#DBEAFE", color: "#1E40AF" }}><Edit className="w-4 h-4" /></button></Link>
-                                <button className="p-2 rounded-lg hover:scale-105" style={{ background: "#E5E7EB", color: "#374151" }}><Copy className="w-4 h-4" /></button>
-                                <button className="p-2 rounded-lg hover:scale-105" style={{ background: "#E0E7FF", color: "#4338CA" }}><Download className="w-4 h-4" /></button>
-                                <button onClick={() => deleteCertificate(category.id, cert.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: "#FEE2E2", color: "#991B1B" }}><Trash2 className="w-4 h-4" /></button>
+                                <Link href={`/certificate/${cert.id}/edit`}><button className="p-2 rounded-lg hover:scale-105" style={{ background: "#DBEAFE", color: "#1E40AF" }}><Edit className="w-5 h-5" /></button></Link>
+                                <button className="p-2 rounded-lg hover:scale-105" style={{ background: "#E5E7EB", color: "#374151" }}><Copy className="w-5 h-5" /></button>
+                                <button className="p-2 rounded-lg hover:scale-105" style={{ background: "#E0E7FF", color: "#4338CA" }}><Download className="w-5 h-5" /></button>
+                                <button onClick={() => deleteCertificate(category.id, cert.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: "#FEE2E2", color: "#991B1B" }}><Trash2 className="w-5 h-5" /></button>
                               </div>
                             </div>
                           </div>
