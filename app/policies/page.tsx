@@ -702,8 +702,8 @@ export default function PoliciesPage() {
                               border: `1px solid ${COLORS.border}`,
                             }}
                           >
-                            <button className="cursor-move hover:bg-gray-100 p-1 rounded">
-                              <GripVertical className="w-5 h-5" style={{ color: COLORS.textSecondary }} />
+                            <button className="cursor-move hover:bg-gray-50 h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200">
+                              <GripVertical className="w-5 h-5" style={{ color: "#9CA3AF" }} />
                             </button>
                             <div className="flex-1">
                               <Link
@@ -731,10 +731,9 @@ export default function PoliciesPage() {
                               <div className="flex items-center gap-1 mr-2">
                                 <button
                                   onClick={() => toggleHighlight(category.id, policy.id)}
-                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200"
                                   style={{
-                                    background: policy.highlighted ? COLORS.warning : "#FEF3C7",
-                                    color: policy.highlighted ? COLORS.textWhite : "#92400E",
+                                    color: policy.highlighted ? "#EAB308" : "#D1D5DB",
                                   }}
                                   title={policy.highlighted ? "Remove Highlight" : "Highlight"}
                                 >
@@ -742,10 +741,9 @@ export default function PoliciesPage() {
                                 </button>
                                 <button
                                   onClick={() => toggleApprove(category.id, policy.id)}
-                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200"
                                   style={{
-                                    background: policy.approved ? COLORS.green500 : "#D1FAE5",
-                                    color: policy.approved ? COLORS.textWhite : "#065F46",
+                                    color: policy.approved ? "#22C55E" : "#D1D5DB",
                                   }}
                                   title={policy.approved ? "Unapprove" : "Approve"}
                                 >
@@ -753,10 +751,9 @@ export default function PoliciesPage() {
                                 </button>
                                 <button
                                   onClick={() => togglePause(category.id, policy.id)}
-                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200"
                                   style={{
-                                    background: policy.paused ? COLORS.warning : "#FEF3C7",
-                                    color: policy.paused ? COLORS.textWhite : "#92400E",
+                                    color: policy.paused ? "#F59E0B" : "#D1D5DB",
                                   }}
                                   title={policy.paused ? "Resume" : "Pause"}
                                 >
@@ -771,10 +768,9 @@ export default function PoliciesPage() {
                               <div className="flex items-center gap-1">
                                 <Link href={`/policies/${policy.id}/edit`}>
                                   <button
-                                    className="p-2 rounded-lg transition-all hover:scale-105"
+                                    className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200"
                                     style={{
-                                      background: "#DBEAFE",
-                                      color: "#1E40AF",
+                                      color: "#3B82F6",
                                     }}
                                     title="Edit"
                                   >
@@ -782,20 +778,18 @@ export default function PoliciesPage() {
                                   </button>
                                 </Link>
                                 <button
-                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200"
                                   style={{
-                                    background: "#E5E7EB",
-                                    color: "#374151",
+                                    color: "#6B7280",
                                   }}
                                   title="Duplicate"
                                 >
                                   <Copy className="w-5 h-5" />
                                 </button>
                                 <button
-                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200"
                                   style={{
-                                    background: "#E0E7FF",
-                                    color: "#4338CA",
+                                    color: "#3B82F6",
                                   }}
                                   title="Download"
                                 >
@@ -803,10 +797,9 @@ export default function PoliciesPage() {
                                 </button>
                                 <button
                                   onClick={() => deletePolicy(category.id, policy.id)}
-                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200"
                                   style={{
-                                    background: "#FEE2E2",
-                                    color: "#991B1B",
+                                    color: "#F97316",
                                   }}
                                   title="Delete"
                                 >
