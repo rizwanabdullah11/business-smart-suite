@@ -9,10 +9,11 @@ import { COLORS } from "@/constant/colors"
 export default function EditManualPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  
+
   const [title, setTitle] = useState("")
   const [version, setVersion] = useState("")
   const [location, setLocation] = useState("")
+  const [issueDate, setIssueDate] = useState("")
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -34,9 +35,22 @@ export default function EditManualPage({ params }: { params: Promise<{ id: strin
         }
 
         const data = await response.json()
+        console.log("Fetched manual data:", data)
         setTitle(data.title || "")
         setVersion(data.version || "")
         setLocation(data.location || "")
+
+        // Format issueDate for <input type="date"> (YYYY-MM-DD)
+        const rawDate = data.issueDate || data.createdAt
+        if (rawDate) {
+          const d = new Date(rawDate)
+          if (!isNaN(d.getTime())) {
+            const y = d.getFullYear()
+            const m = String(d.getMonth() + 1).padStart(2, '0')
+            const day = String(d.getDate()).padStart(2, '0')
+            setIssueDate(`${y}-${m}-${day}`)
+          }
+        }
       } catch (err) {
         console.error("Error fetching manual:", err)
         setError("Failed to load manual data")
@@ -51,7 +65,7 @@ export default function EditManualPage({ params }: { params: Promise<{ id: strin
   }, [id])
 
   const handleSave = async () => {
-    if (!title.trim() || !version.trim() || !location.trim()) {
+    if (!title.trim() || !version.trim() || !location.trim() || !issueDate) {
       setError("All fields are required")
       return
     }
@@ -71,6 +85,7 @@ export default function EditManualPage({ params }: { params: Promise<{ id: strin
           title: title.trim(),
           version: version.trim(),
           location: location.trim(),
+          issueDate: issueDate,
         }),
       })
 
@@ -94,121 +109,150 @@ export default function EditManualPage({ params }: { params: Promise<{ id: strin
   if (loadingData) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: COLORS.bgGray }}>
-        <Loader className="w-8 h-8 animate-spin" style={{ color: COLORS.primary }} />
+        <Loader className="w-10 h-10 animate-spin" style={{ color: COLORS.primary }} />
       </div>
     )
   }
 
   return (
     <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
-      <div className="p-6">
-        <div className="max-w-4xl mx-auto">
+      <div className="p-8">
+        <div className="max-w-3xl mx-auto">
           {/* Back Button */}
-          <div className="mb-6">
+          <div className="mb-8">
             <Link
               href="/manual"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold transition-all hover:bg-white hover:shadow-md"
               style={{
                 background: COLORS.bgWhite,
                 color: COLORS.textPrimary,
                 border: `1px solid ${COLORS.border}`,
               }}
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-5 h-5" />
               Back to Manuals
             </Link>
           </div>
 
           {/* Edit Form */}
           <div
-            className="rounded-lg p-6"
+            className="rounded-2xl p-8 shadow-sm"
             style={{
               background: COLORS.bgWhite,
               border: `1px solid ${COLORS.border}`,
             }}
           >
-            <h1 className="text-2xl font-bold mb-6" style={{ color: COLORS.textPrimary }}>
-              Edit Manual
-            </h1>
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold mb-2" style={{ color: COLORS.textPrimary }}>
+                Edit Manual
+              </h1>
+              <p className="text-gray-500 font-medium">Update the details for this documentation</p>
+            </div>
 
             {error && (
-              <div className="mb-4 p-4 rounded-lg" style={{ background: "#FEE2E2", color: "#991B1B" }}>
+              <div className="mb-6 p-4 rounded-xl font-medium" style={{ background: "#FEE2E2", color: "#991B1B", border: "1px solid #FECACA" }}>
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="mb-4 p-4 rounded-lg" style={{ background: "#DCFCE7", color: "#15803D" }}>
+              <div className="mb-6 p-4 rounded-xl font-medium shadow-sm" style={{ background: "#DCFCE7", color: "#15803D", border: "1px solid #BBF7D0" }}>
                 Manual saved successfully! Redirecting...
               </div>
             )}
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                  Title
+                <label className="block text-base font-bold mb-2.5" style={{ color: COLORS.textPrimary }}>
+                  Manual Title <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   disabled={loading}
-                  className="w-full px-3 py-2 rounded border disabled:opacity-50"
+                  placeholder="e.g., Quality Management Manual"
+                  className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all disabled:opacity-50 text-lg"
                   style={{
                     borderColor: COLORS.border,
                     color: COLORS.textPrimary,
+                    background: COLORS.bgGrayLight,
                   }}
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                  Version
-                </label>
-                <input
-                  type="text"
-                  value={version}
-                  onChange={(e) => setVersion(e.target.value)}
-                  disabled={loading}
-                  className="w-full px-3 py-2 rounded border disabled:opacity-50"
-                  style={{
-                    borderColor: COLORS.border,
-                    color: COLORS.textPrimary,
-                  }}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-base font-bold mb-2.5" style={{ color: COLORS.textPrimary }}>
+                    Version <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={version}
+                    onChange={(e) => setVersion(e.target.value)}
+                    disabled={loading}
+                    placeholder="e.g., v1.0"
+                    className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all disabled:opacity-50 text-lg"
+                    style={{
+                      borderColor: COLORS.border,
+                      color: COLORS.textPrimary,
+                      background: COLORS.bgGrayLight,
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-base font-bold mb-2.5" style={{ color: COLORS.textPrimary }}>
+                    Issue Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={issueDate}
+                    onChange={(e) => setIssueDate(e.target.value)}
+                    disabled={loading}
+                    className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all disabled:opacity-50 text-lg"
+                    style={{
+                      borderColor: COLORS.border,
+                      color: COLORS.textPrimary,
+                      background: COLORS.bgGrayLight,
+                    }}
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                  Location
+                <label className="block text-base font-bold mb-2.5" style={{ color: COLORS.textPrimary }}>
+                  Location <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   disabled={loading}
-                  className="w-full px-3 py-2 rounded border disabled:opacity-50"
+                  placeholder="e.g., QMS"
+                  className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all disabled:opacity-50 text-lg"
                   style={{
                     borderColor: COLORS.border,
                     color: COLORS.textPrimary,
+                    background: COLORS.bgGrayLight,
                   }}
                 />
               </div>
 
-              <div className="flex gap-2 pt-4">
+              <div className="flex gap-4 pt-6">
                 <button
                   onClick={handleSave}
                   disabled={loading}
-                  className="px-6 py-2 rounded-lg font-medium transition-all inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-8 py-4 rounded-xl font-bold transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
                   style={{
-                    background: COLORS.primary,
+                    background: COLORS.primaryGradient,
                     color: COLORS.textWhite,
                   }}
                 >
                   {loading ? (
                     <>
-                      <Loader className="w-4 h-4 animate-spin" />
-                      Saving...
+                      <Loader className="w-5 h-5 animate-spin" />
+                      Saving Changes...
                     </>
                   ) : (
                     "Save Changes"
@@ -216,7 +260,7 @@ export default function EditManualPage({ params }: { params: Promise<{ id: strin
                 </button>
                 <Link
                   href="/manual"
-                  className="px-6 py-2 rounded-lg font-medium transition-all"
+                  className="px-8 py-4 rounded-xl font-bold transition-all hover:bg-gray-200 text-lg"
                   style={{
                     background: COLORS.bgGray,
                     color: COLORS.textPrimary,

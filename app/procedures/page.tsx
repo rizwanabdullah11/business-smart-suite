@@ -17,7 +17,8 @@ import {
   ChevronRight,
   Copy,
   Download,
-  List
+  List,
+  ArrowLeft
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
@@ -212,6 +213,18 @@ export default function ProceduresPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
+            <Link href="/dashboard">
+              <button
+                className="flex items-center justify-center w-10 h-10 rounded-xl transition-all hover:shadow-md"
+                style={{
+                  backgroundColor: COLORS.bgWhite,
+                  color: COLORS.textPrimary,
+                  border: `1px solid ${COLORS.border}`,
+                }}
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            </Link>
             <div
               className="flex items-center justify-center w-12 h-12 rounded-xl"
               style={{
@@ -367,7 +380,7 @@ export default function ProceduresPage() {
                 <div
                   className="p-5 flex items-center justify-between cursor-pointer"
                   style={{
-                    background: COLORS.primary,
+                    background: COLORS.primaryGradient,
                     color: COLORS.textWhite,
                   }}
                   onClick={() => toggleCategory(category.id)}
@@ -378,21 +391,22 @@ export default function ProceduresPage() {
                     ) : (
                       <ChevronRight className="w-5 h-5" />
                     )}
-                    <h2 className="text-xl font-bold">{category.title}</h2>
-                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-white bg-opacity-20">
+                    <h2 className="text-2xl font-bold">{category.title}</h2>
+                    <span className="px-3 py-1 rounded-full text-base font-medium bg-white bg-opacity-20">
                       {category.procedures.length} procedures
                     </span>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
                         startEditCategory(category.id, category.title)
                       }}
-                      className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
+                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
                       title="Edit Category"
+                      style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
                     >
-                      <Edit className="w-4 h-4" />
+                      <Edit className="w-5 h-5" />
                     </button>
                     <button
                       onClick={(e) => {
@@ -402,20 +416,32 @@ export default function ProceduresPage() {
                           setExpandedCategories(prev => [...prev, category.id])
                         }
                       }}
-                      className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
+                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
                       title="Add Procedure"
+                      style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                      }}
+                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
+                      title="Archive Category"
+                      style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
+                    >
+                      <Archive className="w-5 h-5" />
                     </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
                         deleteCategory(category.id)
                       }}
-                      className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
+                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
                       title="Delete Category"
+                      style={{ background: COLORS.bgWhite, color: COLORS.pink600 }}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
@@ -568,8 +594,8 @@ export default function ProceduresPage() {
                               border: `1px solid ${COLORS.border}`,
                             }}
                           >
-                            <button className="cursor-move hover:bg-gray-100 p-1 rounded">
-                              <GripVertical className="w-4 h-4" style={{ color: COLORS.textSecondary }} />
+                            <button className="cursor-move hover:bg-gray-50 h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200">
+                              <GripVertical className="w-5 h-5" style={{ color: "#9CA3AF" }} />
                             </button>
                             <div className="flex-1">
                               <Link
@@ -595,16 +621,16 @@ export default function ProceduresPage() {
                             <div className="flex items-center gap-1.5">
                               {/* Actions */}
                               <div className="flex items-center gap-1 mr-2">
-                                <button onClick={() => toggleHighlight(category.id, proc.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: proc.highlighted ? COLORS.warning : "#FEF3C7", color: proc.highlighted ? COLORS.textWhite : "#92400E" }}><Star className="w-4 h-4" /></button>
-                                <button onClick={() => toggleApprove(category.id, proc.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: proc.approved ? COLORS.green500 : "#D1FAE5", color: proc.approved ? COLORS.textWhite : "#065F46" }}><Check className="w-4 h-4" /></button>
-                                <button onClick={() => togglePause(category.id, proc.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: proc.paused ? COLORS.warning : "#FEF3C7", color: proc.paused ? COLORS.textWhite : "#92400E" }}><Pause className="w-4 h-4" /></button>
+                                <button onClick={() => toggleHighlight(category.id, proc.id)} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: proc.highlighted ? "#EAB308" : "#D1D5DB" }}><Star className="w-5 h-5" /></button>
+                                <button onClick={() => toggleApprove(category.id, proc.id)} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: proc.approved ? "#22C55E" : "#D1D5DB" }}><Check className="w-5 h-5" /></button>
+                                <button onClick={() => togglePause(category.id, proc.id)} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: proc.paused ? "#F59E0B" : "#D1D5DB" }}><Pause className="w-5 h-5" /></button>
                               </div>
                               <div className="w-px h-6 bg-gray-300 mx-1"></div>
                               <div className="flex items-center gap-1">
-                                <Link href={`/procedures/${proc.id}/edit`}><button className="p-2 rounded-lg hover:scale-105" style={{ background: "#DBEAFE", color: "#1E40AF" }}><Edit className="w-4 h-4" /></button></Link>
-                                <button className="p-2 rounded-lg hover:scale-105" style={{ background: "#E5E7EB", color: "#374151" }}><Copy className="w-4 h-4" /></button>
-                                <button className="p-2 rounded-lg hover:scale-105" style={{ background: "#E0E7FF", color: "#4338CA" }}><Download className="w-4 h-4" /></button>
-                                <button onClick={() => deleteProcedure(category.id, proc.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: "#FEE2E2", color: "#991B1B" }}><Trash2 className="w-4 h-4" /></button>
+                                <Link href={`/procedures/${proc.id}/edit`}><button className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#3B82F6" }}><Edit className="w-5 h-5" /></button></Link>
+                                <button className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#6B7280" }}><Copy className="w-5 h-5" /></button>
+                                <button className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#3B82F6" }}><Download className="w-5 h-5" /></button>
+                                <button onClick={() => deleteProcedure(category.id, proc.id)} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#F97316" }}><Trash2 className="w-5 h-5" /></button>
                               </div>
                             </div>
                           </div>

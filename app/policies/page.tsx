@@ -19,7 +19,8 @@ import {
   ChevronRight,
   MoreVertical,
   Copy,
-  Download
+  Download,
+  ArrowLeft
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
@@ -231,6 +232,18 @@ export default function PoliciesPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
+            <Link href="/dashboard">
+              <button
+                className="flex items-center justify-center w-10 h-10 rounded-xl transition-all hover:shadow-md"
+                style={{
+                  backgroundColor: COLORS.bgWhite,
+                  color: COLORS.textPrimary,
+                  border: `1px solid ${COLORS.border}`,
+                }}
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            </Link>
             <div
               className="flex items-center justify-center w-12 h-12 rounded-xl"
               style={{
@@ -423,7 +436,7 @@ export default function PoliciesPage() {
                 <div
                   className="p-5 flex items-center justify-between cursor-pointer"
                   style={{
-                    background: COLORS.primary,
+                    background: COLORS.primaryGradient,
                     color: COLORS.textWhite,
                   }}
                   onClick={() => toggleCategory(category.id)}
@@ -439,16 +452,17 @@ export default function PoliciesPage() {
                       {category.policies.length} policies
                     </span>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
                         startEditCategory(category.id, category.title)
                       }}
-                      className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
+                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
                       title="Edit Category"
+                      style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
                     >
-                      <Edit className="w-4 h-4" />
+                      <Edit className="w-5 h-5" />
                     </button>
                     <button
                       onClick={(e) => {
@@ -458,29 +472,32 @@ export default function PoliciesPage() {
                           setExpandedCategories(prev => [...prev, category.id])
                         }
                       }}
-                      className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
+                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
                       title="Add Policy"
+                      style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-5 h-5" />
                     </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
                       }}
-                      className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
+                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
                       title="Archive Category"
+                      style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
                     >
-                      <Archive className="w-4 h-4" />
+                      <Archive className="w-5 h-5" />
                     </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
                         deleteCategory(category.id)
                       }}
-                      className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
+                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
                       title="Delete Category"
+                      style={{ background: COLORS.bgWhite, color: COLORS.pink600 }}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
@@ -685,8 +702,8 @@ export default function PoliciesPage() {
                               border: `1px solid ${COLORS.border}`,
                             }}
                           >
-                            <button className="cursor-move hover:bg-gray-100 p-1 rounded">
-                              <GripVertical className="w-4 h-4" style={{ color: COLORS.textSecondary }} />
+                            <button className="cursor-move hover:bg-gray-50 h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200">
+                              <GripVertical className="w-5 h-5" style={{ color: "#9CA3AF" }} />
                             </button>
                             <div className="flex-1">
                               <Link
@@ -714,36 +731,33 @@ export default function PoliciesPage() {
                               <div className="flex items-center gap-1 mr-2">
                                 <button
                                   onClick={() => toggleHighlight(category.id, policy.id)}
-                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200"
                                   style={{
-                                    background: policy.highlighted ? COLORS.warning : "#FEF3C7",
-                                    color: policy.highlighted ? COLORS.textWhite : "#92400E",
+                                    color: policy.highlighted ? "#EAB308" : "#D1D5DB",
                                   }}
                                   title={policy.highlighted ? "Remove Highlight" : "Highlight"}
                                 >
-                                  <Star className={`w-4 h-4 ${policy.highlighted ? "fill-current" : ""}`} />
+                                  <Star className={`w-5 h-5 ${policy.highlighted ? "fill-current" : ""}`} />
                                 </button>
                                 <button
                                   onClick={() => toggleApprove(category.id, policy.id)}
-                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200"
                                   style={{
-                                    background: policy.approved ? COLORS.green500 : "#D1FAE5",
-                                    color: policy.approved ? COLORS.textWhite : "#065F46",
+                                    color: policy.approved ? "#22C55E" : "#D1D5DB",
                                   }}
                                   title={policy.approved ? "Unapprove" : "Approve"}
                                 >
-                                  <Check className="w-4 h-4" />
+                                  <Check className="w-5 h-5" />
                                 </button>
                                 <button
                                   onClick={() => togglePause(category.id, policy.id)}
-                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200"
                                   style={{
-                                    background: policy.paused ? COLORS.warning : "#FEF3C7",
-                                    color: policy.paused ? COLORS.textWhite : "#92400E",
+                                    color: policy.paused ? "#F59E0B" : "#D1D5DB",
                                   }}
                                   title={policy.paused ? "Resume" : "Pause"}
                                 >
-                                  <Pause className="w-4 h-4" />
+                                  <Pause className="w-5 h-5" />
                                 </button>
                               </div>
 
@@ -754,46 +768,42 @@ export default function PoliciesPage() {
                               <div className="flex items-center gap-1">
                                 <Link href={`/policies/${policy.id}/edit`}>
                                   <button
-                                    className="p-2 rounded-lg transition-all hover:scale-105"
+                                    className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200"
                                     style={{
-                                      background: "#DBEAFE",
-                                      color: "#1E40AF",
+                                      color: "#3B82F6",
                                     }}
                                     title="Edit"
                                   >
-                                    <Edit className="w-4 h-4" />
+                                    <Edit className="w-5 h-5" />
                                   </button>
                                 </Link>
                                 <button
-                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200"
                                   style={{
-                                    background: "#E5E7EB",
-                                    color: "#374151",
+                                    color: "#6B7280",
                                   }}
                                   title="Duplicate"
                                 >
-                                  <Copy className="w-4 h-4" />
+                                  <Copy className="w-5 h-5" />
                                 </button>
                                 <button
-                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200"
                                   style={{
-                                    background: "#E0E7FF",
-                                    color: "#4338CA",
+                                    color: "#3B82F6",
                                   }}
                                   title="Download"
                                 >
-                                  <Download className="w-4 h-4" />
+                                  <Download className="w-5 h-5" />
                                 </button>
                                 <button
                                   onClick={() => deletePolicy(category.id, policy.id)}
-                                  className="p-2 rounded-lg transition-all hover:scale-105"
+                                  className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200"
                                   style={{
-                                    background: "#FEE2E2",
-                                    color: "#991B1B",
+                                    color: "#F97316",
                                   }}
                                   title="Delete"
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  <Trash2 className="w-5 h-5" />
                                 </button>
                               </div>
                             </div>

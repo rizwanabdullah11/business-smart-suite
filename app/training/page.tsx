@@ -18,7 +18,8 @@ import {
   Download,
   Users,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  ArrowLeft
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
@@ -211,8 +212,8 @@ export default function TrainingPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Valid": return COLORS.success
-      case "Expiring Soon": return COLORS.warning
-      case "Expired": return COLORS.danger
+      case "Expiring Soon": return COLORS.orange500
+      case "Expired": return COLORS.orange700
       default: return COLORS.textSecondary
     }
   }
@@ -223,6 +224,18 @@ export default function TrainingPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
+            <Link href="/dashboard">
+              <button
+                className="flex items-center justify-center w-10 h-10 rounded-xl transition-all hover:shadow-md"
+                style={{
+                  backgroundColor: COLORS.bgWhite,
+                  color: COLORS.textPrimary,
+                  border: `1px solid ${COLORS.border}`,
+                }}
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            </Link>
             <div
               className="flex items-center justify-center w-12 h-12 rounded-xl"
               style={{
@@ -619,7 +632,7 @@ export default function TrainingPage() {
                             key={item.id}
                             className="flex items-center gap-3 p-4 rounded-lg hover:shadow-md transition-all"
                             style={{
-                              background: item.paused ? `${COLORS.warning}05` : item.highlighted ? `${COLORS.primary}05` : COLORS.bgWhite,
+                              background: item.paused ? `${COLORS.orange500}05` : item.highlighted ? `${COLORS.primary}05` : COLORS.bgWhite,
                               border: `1px solid ${COLORS.border}`,
                             }}
                           >
@@ -665,7 +678,7 @@ export default function TrainingPage() {
                               <div className="flex items-center gap-1 mr-2">
                                 <button onClick={() => toggleHighlight(category.id, item.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: item.highlighted ? COLORS.warning : "#FEF3C7", color: item.highlighted ? COLORS.textWhite : "#92400E" }}><Star className="w-4 h-4" /></button>
                                 <button onClick={() => toggleApprove(category.id, item.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: item.approved ? COLORS.green500 : "#D1FAE5", color: item.approved ? COLORS.textWhite : "#065F46" }}><Check className="w-4 h-4" /></button>
-                                <button onClick={() => togglePause(category.id, item.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: item.paused ? COLORS.warning : "#FEF3C7", color: item.paused ? COLORS.textWhite : "#92400E" }}><Pause className="w-4 h-4" /></button>
+                                <button onClick={() => togglePause(category.id, item.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: item.paused ? COLORS.orange500 : "#FEF3C7", color: item.paused ? COLORS.textWhite : "#92400E" }}><Pause className="w-4 h-4" /></button>
                               </div>
                               <div className="w-px h-6 bg-gray-300 mx-1"></div>
                               <div className="flex items-center gap-1">

@@ -20,7 +20,8 @@ import {
   ChevronRight,
   MoreVertical,
   Copy,
-  Download
+  Download,
+  ArrowLeft
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
@@ -49,8 +50,8 @@ import { COLORS } from "@/constant/colors"
 type SortType = "name" | "date"
 
 export default function ManualPage() {
-  const [categories, setCategories] = useState([])
-  const [archivedCategories, setArchivedCategories] = useState([])
+  const [categories, setCategories] = useState<any[]>([])
+  const [archivedCategories, setArchivedCategories] = useState<any[]>([])
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1"])
   const [editingCategory, setEditingCategory] = useState<string | null>(null)
@@ -161,7 +162,7 @@ export default function ManualPage() {
       const token = localStorage.getItem("token")
       const manual = categories
         .find(c => c.id === categoryId)
-        ?.manuals.find(m => m.id === manualId)
+        ?.manuals.find((m: any) => m.id === manualId)
 
       if (!manual) return
 
@@ -181,7 +182,7 @@ export default function ManualPage() {
           cat.id === categoryId
             ? {
               ...cat,
-              manuals: cat.manuals.map(m =>
+              manuals: cat.manuals.map((m: any) =>
                 m.id === manualId
                   ? { ...m, highlighted: !m.highlighted }
                   : m
@@ -204,7 +205,7 @@ export default function ManualPage() {
       const token = localStorage.getItem("token")
       const manual = categories
         .find(c => c.id === categoryId)
-        ?.manuals.find(m => m.id === manualId)
+        ?.manuals.find((m: any) => m.id === manualId)
 
       if (!manual) return
 
@@ -224,7 +225,7 @@ export default function ManualPage() {
           cat.id === categoryId
             ? {
               ...cat,
-              manuals: cat.manuals.map(m =>
+              manuals: cat.manuals.map((m: any) =>
                 m.id === manualId
                   ? { ...m, approved: !m.approved }
                   : m
@@ -247,7 +248,7 @@ export default function ManualPage() {
       const token = localStorage.getItem("token")
       const manual = categories
         .find(c => c.id === categoryId)
-        ?.manuals.find(m => m.id === manualId)
+        ?.manuals.find((m: any) => m.id === manualId)
 
       if (!manual) return
 
@@ -267,7 +268,7 @@ export default function ManualPage() {
           cat.id === categoryId
             ? {
               ...cat,
-              manuals: cat.manuals.map(m =>
+              manuals: cat.manuals.map((m: any) =>
                 m.id === manualId
                   ? { ...m, paused: !m.paused }
                   : m
@@ -598,6 +599,18 @@ export default function ManualPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
+            <Link href="/dashboard">
+              <button
+                className="flex items-center justify-center w-10 h-10 rounded-xl transition-all hover:shadow-md"
+                style={{
+                  backgroundColor: COLORS.bgWhite,
+                  color: COLORS.textPrimary,
+                  border: `1px solid ${COLORS.border}`,
+                }}
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            </Link>
             <div
               className="flex items-center justify-center w-12 h-12 rounded-xl"
               style={{
@@ -801,21 +814,22 @@ export default function ManualPage() {
                     ) : (
                       <ChevronRight className="w-5 h-5" />
                     )}
-                    <h2 className="text-xl font-bold">{category.title}</h2>
-                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-white bg-opacity-20">
+                    <h2 className="text-2xl font-bold">{category.title}</h2>
+                    <span className="px-3 py-1 rounded-full text-base font-medium bg-white bg-opacity-20">
                       {category.manuals.length} manuals
                     </span>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
                         startEditCategory(category.id, category.title)
                       }}
-                      className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
+                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
                       title="Edit Category"
+                      style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
                     >
-                      <Edit className="w-4 h-4" />
+                      <Edit className="w-5 h-5" />
                     </button>
                     <button
                       onClick={(e) => {
@@ -825,30 +839,33 @@ export default function ManualPage() {
                           setExpandedCategories(prev => [...prev, category.id])
                         }
                       }}
-                      className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
+                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
                       title="Add Manual"
+                      style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-5 h-5" />
                     </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
                         archiveCategory(category.id)
                       }}
-                      className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
+                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
                       title="Archive Category"
+                      style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
                     >
-                      <Archive className="w-4 h-4" />
+                      <Archive className="w-5 h-5" />
                     </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
                         deleteCategory(category.id)
                       }}
-                      className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
+                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
                       title="Delete Category"
+                      style={{ background: COLORS.bgWhite, color: COLORS.pink600 }}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
@@ -920,26 +937,30 @@ export default function ManualPage() {
                     {/* Add Manual Form */}
                     {addingManualToCategory === category.id && (
                       <div
-                        className="mb-5 p-5 rounded-xl shadow-sm"
+                        className="mb-8 p-8 rounded-2xl shadow-sm"
                         style={{
-                          background: COLORS.bgGray,
+                          background: "#F9FAFB",
                           border: `2px dashed ${COLORS.border}`,
                         }}
                       >
-                        <h3 className="text-lg font-semibold mb-4" style={{ color: COLORS.textPrimary }}>
-                          Add New Manual
-                        </h3>
-                        <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="mb-6">
+                          <h3 className="text-xl font-bold" style={{ color: COLORS.textPrimary }}>
+                            Add New Manual
+                          </h3>
+                          <p className="text-sm text-gray-500 font-medium">Create a new documentation entry in this category</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                           <div>
-                            <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                              Title *
+                            <label className="block text-base font-bold mb-2.5" style={{ color: COLORS.textPrimary }}>
+                              Manual Title <span className="text-red-500">*</span>
                             </label>
                             <input
                               type="text"
                               value={newManualData.title}
                               onChange={(e) => setNewManualData(prev => ({ ...prev, title: e.target.value }))}
                               placeholder="Enter manual title..."
-                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium shadow-sm"
                               style={{
                                 borderColor: COLORS.border,
                                 color: COLORS.textPrimary,
@@ -948,7 +969,7 @@ export default function ManualPage() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                            <label className="block text-base font-bold mb-2.5" style={{ color: COLORS.textPrimary }}>
                               Version
                             </label>
                             <input
@@ -956,7 +977,7 @@ export default function ManualPage() {
                               value={newManualData.version}
                               onChange={(e) => setNewManualData(prev => ({ ...prev, version: e.target.value }))}
                               placeholder="e.g., v1.0"
-                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium shadow-sm"
                               style={{
                                 borderColor: COLORS.border,
                                 color: COLORS.textPrimary,
@@ -965,7 +986,7 @@ export default function ManualPage() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                            <label className="block text-base font-bold mb-2.5" style={{ color: COLORS.textPrimary }}>
                               Location
                             </label>
                             <input
@@ -973,7 +994,7 @@ export default function ManualPage() {
                               value={newManualData.location}
                               onChange={(e) => setNewManualData(prev => ({ ...prev, location: e.target.value }))}
                               placeholder="e.g., QMS"
-                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium shadow-sm"
                               style={{
                                 borderColor: COLORS.border,
                                 color: COLORS.textPrimary,
@@ -982,14 +1003,14 @@ export default function ManualPage() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                            <label className="block text-base font-bold mb-2.5" style={{ color: COLORS.textPrimary }}>
                               Issue Date
                             </label>
                             <input
                               type="date"
                               value={newManualData.issueDate}
                               onChange={(e) => setNewManualData(prev => ({ ...prev, issueDate: e.target.value }))}
-                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium shadow-sm"
                               style={{
                                 borderColor: COLORS.border,
                                 color: COLORS.textPrimary,
@@ -998,12 +1019,12 @@ export default function ManualPage() {
                             />
                           </div>
                         </div>
-                        <div className="flex gap-3">
+                        <div className="flex gap-4">
                           <button
                             onClick={() => addManualToCategory(category.id)}
-                            className="px-6 py-2.5 rounded-lg font-medium hover:shadow-md transition-all"
+                            className="px-8 py-3.5 rounded-xl font-bold hover:shadow-lg transition-all focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                             style={{
-                              background: COLORS.primary,
+                              background: COLORS.primaryGradient,
                               color: COLORS.textWhite,
                             }}
                           >
@@ -1019,7 +1040,7 @@ export default function ManualPage() {
                                 issueDate: new Date().toISOString().split('T')[0]
                               })
                             }}
-                            className="px-6 py-2.5 rounded-lg font-medium hover:shadow-md transition-all"
+                            className="px-8 py-3.5 rounded-xl font-bold hover:bg-gray-100 transition-all"
                             style={{
                               background: COLORS.bgWhite,
                               color: COLORS.textPrimary,
@@ -1049,7 +1070,7 @@ export default function ManualPage() {
                             key={manual.id}
                             className="flex items-center gap-3 p-4 rounded-lg hover:shadow-md transition-all"
                             style={{
-                              background: manual.paused ? `${COLORS.warning}05` : manual.highlighted ? `${COLORS.primary}05` : COLORS.bgWhite,
+                              background: manual.paused ? `${COLORS.orange500}05` : manual.highlighted ? `${COLORS.primary}05` : COLORS.bgWhite,
                               border: `1px solid ${COLORS.border}`,
                             }}
                           >
@@ -1059,21 +1080,21 @@ export default function ManualPage() {
                             <div className="flex-1">
                               <Link
                                 href={`/manual/${manual.id}`}
-                                className="font-semibold hover:underline text-lg"
+                                className="font-bold hover:underline text-xl"
                                 style={{ color: COLORS.textPrimary }}
                               >
                                 {manual.title}
                               </Link>
-                              <div className="flex gap-4 text-sm mt-1.5" style={{ color: COLORS.textSecondary }}>
-                                <span className="flex items-center gap-1">
-                                  <span className="font-medium">Version:</span> {manual.version}
+                              <div className="flex gap-5 text-base mt-2" style={{ color: COLORS.textSecondary }}>
+                                <span className="flex items-center gap-1.5">
+                                  <span className="font-semibold text-gray-400">Version:</span> {manual.version}
                                 </span>
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="w-3 h-3" />
+                                <span className="flex items-center gap-1.5">
+                                  <Calendar className="w-4 h-4 text-primary" style={{ color: COLORS.primary }} />
                                   {manual.issueDate}
                                 </span>
-                                <span className="flex items-center gap-1">
-                                  <span className="font-medium">Location:</span> {manual.location}
+                                <span className="flex items-center gap-1.5">
+                                  <span className="font-semibold text-gray-400">Location:</span> {manual.location}
                                 </span>
                               </div>
                             </div>
@@ -1083,11 +1104,11 @@ export default function ManualPage() {
                                 <button
                                   onClick={() => toggleHighlight(category.id, manual.id)}
                                   disabled={loadingAction === `highlight-${manual.id}`}
-                                  className={`p-2.5 rounded-lg transition-all hover:scale-105 ${loadingAction === `highlight-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
+                                  className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `highlight-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                                   style={{
-                                    background: manual.highlighted ? "#FEF9C3" : "#FFFBEB",
-                                    color: manual.highlighted ? "#854D0E" : "#D97706",
-                                    border: `1px solid ${manual.highlighted ? "#FEF08A" : "transparent"}`
+                                    background: COLORS.bgWhite,
+                                    color: manual.highlighted ? "#f59e0b" : "#94a3b8",
+                                    borderColor: manual.highlighted ? "#fde047" : "#e2e8f0",
                                   }}
                                   title={manual.highlighted ? "Remove Highlight" : "Highlight"}
                                 >
@@ -1096,11 +1117,11 @@ export default function ManualPage() {
                                 <button
                                   onClick={() => toggleApprove(category.id, manual.id)}
                                   disabled={loadingAction === `approve-${manual.id}`}
-                                  className={`p-2.5 rounded-lg transition-all hover:scale-105 ${loadingAction === `approve-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
+                                  className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `approve-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                                   style={{
-                                    background: manual.approved ? "#DCFCE7" : "#F0FDF4",
-                                    color: manual.approved ? "#166534" : "#15803D",
-                                    border: `1px solid ${manual.approved ? "#BBF7D0" : "transparent"}`
+                                    background: COLORS.bgWhite,
+                                    color: manual.approved ? COLORS.emerald600 : "#94a3b8",
+                                    borderColor: manual.approved ? COLORS.emerald200 : "#e2e8f0",
                                   }}
                                   title={manual.approved ? "Unapprove" : "Approve"}
                                 >
@@ -1109,11 +1130,11 @@ export default function ManualPage() {
                                 <button
                                   onClick={() => togglePause(category.id, manual.id)}
                                   disabled={loadingAction === `pause-${manual.id}`}
-                                  className={`p-2.5 rounded-lg transition-all hover:scale-105 ${loadingAction === `pause-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
+                                  className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `pause-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                                   style={{
-                                    background: manual.paused ? "#FFEDD5" : "#FFF7ED",
-                                    color: manual.paused ? "#9A3412" : "#C2410C",
-                                    border: `1px solid ${manual.paused ? "#FED7AA" : "transparent"}`
+                                    background: COLORS.bgWhite,
+                                    color: manual.paused ? COLORS.orange600 : "#94a3b8",
+                                    borderColor: manual.paused ? COLORS.orange200 : "#e2e8f0",
                                   }}
                                   title={manual.paused ? "Resume" : "Pause"}
                                 >
@@ -1128,10 +1149,11 @@ export default function ManualPage() {
                               <div className="flex items-center gap-1">
                                 <Link href={`/manual/${manual.id}/edit`}>
                                   <button
-                                    className="p-2.5 rounded-lg transition-all hover:scale-105"
+                                    className="p-3 rounded-lg transition-all hover:scale-110 shadow-sm border cursor-pointer"
                                     style={{
-                                      background: "#DBEAFE",
-                                      color: "#1E40AF",
+                                      background: COLORS.bgWhite,
+                                      color: COLORS.blue600,
+                                      borderColor: COLORS.blue200,
                                     }}
                                     title="Edit"
                                   >
@@ -1141,10 +1163,11 @@ export default function ManualPage() {
                                 <button
                                   onClick={() => copyManual(category.id, manual.id)}
                                   disabled={loadingAction === `copy-${manual.id}`}
-                                  className={`p-2.5 rounded-lg transition-all hover:scale-105 ${loadingAction === `copy-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
+                                  className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `copy-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                                   style={{
-                                    background: "#F3F4F6",
-                                    color: "#374151",
+                                    background: COLORS.bgWhite,
+                                    color: COLORS.gray600,
+                                    borderColor: COLORS.gray200,
                                   }}
                                   title="Duplicate"
                                 >
@@ -1153,10 +1176,11 @@ export default function ManualPage() {
                                 <button
                                   onClick={() => downloadManual(manual.id, manual.title)}
                                   disabled={loadingAction === `download-${manual.id}`}
-                                  className={`p-2.5 rounded-lg transition-all hover:scale-105 ${loadingAction === `download-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
+                                  className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `download-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                                   style={{
-                                    background: "#E0E7FF",
-                                    color: "#4338CA",
+                                    background: COLORS.bgWhite,
+                                    color: COLORS.indigo600,
+                                    borderColor: COLORS.indigo200,
                                   }}
                                   title="Download"
                                 >
@@ -1166,10 +1190,11 @@ export default function ManualPage() {
                                   <button
                                     onClick={() => archiveManual(category.id, manual.id)}
                                     disabled={loadingAction === `archive-${manual.id}`}
-                                    className={`p-2.5 rounded-lg transition-all hover:scale-105 ${loadingAction === `archive-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
+                                    className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `archive-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                                     style={{
-                                      background: "#FEF3C7",
-                                      color: "#92400E",
+                                      background: COLORS.bgWhite,
+                                      color: COLORS.orange700,
+                                      borderColor: COLORS.orange200,
                                     }}
                                     title="Archive"
                                   >
@@ -1179,10 +1204,11 @@ export default function ManualPage() {
                                   <button
                                     onClick={() => unarchiveManual(category.id, manual.id)}
                                     disabled={loadingAction === `unarchive-${manual.id}`}
-                                    className={`p-2.5 rounded-lg transition-all hover:scale-105 ${loadingAction === `unarchive-${manual.id}` ? "opacity-50 cursor-not-allowed" : ""}`}
+                                    className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `unarchive-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                                     style={{
-                                      background: "#D1FAE5",
-                                      color: "#065F46",
+                                      background: COLORS.bgWhite,
+                                      color: COLORS.emerald600,
+                                      borderColor: COLORS.emerald200,
                                     }}
                                     title="Unarchive"
                                   >
@@ -1191,10 +1217,11 @@ export default function ManualPage() {
                                 )}
                                 <button
                                   onClick={() => deleteManual(category.id, manual.id)}
-                                  className="p-2.5 rounded-lg transition-all hover:scale-105"
+                                  className="p-3 rounded-lg transition-all hover:scale-110 shadow-sm border cursor-pointer"
                                   style={{
-                                    background: "#FEE2E2",
-                                    color: "#991B1B",
+                                    background: COLORS.bgWhite,
+                                    color: COLORS.pink600,
+                                    borderColor: COLORS.pink200,
                                   }}
                                   title="Delete"
                                 >
