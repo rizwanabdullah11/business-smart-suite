@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   FileBox,
   Plus,
@@ -23,30 +23,11 @@ import {
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
 
-// Sample data
-const initialCategories = [
-  {
-    id: "1",
-    title: "HR Forms",
-    forms: [
-      { id: "1-1", title: "Leave Application Form", version: "v2.0", issueDate: "2024-01-01", location: "HR", highlighted: true, approved: true, paused: false },
-      { id: "1-2", title: "Performance Review Template", version: "v2024", issueDate: "2024-01-15", location: "HR", highlighted: false, approved: true, paused: false },
-    ]
-  },
-  {
-    id: "2",
-    title: "Operational Forms",
-    forms: [
-      { id: "2-1", title: "Incident Report Form", version: "v3.1", issueDate: "2024-02-10", location: "HSE", highlighted: false, approved: true, paused: false },
-      { id: "2-2", title: "Maintenance Request", version: "v1.5", issueDate: "2024-03-01", location: "OPS", highlighted: false, approved: true, paused: false },
-    ]
-  },
-]
-
 type SortType = "name" | "date"
 
 export default function FormsPage() {
-  const [categories, setCategories] = useState(initialCategories)
+  const [categories, setCategories] = useState<any[]>([])
+  const [archivedCategories, setArchivedCategories] = useState<any[]>([])
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1"])
   const [editingCategory, setEditingCategory] = useState<string | null>(null)
@@ -56,6 +37,7 @@ export default function FormsPage() {
   const [sortType, setSortType] = useState<SortType>("name")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
   const [addingFormToCategory, setAddingFormToCategory] = useState<string | null>(null)
+  const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [newFormData, setNewFormData] = useState({
     title: "",
     version: "",
@@ -63,76 +45,317 @@ export default function FormsPage() {
     issueDate: new Date().toISOString().split('T')[0]
   })
 
-  // Helper functions
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      const token = localStorage.getItem("token")
+
+      // 1) Get categories
+      const catRes = await fetch("http://localhost:5000/api/categories", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      const categoriesData = await catRes.json()
+
+      // 2) Get active forms
+      const formsRes = await fetch("http://localhost:5000/api/forms", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      const formsData = await formsRes.json()
+
+      // 3) Get archived forms
+      const archivedRes = await fetch("http://localhost:5000/api/forms/archived/all", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      const archivedData = archivedRes.ok ? await archivedRes.json() : []
+
+      // 4) Merge active forms inside categories
+      const merged = categoriesData
+        .filter((cat: any) => !cat.isArchived && !cat.archived)
+        .map((cat: any) => ({
+          id: cat._id,
+          title: cat.name,
+          forms: formsData
+            .filter((f: any) => f.category?._id === cat._id && !f.archived)
+            .map((f: any) => ({
+              id: f._id,
+              title: f.title,
+              version: f.version,
+              issueDate: f.issueDate,
+              location: f.location,
+              highlighted: f.highlighted || false,
+              approved: f.approved || false,
+              paused: f.paused || false
+            }))
+        }))
+
+      // 5) Merge archived forms inside archived categories
+      const mergedArchived = categoriesData
+        .filter((cat: any) => cat.isArchived || cat.archived)
+        .map((cat: any) => ({
+          id: cat._id,
+          title: cat.name,
+          forms: archivedData
+            .filter((f: any) => f.category?._id === cat._id)
+            .map((f: any) => ({
+              id: f._id,
+              title: f.title,
+              version: f.version,
+              issueDate: f.issueDate,
+              location: f.location,
+              highlighted: f.highlighted || false,
+              approved: f.approved || false,
+              paused: f.paused || false
+            }))
+        }))
+
+      setCategories(merged)
+      setArchivedCategories(mergedArchived)
+    } catch (err) {
+      console.log(err)
+    }
+  }
+
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories(prev =>
       prev.includes(categoryId) ? prev.filter(id => id !== categoryId) : [...prev, categoryId]
     )
   }
 
-  const toggleHighlight = (categoryId: string, formId: string) => {
-    setCategories(prev =>
-      prev.map(cat =>
-        cat.id === categoryId
-          ? {
-            ...cat,
-            forms: cat.forms.map(f =>
-              f.id === formId ? { ...f, highlighted: !f.highlighted } : f
-            )
-          }
-          : cat
-      )
-    )
+  const archiveCategory = async (categoryId: string) => {
+    if (!confirm("Archive this category?")) return
+
+    try {
+      setLoadingAction(`archive-category-${categoryId}`)
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/archive`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) throw new Error("Failed to archive category")
+
+      await loadData()
+    } catch (err) {
+      console.error("Error archiving category:", err)
+      alert("Failed to archive category")
+    } finally {
+      setLoadingAction(null)
+    }
   }
 
-  const toggleApprove = (categoryId: string, formId: string) => {
-    setCategories(prev =>
-      prev.map(cat =>
-        cat.id === categoryId
-          ? {
-            ...cat,
-            forms: cat.forms.map(f =>
-              f.id === formId ? { ...f, approved: !f.approved } : f
-            )
-          }
-          : cat
-      )
-    )
+  const unarchiveCategory = async (categoryId: string) => {
+    if (!confirm("Unarchive this category?")) return
+
+    try {
+      setLoadingAction(`unarchive-category-${categoryId}`)
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/unarchive`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) throw new Error("Failed to unarchive category")
+
+      await loadData()
+    } catch (err) {
+      console.error("Error unarchiving category:", err)
+      alert("Failed to unarchive category")
+    } finally {
+      setLoadingAction(null)
+    }
   }
 
-  const togglePause = (categoryId: string, formId: string) => {
-    setCategories(prev =>
-      prev.map(cat =>
-        cat.id === categoryId
-          ? {
-            ...cat,
-            forms: cat.forms.map(f =>
-              f.id === formId ? { ...f, paused: !f.paused } : f
-            )
-          }
-          : cat
-      )
-    )
-  }
+  const toggleHighlight = async (categoryId: string, formId: string) => {
+    try {
+      setLoadingAction(`highlight-${formId}`)
+      const token = localStorage.getItem("token")
+      const form = categories
+        .find(c => c.id === categoryId)
+        ?.forms.find((f: any) => f.id === formId)
 
-  const deleteForm = (categoryId: string, formId: string) => {
-    if (confirm("Are you sure you want to delete this form?")) {
+      if (!form) return
+
+      const response = await fetch(`http://localhost:5000/api/forms/${formId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ highlighted: !form.highlighted })
+      })
+
+      if (!response.ok) throw new Error("Failed to update highlight")
+
       setCategories(prev =>
         prev.map(cat =>
           cat.id === categoryId
             ? {
               ...cat,
-              forms: cat.forms.filter(f => f.id !== formId)
+              forms: cat.forms.map((f: any) =>
+                f.id === formId
+                  ? { ...f, highlighted: !f.highlighted }
+                  : f
+              )
             }
             : cat
         )
       )
+    } catch (err) {
+      console.error("Error toggling highlight:", err)
+      alert("Failed to update highlight status")
+    } finally {
+      setLoadingAction(null)
     }
   }
 
-  const deleteCategory = (categoryId: string) => {
-    if (confirm("Are you sure you want to delete this category?")) {
-      setCategories(prev => prev.filter(cat => cat.id !== categoryId))
+  const toggleApprove = async (categoryId: string, formId: string) => {
+    try {
+      setLoadingAction(`approve-${formId}`)
+      const token = localStorage.getItem("token")
+      const form = categories
+        .find(c => c.id === categoryId)
+        ?.forms.find((f: any) => f.id === formId)
+
+      if (!form) return
+
+      const response = await fetch(`http://localhost:5000/api/forms/${formId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ approved: !form.approved })
+      })
+
+      if (!response.ok) throw new Error("Failed to update approval")
+
+      setCategories(prev =>
+        prev.map(cat =>
+          cat.id === categoryId
+            ? {
+              ...cat,
+              forms: cat.forms.map((f: any) =>
+                f.id === formId
+                  ? { ...f, approved: !f.approved }
+                  : f
+              )
+            }
+            : cat
+        )
+      )
+    } catch (err) {
+      console.error("Error toggling approve:", err)
+      alert("Failed to update approval status")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const togglePause = async (categoryId: string, formId: string) => {
+    try {
+      setLoadingAction(`pause-${formId}`)
+      const token = localStorage.getItem("token")
+      const form = categories
+        .find(c => c.id === categoryId)
+        ?.forms.find((f: any) => f.id === formId)
+
+      if (!form) return
+
+      const response = await fetch(`http://localhost:5000/api/forms/${formId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ paused: !form.paused })
+      })
+
+      if (!response.ok) throw new Error("Failed to update pause status")
+
+      setCategories(prev =>
+        prev.map(cat =>
+          cat.id === categoryId
+            ? {
+              ...cat,
+              forms: cat.forms.map((f: any) =>
+                f.id === formId
+                  ? { ...f, paused: !f.paused }
+                  : f
+              )
+            }
+            : cat
+        )
+      )
+    } catch (err) {
+      console.error("Error toggling pause:", err)
+      alert("Failed to update pause status")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const deleteForm = async (categoryId: any, formId: any) => {
+    if (!confirm("Are you sure you want to delete this form?")) return
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/forms/${formId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete form")
+      }
+
+      await loadData()
+    } catch (err) {
+      console.error("Error deleting form:", err)
+      alert("Failed to delete form")
+    }
+  }
+
+  const deleteCategory = async (categoryId: any) => {
+    if (!confirm("Are you sure you want to delete this category?")) return
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete category")
+      }
+
+      await loadData()
+    } catch (err) {
+      console.error("Error deleting category:", err)
+      alert("Failed to delete category")
     }
   }
 
@@ -141,59 +364,104 @@ export default function FormsPage() {
     setEditTitle(currentTitle)
   }
 
-  const saveEditCategory = (categoryId: string) => {
-    if (editTitle.trim()) {
+  const saveEditCategory = async (categoryId: string) => {
+    if (!editTitle.trim()) return
+
+    try {
+      const token = localStorage.getItem("token")
+
+      await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: editTitle.trim() })
+      })
+
       setCategories(prev =>
         prev.map(cat =>
           cat.id === categoryId ? { ...cat, title: editTitle.trim() } : cat
         )
       )
+    } catch (err) {
+      console.error("Error updating category:", err)
     }
+
     setEditingCategory(null)
     setEditTitle("")
   }
 
-  const addCategory = () => {
-    if (newCategoryTitle.trim()) {
-      const newCategory = {
-        id: Date.now().toString(),
-        title: newCategoryTitle.trim(),
-        forms: []
+  const addCategory = async () => {
+    if (!newCategoryTitle.trim()) {
+      alert("Please enter a category name")
+      return
+    }
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch("http://localhost:5000/api/categories", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: newCategoryTitle })
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to add category")
       }
-      setCategories(prev => [...prev, newCategory])
+
       setNewCategoryTitle("")
       setShowAddCategory(false)
+      await loadData()
+    } catch (err) {
+      console.error("Error adding category:", err)
+      alert("Failed to add category")
     }
   }
 
-  const addFormToCategory = (categoryId: string) => {
-    if (newFormData.title.trim()) {
-      const newForm = {
-        id: `${categoryId}-${Date.now()}`,
-        title: newFormData.title.trim(),
-        version: newFormData.version.trim() || "v1.0",
-        location: newFormData.location.trim() || "N/A",
-        issueDate: newFormData.issueDate,
-        highlighted: false,
-        approved: false,
-        paused: false
+  const addFormToCategory = async (categoryId: any) => {
+    if (!newFormData.title.trim()) {
+      alert("Please enter a form title")
+      return
+    }
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch("http://localhost:5000/api/forms", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: newFormData.title,
+          version: newFormData.version || "v1.0",
+          location: newFormData.location || "N/A",
+          issueDate: newFormData.issueDate,
+          category: categoryId
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to add form")
       }
 
-      setCategories(prev =>
-        prev.map(cat =>
-          cat.id === categoryId
-            ? { ...cat, forms: [...cat.forms, newForm] }
-            : cat
-        )
-      )
-
+      setAddingFormToCategory(null)
       setNewFormData({
         title: "",
         version: "",
         location: "",
         issueDate: new Date().toISOString().split('T')[0]
       })
-      setAddingFormToCategory(null)
+      await loadData()
+    } catch (err) {
+      console.error("Error adding form:", err)
+      alert("Failed to add form")
     }
   }
 
@@ -346,7 +614,7 @@ export default function FormsPage() {
               }}
               onClick={() => setShowArchived(false)}
             >
-              Active ({categories.reduce((acc, cat) => acc + cat.forms.length, 0)})
+              Active ({categories.length})
             </button>
             <button
               className="px-6 py-3 font-semibold border-b-2 transition-all"
@@ -356,14 +624,14 @@ export default function FormsPage() {
               }}
               onClick={() => setShowArchived(true)}
             >
-              Archived (0)
+              Archived ({archivedCategories.length})
             </button>
           </div>
         </div>
 
         {/* Categories */}
         <div className="space-y-4">
-          {categories.map((category) => {
+          {(showArchived ? archivedCategories : categories).map((category) => {
             const sortedForms = sortForms(category.forms)
             const isExpanded = expandedCategories.includes(category.id)
 
@@ -422,16 +690,31 @@ export default function FormsPage() {
                     >
                       <Plus className="w-5 h-5" />
                     </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                      }}
-                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
-                      title="Archive Category"
-                      style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
-                    >
-                      <Archive className="w-5 h-5" />
-                    </button>
+                    {showArchived ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          unarchiveCategory(category.id)
+                        }}
+                        className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
+                        title="Unarchive Category"
+                        style={{ background: COLORS.bgWhite, color: COLORS.green600 }}
+                      >
+                        <Archive className="w-5 h-5" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          archiveCategory(category.id)
+                        }}
+                        className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
+                        title="Archive Category"
+                        style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
+                      >
+                        <Archive className="w-5 h-5" />
+                      </button>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation()

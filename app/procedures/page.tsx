@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   FileText,
   Plus,
@@ -23,30 +23,11 @@ import {
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
 
-// Sample data
-const initialCategories = [
-  {
-    id: "1",
-    title: "Standard Operating Procedures",
-    procedures: [
-      { id: "1-1", title: "SOP-001: Machine Operation", version: "v4.0", issueDate: "2024-01-10", location: "PROD", highlighted: true, approved: true, paused: false },
-      { id: "1-2", title: "SOP-002: Quality Check Process", version: "v2.5", issueDate: "2024-02-05", location: "QA", highlighted: false, approved: true, paused: false },
-    ]
-  },
-  {
-    id: "2",
-    title: "Emergency Procedures",
-    procedures: [
-      { id: "2-1", title: "Fire Evacuation Plan", version: "v5.0", issueDate: "2024-01-01", location: "HSE", highlighted: true, approved: true, paused: false },
-      { id: "2-2", title: "Chemical Spill Response", version: "v3.2", issueDate: "2024-03-15", location: "HSE", highlighted: false, approved: true, paused: false },
-    ]
-  },
-]
-
 type SortType = "name" | "date"
 
 export default function ProceduresPage() {
-  const [categories, setCategories] = useState(initialCategories)
+  const [categories, setCategories] = useState<any[]>([])
+  const [archivedCategories, setArchivedCategories] = useState<any[]>([])
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1"])
   const [editingCategory, setEditingCategory] = useState<string | null>(null)
@@ -56,6 +37,7 @@ export default function ProceduresPage() {
   const [sortType, setSortType] = useState<SortType>("name")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
   const [addingProcedureToCategory, setAddingProcedureToCategory] = useState<string | null>(null)
+  const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [newProcedureData, setNewProcedureData] = useState({
     title: "",
     version: "",
@@ -63,76 +45,317 @@ export default function ProceduresPage() {
     issueDate: new Date().toISOString().split('T')[0]
   })
 
-  // Helper functions
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      const token = localStorage.getItem("token")
+
+      // 1) Get categories
+      const catRes = await fetch("http://localhost:5000/api/categories", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      const categoriesData = await catRes.json()
+
+      // 2) Get active procedures
+      const procRes = await fetch("http://localhost:5000/api/procedures", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      const proceduresData = await procRes.json()
+
+      // 3) Get archived procedures
+      const archivedRes = await fetch("http://localhost:5000/api/procedures/archived/all", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      const archivedData = archivedRes.ok ? await archivedRes.json() : []
+
+      // 4) Merge active procedures inside categories
+      const merged = categoriesData
+        .filter((cat: any) => !cat.isArchived && !cat.archived)
+        .map((cat: any) => ({
+          id: cat._id,
+          title: cat.name,
+          procedures: proceduresData
+            .filter((p: any) => p.category?._id === cat._id && !p.archived)
+            .map((p: any) => ({
+              id: p._id,
+              title: p.title,
+              version: p.version,
+              issueDate: p.issueDate,
+              location: p.location,
+              highlighted: p.highlighted || false,
+              approved: p.approved || false,
+              paused: p.paused || false
+            }))
+        }))
+
+      // 5) Merge archived procedures inside archived categories
+      const mergedArchived = categoriesData
+        .filter((cat: any) => cat.isArchived || cat.archived)
+        .map((cat: any) => ({
+          id: cat._id,
+          title: cat.name,
+          procedures: archivedData
+            .filter((p: any) => p.category?._id === cat._id)
+            .map((p: any) => ({
+              id: p._id,
+              title: p.title,
+              version: p.version,
+              issueDate: p.issueDate,
+              location: p.location,
+              highlighted: p.highlighted || false,
+              approved: p.approved || false,
+              paused: p.paused || false
+            }))
+        }))
+
+      setCategories(merged)
+      setArchivedCategories(mergedArchived)
+    } catch (err) {
+      console.log(err)
+    }
+  }
+
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories(prev =>
       prev.includes(categoryId) ? prev.filter(id => id !== categoryId) : [...prev, categoryId]
     )
   }
 
-  const toggleHighlight = (categoryId: string, procId: string) => {
-    setCategories(prev =>
-      prev.map(cat =>
-        cat.id === categoryId
-          ? {
-            ...cat,
-            procedures: cat.procedures.map(p =>
-              p.id === procId ? { ...p, highlighted: !p.highlighted } : p
-            )
-          }
-          : cat
-      )
-    )
+  const archiveCategory = async (categoryId: string) => {
+    if (!confirm("Archive this category?")) return
+
+    try {
+      setLoadingAction(`archive-category-${categoryId}`)
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/archive`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) throw new Error("Failed to archive category")
+
+      await loadData()
+    } catch (err) {
+      console.error("Error archiving category:", err)
+      alert("Failed to archive category")
+    } finally {
+      setLoadingAction(null)
+    }
   }
 
-  const toggleApprove = (categoryId: string, procId: string) => {
-    setCategories(prev =>
-      prev.map(cat =>
-        cat.id === categoryId
-          ? {
-            ...cat,
-            procedures: cat.procedures.map(p =>
-              p.id === procId ? { ...p, approved: !p.approved } : p
-            )
-          }
-          : cat
-      )
-    )
+  const unarchiveCategory = async (categoryId: string) => {
+    if (!confirm("Unarchive this category?")) return
+
+    try {
+      setLoadingAction(`unarchive-category-${categoryId}`)
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/unarchive`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) throw new Error("Failed to unarchive category")
+
+      await loadData()
+    } catch (err) {
+      console.error("Error unarchiving category:", err)
+      alert("Failed to unarchive category")
+    } finally {
+      setLoadingAction(null)
+    }
   }
 
-  const togglePause = (categoryId: string, procId: string) => {
-    setCategories(prev =>
-      prev.map(cat =>
-        cat.id === categoryId
-          ? {
-            ...cat,
-            procedures: cat.procedures.map(p =>
-              p.id === procId ? { ...p, paused: !p.paused } : p
-            )
-          }
-          : cat
-      )
-    )
-  }
+  const toggleHighlight = async (categoryId: string, procId: string) => {
+    try {
+      setLoadingAction(`highlight-${procId}`)
+      const token = localStorage.getItem("token")
+      const procedure = categories
+        .find(c => c.id === categoryId)
+        ?.procedures.find((p: any) => p.id === procId)
 
-  const deleteProcedure = (categoryId: string, procId: string) => {
-    if (confirm("Are you sure you want to delete this procedure?")) {
+      if (!procedure) return
+
+      const response = await fetch(`http://localhost:5000/api/procedures/${procId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ highlighted: !procedure.highlighted })
+      })
+
+      if (!response.ok) throw new Error("Failed to update highlight")
+
       setCategories(prev =>
         prev.map(cat =>
           cat.id === categoryId
             ? {
               ...cat,
-              procedures: cat.procedures.filter(p => p.id !== procId)
+              procedures: cat.procedures.map((p: any) =>
+                p.id === procId
+                  ? { ...p, highlighted: !p.highlighted }
+                  : p
+              )
             }
             : cat
         )
       )
+    } catch (err) {
+      console.error("Error toggling highlight:", err)
+      alert("Failed to update highlight status")
+    } finally {
+      setLoadingAction(null)
     }
   }
 
-  const deleteCategory = (categoryId: string) => {
-    if (confirm("Are you sure you want to delete this category?")) {
-      setCategories(prev => prev.filter(cat => cat.id !== categoryId))
+  const toggleApprove = async (categoryId: string, procId: string) => {
+    try {
+      setLoadingAction(`approve-${procId}`)
+      const token = localStorage.getItem("token")
+      const procedure = categories
+        .find(c => c.id === categoryId)
+        ?.procedures.find((p: any) => p.id === procId)
+
+      if (!procedure) return
+
+      const response = await fetch(`http://localhost:5000/api/procedures/${procId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ approved: !procedure.approved })
+      })
+
+      if (!response.ok) throw new Error("Failed to update approval")
+
+      setCategories(prev =>
+        prev.map(cat =>
+          cat.id === categoryId
+            ? {
+              ...cat,
+              procedures: cat.procedures.map((p: any) =>
+                p.id === procId
+                  ? { ...p, approved: !p.approved }
+                  : p
+              )
+            }
+            : cat
+        )
+      )
+    } catch (err) {
+      console.error("Error toggling approve:", err)
+      alert("Failed to update approval status")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const togglePause = async (categoryId: string, procId: string) => {
+    try {
+      setLoadingAction(`pause-${procId}`)
+      const token = localStorage.getItem("token")
+      const procedure = categories
+        .find(c => c.id === categoryId)
+        ?.procedures.find((p: any) => p.id === procId)
+
+      if (!procedure) return
+
+      const response = await fetch(`http://localhost:5000/api/procedures/${procId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ paused: !procedure.paused })
+      })
+
+      if (!response.ok) throw new Error("Failed to update pause status")
+
+      setCategories(prev =>
+        prev.map(cat =>
+          cat.id === categoryId
+            ? {
+              ...cat,
+              procedures: cat.procedures.map((p: any) =>
+                p.id === procId
+                  ? { ...p, paused: !p.paused }
+                  : p
+              )
+            }
+            : cat
+        )
+      )
+    } catch (err) {
+      console.error("Error toggling pause:", err)
+      alert("Failed to update pause status")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const deleteProcedure = async (categoryId: any, procId: any) => {
+    if (!confirm("Are you sure you want to delete this procedure?")) return
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/procedures/${procId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete procedure")
+      }
+
+      await loadData()
+    } catch (err) {
+      console.error("Error deleting procedure:", err)
+      alert("Failed to delete procedure")
+    }
+  }
+
+  const deleteCategory = async (categoryId: any) => {
+    if (!confirm("Are you sure you want to delete this category?")) return
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete category")
+      }
+
+      await loadData()
+    } catch (err) {
+      console.error("Error deleting category:", err)
+      alert("Failed to delete category")
     }
   }
 
@@ -141,59 +364,104 @@ export default function ProceduresPage() {
     setEditTitle(currentTitle)
   }
 
-  const saveEditCategory = (categoryId: string) => {
-    if (editTitle.trim()) {
+  const saveEditCategory = async (categoryId: string) => {
+    if (!editTitle.trim()) return
+
+    try {
+      const token = localStorage.getItem("token")
+
+      await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: editTitle.trim() })
+      })
+
       setCategories(prev =>
         prev.map(cat =>
           cat.id === categoryId ? { ...cat, title: editTitle.trim() } : cat
         )
       )
+    } catch (err) {
+      console.error("Error updating category:", err)
     }
+
     setEditingCategory(null)
     setEditTitle("")
   }
 
-  const addCategory = () => {
-    if (newCategoryTitle.trim()) {
-      const newCategory = {
-        id: Date.now().toString(),
-        title: newCategoryTitle.trim(),
-        procedures: []
+  const addCategory = async () => {
+    if (!newCategoryTitle.trim()) {
+      alert("Please enter a category name")
+      return
+    }
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch("http://localhost:5000/api/categories", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: newCategoryTitle })
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to add category")
       }
-      setCategories(prev => [...prev, newCategory])
+
       setNewCategoryTitle("")
       setShowAddCategory(false)
+      await loadData()
+    } catch (err) {
+      console.error("Error adding category:", err)
+      alert("Failed to add category")
     }
   }
 
-  const addProcedureToCategory = (categoryId: string) => {
-    if (newProcedureData.title.trim()) {
-      const newProc = {
-        id: `${categoryId}-${Date.now()}`,
-        title: newProcedureData.title.trim(),
-        version: newProcedureData.version.trim() || "v1.0",
-        location: newProcedureData.location.trim() || "N/A",
-        issueDate: newProcedureData.issueDate,
-        highlighted: false,
-        approved: false,
-        paused: false
+  const addProcedureToCategory = async (categoryId: any) => {
+    if (!newProcedureData.title.trim()) {
+      alert("Please enter a procedure title")
+      return
+    }
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch("http://localhost:5000/api/procedures", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: newProcedureData.title,
+          version: newProcedureData.version || "v1.0",
+          location: newProcedureData.location || "N/A",
+          issueDate: newProcedureData.issueDate,
+          category: categoryId
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to add procedure")
       }
 
-      setCategories(prev =>
-        prev.map(cat =>
-          cat.id === categoryId
-            ? { ...cat, procedures: [...cat.procedures, newProc] }
-            : cat
-        )
-      )
-
+      setAddingProcedureToCategory(null)
       setNewProcedureData({
         title: "",
         version: "",
         location: "",
         issueDate: new Date().toISOString().split('T')[0]
       })
-      setAddingProcedureToCategory(null)
+      await loadData()
+    } catch (err) {
+      console.error("Error adding procedure:", err)
+      alert("Failed to add procedure")
     }
   }
 
@@ -346,7 +614,7 @@ export default function ProceduresPage() {
               }}
               onClick={() => setShowArchived(false)}
             >
-              Active ({categories.reduce((acc, cat) => acc + cat.procedures.length, 0)})
+              Active ({categories.length})
             </button>
             <button
               className="px-6 py-3 font-semibold border-b-2 transition-all"
@@ -356,14 +624,14 @@ export default function ProceduresPage() {
               }}
               onClick={() => setShowArchived(true)}
             >
-              Archived (0)
+              Archived ({archivedCategories.length})
             </button>
           </div>
         </div>
 
         {/* Categories */}
         <div className="space-y-4">
-          {categories.map((category) => {
+          {(showArchived ? archivedCategories : categories).map((category) => {
             const sortedProcedures = sortProcedures(category.procedures)
             const isExpanded = expandedCategories.includes(category.id)
 
@@ -422,16 +690,31 @@ export default function ProceduresPage() {
                     >
                       <Plus className="w-5 h-5" />
                     </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                      }}
-                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
-                      title="Archive Category"
-                      style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
-                    >
-                      <Archive className="w-5 h-5" />
-                    </button>
+                    {showArchived ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          unarchiveCategory(category.id)
+                        }}
+                        className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
+                        title="Unarchive Category"
+                        style={{ background: COLORS.bgWhite, color: COLORS.green600 }}
+                      >
+                        <Archive className="w-5 h-5" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          archiveCategory(category.id)
+                        }}
+                        className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
+                        title="Archive Category"
+                        style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
+                      >
+                        <Archive className="w-5 h-5" />
+                      </button>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation()

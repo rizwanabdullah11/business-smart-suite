@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   FileText,
   Plus,
@@ -25,31 +25,11 @@ import {
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
 
-// Sample data
-const initialCategories = [
-  {
-    id: "1",
-    title: "General Policies",
-    policies: [
-      { id: "1-1", title: "Quality Policy", version: "v2.1", issueDate: "2024-01-15", location: "QMS", highlighted: false, approved: true, paused: false },
-      { id: "1-2", title: "Safety Policy", version: "v3.0", issueDate: "2024-02-01", location: "HSE", highlighted: true, approved: true, paused: false },
-      { id: "1-3", title: "Environmental Policy", version: "v4.2", issueDate: "2024-02-05", location: "ENV", highlighted: false, approved: false, paused: false },
-    ]
-  },
-  {
-    id: "2",
-    title: "HR Policies",
-    policies: [
-      { id: "2-1", title: "Employee Handbook", version: "v1.5", issueDate: "2024-01-20", location: "HR", highlighted: false, approved: true, paused: false },
-      { id: "2-2", title: "Code of Conduct", version: "v2.3", issueDate: "2024-01-25", location: "HR", highlighted: false, approved: true, paused: true },
-    ]
-  },
-]
-
 type SortType = "name" | "date"
 
 export default function PoliciesPage() {
-  const [categories, setCategories] = useState(initialCategories)
+  const [categories, setCategories] = useState<any[]>([])
+  const [archivedCategories, setArchivedCategories] = useState<any[]>([])
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1"])
   const [editingCategory, setEditingCategory] = useState<string | null>(null)
@@ -59,12 +39,92 @@ export default function PoliciesPage() {
   const [sortType, setSortType] = useState<SortType>("name")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
   const [addingPolicyToCategory, setAddingPolicyToCategory] = useState<string | null>(null)
+  const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [newPolicyData, setNewPolicyData] = useState({
     title: "",
     version: "",
     location: "",
     issueDate: new Date().toISOString().split('T')[0]
   })
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      const token = localStorage.getItem("token")
+
+      // 1) Get categories
+      const catRes = await fetch("http://localhost:5000/api/categories", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      const categoriesData = await catRes.json()
+
+      // 2) Get active policies
+      const polRes = await fetch("http://localhost:5000/api/policies", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      const policiesData = await polRes.json()
+
+      // 3) Get archived policies
+      const archivedRes = await fetch("http://localhost:5000/api/policies/archived/all", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      const archivedData = archivedRes.ok ? await archivedRes.json() : []
+
+      // 4) Merge active policies inside categories
+      const merged = categoriesData
+        .filter((cat: any) => !cat.isArchived && !cat.archived)
+        .map((cat: any) => ({
+          id: cat._id,
+          title: cat.name,
+          policies: policiesData
+            .filter((p: any) => p.category?._id === cat._id && !p.archived)
+            .map((p: any) => ({
+              id: p._id,
+              title: p.title,
+              version: p.version,
+              issueDate: p.issueDate,
+              location: p.location,
+              highlighted: p.highlighted || false,
+              approved: p.approved || false,
+              paused: p.paused || false
+            }))
+        }))
+
+      // 5) Merge archived policies inside archived categories
+      const mergedArchived = categoriesData
+        .filter((cat: any) => cat.isArchived || cat.archived)
+        .map((cat: any) => ({
+          id: cat._id,
+          title: cat.name,
+          policies: archivedData
+            .filter((p: any) => p.category?._id === cat._id)
+            .map((p: any) => ({
+              id: p._id,
+              title: p.title,
+              version: p.version,
+              issueDate: p.issueDate,
+              location: p.location,
+              highlighted: p.highlighted || false,
+              approved: p.approved || false,
+              paused: p.paused || false
+            }))
+        }))
+
+      setCategories(merged)
+      setArchivedCategories(mergedArchived)
+    } catch (err) {
+      console.log(err)
+    }
+  }
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories(prev =>
@@ -74,75 +134,232 @@ export default function PoliciesPage() {
     )
   }
 
-  const toggleHighlight = (categoryId: string, policyId: string) => {
-    setCategories(prev =>
-      prev.map(cat =>
-        cat.id === categoryId
-          ? {
-            ...cat,
-            policies: cat.policies.map(policy =>
-              policy.id === policyId
-                ? { ...policy, highlighted: !policy.highlighted }
-                : policy
-            )
-          }
-          : cat
-      )
-    )
+  const archiveCategory = async (categoryId: string) => {
+    if (!confirm("Archive this category?")) return
+
+    try {
+      setLoadingAction(`archive-category-${categoryId}`)
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/archive`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) throw new Error("Failed to archive category")
+
+      await loadData()
+    } catch (err) {
+      console.error("Error archiving category:", err)
+      alert("Failed to archive category")
+    } finally {
+      setLoadingAction(null)
+    }
   }
 
-  const toggleApprove = (categoryId: string, policyId: string) => {
-    setCategories(prev =>
-      prev.map(cat =>
-        cat.id === categoryId
-          ? {
-            ...cat,
-            policies: cat.policies.map(policy =>
-              policy.id === policyId
-                ? { ...policy, approved: !policy.approved }
-                : policy
-            )
-          }
-          : cat
-      )
-    )
+  const unarchiveCategory = async (categoryId: string) => {
+    if (!confirm("Unarchive this category?")) return
+
+    try {
+      setLoadingAction(`unarchive-category-${categoryId}`)
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/unarchive`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) throw new Error("Failed to unarchive category")
+
+      await loadData()
+    } catch (err) {
+      console.error("Error unarchiving category:", err)
+      alert("Failed to unarchive category")
+    } finally {
+      setLoadingAction(null)
+    }
   }
 
-  const togglePause = (categoryId: string, policyId: string) => {
-    setCategories(prev =>
-      prev.map(cat =>
-        cat.id === categoryId
-          ? {
-            ...cat,
-            policies: cat.policies.map(policy =>
-              policy.id === policyId
-                ? { ...policy, paused: !policy.paused }
-                : policy
-            )
-          }
-          : cat
-      )
-    )
-  }
+  const toggleHighlight = async (categoryId: string, policyId: string) => {
+    try {
+      setLoadingAction(`highlight-${policyId}`)
+      const token = localStorage.getItem("token")
+      const policy = categories
+        .find(c => c.id === categoryId)
+        ?.policies.find((p: any) => p.id === policyId)
 
-  const deletePolicy = (categoryId: string, policyId: string) => {
-    if (confirm("Are you sure you want to delete this policy?")) {
+      if (!policy) return
+
+      const response = await fetch(`http://localhost:5000/api/policies/${policyId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ highlighted: !policy.highlighted })
+      })
+
+      if (!response.ok) throw new Error("Failed to update highlight")
+
       setCategories(prev =>
         prev.map(cat =>
           cat.id === categoryId
             ? {
               ...cat,
-              policies: cat.policies.filter(policy => policy.id !== policyId)
+              policies: cat.policies.map((p: any) =>
+                p.id === policyId
+                  ? { ...p, highlighted: !p.highlighted }
+                  : p
+              )
             }
             : cat
         )
       )
+    } catch (err) {
+      console.error("Error toggling highlight:", err)
+      alert("Failed to update highlight status")
+    } finally {
+      setLoadingAction(null)
     }
   }
 
-  const deleteCategory = (categoryId: string) => {
-    if (confirm("Are you sure you want to delete this category?")) {
-      setCategories(prev => prev.filter(cat => cat.id !== categoryId))
+  const toggleApprove = async (categoryId: string, policyId: string) => {
+    try {
+      setLoadingAction(`approve-${policyId}`)
+      const token = localStorage.getItem("token")
+      const policy = categories
+        .find(c => c.id === categoryId)
+        ?.policies.find((p: any) => p.id === policyId)
+
+      if (!policy) return
+
+      const response = await fetch(`http://localhost:5000/api/policies/${policyId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ approved: !policy.approved })
+      })
+
+      if (!response.ok) throw new Error("Failed to update approval")
+
+      setCategories(prev =>
+        prev.map(cat =>
+          cat.id === categoryId
+            ? {
+              ...cat,
+              policies: cat.policies.map((p: any) =>
+                p.id === policyId
+                  ? { ...p, approved: !p.approved }
+                  : p
+              )
+            }
+            : cat
+        )
+      )
+    } catch (err) {
+      console.error("Error toggling approve:", err)
+      alert("Failed to update approval status")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const togglePause = async (categoryId: string, policyId: string) => {
+    try {
+      setLoadingAction(`pause-${policyId}`)
+      const token = localStorage.getItem("token")
+      const policy = categories
+        .find(c => c.id === categoryId)
+        ?.policies.find((p: any) => p.id === policyId)
+
+      if (!policy) return
+
+      const response = await fetch(`http://localhost:5000/api/policies/${policyId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ paused: !policy.paused })
+      })
+
+      if (!response.ok) throw new Error("Failed to update pause status")
+
+      setCategories(prev =>
+        prev.map(cat =>
+          cat.id === categoryId
+            ? {
+              ...cat,
+              policies: cat.policies.map((p: any) =>
+                p.id === policyId
+                  ? { ...p, paused: !p.paused }
+                  : p
+              )
+            }
+            : cat
+        )
+      )
+    } catch (err) {
+      console.error("Error toggling pause:", err)
+      alert("Failed to update pause status")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const deletePolicy = async (categoryId: any, policyId: any) => {
+    if (!confirm("Are you sure you want to delete this policy?")) return
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/policies/${policyId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete policy")
+      }
+
+      await loadData()
+    } catch (err) {
+      console.error("Error deleting policy:", err)
+      alert("Failed to delete policy")
+    }
+  }
+
+  const deleteCategory = async (categoryId: any) => {
+    if (!confirm("Are you sure you want to delete this category?")) return
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete category")
+      }
+
+      await loadData()
+    } catch (err) {
+      console.error("Error deleting category:", err)
+      alert("Failed to delete category")
     }
   }
 
@@ -151,59 +368,104 @@ export default function PoliciesPage() {
     setEditTitle(currentTitle)
   }
 
-  const saveEditCategory = (categoryId: string) => {
-    if (editTitle.trim()) {
+  const saveEditCategory = async (categoryId: string) => {
+    if (!editTitle.trim()) return
+
+    try {
+      const token = localStorage.getItem("token")
+
+      await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: editTitle.trim() })
+      })
+
       setCategories(prev =>
         prev.map(cat =>
           cat.id === categoryId ? { ...cat, title: editTitle.trim() } : cat
         )
       )
+    } catch (err) {
+      console.error("Error updating category:", err)
     }
+
     setEditingCategory(null)
     setEditTitle("")
   }
 
-  const addCategory = () => {
-    if (newCategoryTitle.trim()) {
-      const newCategory = {
-        id: Date.now().toString(),
-        title: newCategoryTitle.trim(),
-        policies: []
+  const addCategory = async () => {
+    if (!newCategoryTitle.trim()) {
+      alert("Please enter a category name")
+      return
+    }
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch("http://localhost:5000/api/categories", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: newCategoryTitle })
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to add category")
       }
-      setCategories(prev => [...prev, newCategory])
+
       setNewCategoryTitle("")
       setShowAddCategory(false)
+      await loadData()
+    } catch (err) {
+      console.error("Error adding category:", err)
+      alert("Failed to add category")
     }
   }
 
-  const addPolicyToCategory = (categoryId: string) => {
-    if (newPolicyData.title.trim()) {
-      const newPolicy = {
-        id: `${categoryId}-${Date.now()}`,
-        title: newPolicyData.title.trim(),
-        version: newPolicyData.version.trim() || "v1.0",
-        location: newPolicyData.location.trim() || "N/A",
-        issueDate: newPolicyData.issueDate,
-        highlighted: false,
-        approved: false,
-        paused: false
+  const addPolicyToCategory = async (categoryId: any) => {
+    if (!newPolicyData.title.trim()) {
+      alert("Please enter a policy title")
+      return
+    }
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch("http://localhost:5000/api/policies", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: newPolicyData.title,
+          version: newPolicyData.version || "v1.0",
+          location: newPolicyData.location || "N/A",
+          issueDate: newPolicyData.issueDate,
+          category: categoryId
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to add policy")
       }
 
-      setCategories(prev =>
-        prev.map(cat =>
-          cat.id === categoryId
-            ? { ...cat, policies: [...cat.policies, newPolicy] }
-            : cat
-        )
-      )
-
+      setAddingPolicyToCategory(null)
       setNewPolicyData({
         title: "",
         version: "",
         location: "",
         issueDate: new Date().toISOString().split('T')[0]
       })
-      setAddingPolicyToCategory(null)
+      await loadData()
+    } catch (err) {
+      console.error("Error adding policy:", err)
+      alert("Failed to add policy")
     }
   }
 
@@ -365,7 +627,7 @@ export default function PoliciesPage() {
               }}
               onClick={() => setShowArchived(false)}
             >
-              Active ({categories.reduce((acc, cat) => acc + cat.policies.length, 0)})
+              Active ({categories.length})
             </button>
             <button
               className="px-6 py-3 font-semibold border-b-2 transition-all"
@@ -375,7 +637,7 @@ export default function PoliciesPage() {
               }}
               onClick={() => setShowArchived(true)}
             >
-              Archived (0)
+              Archived ({archivedCategories.length})
             </button>
           </div>
         </div>
@@ -419,7 +681,7 @@ export default function PoliciesPage() {
 
         {/* Categories */}
         <div className="space-y-4">
-          {categories.map((category) => {
+          {(showArchived ? archivedCategories : categories).map((category) => {
             const sortedPolicies = sortPolicies(category.policies)
             const isExpanded = expandedCategories.includes(category.id)
 
@@ -478,16 +740,31 @@ export default function PoliciesPage() {
                     >
                       <Plus className="w-5 h-5" />
                     </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                      }}
-                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
-                      title="Archive Category"
-                      style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
-                    >
-                      <Archive className="w-5 h-5" />
-                    </button>
+                    {showArchived ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          unarchiveCategory(category.id)
+                        }}
+                        className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
+                        title="Unarchive Category"
+                        style={{ background: COLORS.bgWhite, color: COLORS.green600 }}
+                      >
+                        <Archive className="w-5 h-5" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          archiveCategory(category.id)
+                        }}
+                        className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
+                        title="Archive Category"
+                        style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
+                      >
+                        <Archive className="w-5 h-5" />
+                      </button>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
@@ -501,8 +778,8 @@ export default function PoliciesPage() {
                     </button>
                   </div>
                 </div>
+                
 
-                {/* Edit Category Form */}
                 {editingCategory === category.id && (
                   <div
                     className="p-5"
