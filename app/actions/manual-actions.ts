@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
 
 async function getHeaders() {
   // In a real app, get token from cookies or session
@@ -169,10 +169,9 @@ export async function deleteItem(id: string, type: string) {
 export async function archiveItem(id: string, type: string) {
   try {
     const endpoint = type === "category" ? "categories" : "manuals"
-    const response = await fetch(`${API_URL}/${endpoint}/${id}`, {
-      method: "PUT",
+    const response = await fetch(`${API_URL}/${endpoint}/${id}/archive`, {
+      method: "POST",
       headers: await getHeaders(),
-      body: JSON.stringify({ archived: true }),
     })
 
     if (!response.ok) {
@@ -190,10 +189,9 @@ export async function archiveItem(id: string, type: string) {
 export async function unarchiveItem(id: string, type: string) {
   try {
     const endpoint = type === "category" ? "categories" : "manuals"
-    const response = await fetch(`${API_URL}/${endpoint}/${id}`, {
-      method: "PUT",
+    const response = await fetch(`${API_URL}/${endpoint}/${id}/unarchive`, {
+      method: "POST",
       headers: await getHeaders(),
-      body: JSON.stringify({ archived: false }),
     })
 
     if (!response.ok) {

@@ -103,7 +103,7 @@ export default function ManualPage() {
 
       // 4) Merge active manuals inside categories
       const merged = categoriesData
-        .filter((cat: any) => !cat.archived)
+        .filter((cat: any) => !cat.isArchived && !cat.archived)
         .map((cat: any) => ({
           id: cat._id,
           title: cat.name,
@@ -123,7 +123,7 @@ export default function ManualPage() {
 
       // 5) Merge archived manuals inside archived categories
       const mergedArchived = categoriesData
-        .filter((cat: any) => cat.archived)
+        .filter((cat: any) => cat.isArchived || cat.archived)
         .map((cat: any) => ({
           id: cat._id,
           title: cat.name,
@@ -340,13 +340,12 @@ export default function ManualPage() {
       setLoadingAction(`archive-category-${categoryId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
-        method: "PUT",
+      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/archive`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ archived: true })
+        }
       })
 
       if (!response.ok) throw new Error("Failed to archive category")
@@ -355,6 +354,32 @@ export default function ManualPage() {
     } catch (err) {
       console.error("Error archiving category:", err)
       alert("Failed to archive category")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const unarchiveCategory = async (categoryId: string) => {
+    if (!confirm("Unarchive this category?")) return
+
+    try {
+      setLoadingAction(`unarchive-category-${categoryId}`)
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/unarchive`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) throw new Error("Failed to unarchive category")
+
+      await loadData()
+    } catch (err) {
+      console.error("Error unarchiving category:", err)
+      alert("Failed to unarchive category")
     } finally {
       setLoadingAction(null)
     }
@@ -732,7 +757,7 @@ export default function ManualPage() {
               }}
               onClick={() => setShowArchived(false)}
             >
-              Active ({categories.reduce((acc, cat) => acc + cat.manuals.length, 0)})
+              Active ({categories.length})
             </button>
             <button
               className="px-6 py-3 font-semibold border-b-2 transition-all"
@@ -742,7 +767,7 @@ export default function ManualPage() {
               }}
               onClick={() => setShowArchived(true)}
             >
-              Archived ({archivedCategories.reduce((acc, cat) => acc + cat.manuals.length, 0)})
+              Archived ({archivedCategories.length})
             </button>
           </div>
         </div>
@@ -845,17 +870,31 @@ export default function ManualPage() {
                     >
                       <Plus className="w-5 h-5" />
                     </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        archiveCategory(category.id)
-                      }}
-                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
-                      title="Archive Category"
-                      style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
-                    >
-                      <Archive className="w-5 h-5" />
-                    </button>
+                    {showArchived ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          unarchiveCategory(category.id)
+                        }}
+                        className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
+                        title="Unarchive Category"
+                        style={{ background: COLORS.bgWhite, color: COLORS.green600 }}
+                      >
+                        <Archive className="w-5 h-5" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          archiveCategory(category.id)
+                        }}
+                        className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
+                        title="Archive Category"
+                        style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
+                      >
+                        <Archive className="w-5 h-5" />
+                      </button>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
