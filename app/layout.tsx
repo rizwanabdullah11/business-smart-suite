@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Login | Business Smart Suite",
-  description: "ISO 9001 Compliance Management System - Sign in to access the portal",
+  title: "Business Smart Suite",
+  description: "ISO 9001 Compliance Management System",
 };
 
 export default function RootLayout({
@@ -27,7 +29,8 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <AppLayout>{children}</AppLayout>
+        <Toaster />
       </body>
     </html>
   );
