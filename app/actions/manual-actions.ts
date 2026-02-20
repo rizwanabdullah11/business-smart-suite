@@ -9,7 +9,7 @@ async function getHeaders() {
   const token = ""
   return {
     "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   }
 }
 
@@ -27,7 +27,7 @@ export async function addCategory(title: string) {
 
     const category = await response.json()
     revalidatePath("/manual")
-    
+
     return {
       success: true,
       category: {
@@ -84,7 +84,7 @@ export async function addManual(categoryId: string, data: any) {
 
     const manual = await response.json()
     revalidatePath("/manual")
-    
+
     return {
       success: true,
       manual: {
