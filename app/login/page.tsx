@@ -101,7 +101,7 @@ export default function LoginPage() {
                 {/* Main Content */}
                 <div className="relative z-10 w-full max-w-lg">
                     <h1 className="text-5xl font-bold text-white mb-6 leading-tight">
-                        Welcome to <br /> Business Smart
+                        Welcome to <br /> Business Smart Suite
                     </h1>
                     <p className="text-lg text-white/80 mb-12 leading-relaxed">
                         Your complete solution for ISO 9001 compliance, risk management, and operational excellence.
