@@ -541,7 +541,10 @@ export default function ManualPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ name: newCategoryTitle })
+        body: JSON.stringify({ 
+          name: newCategoryTitle,
+          type: "manual"
+        })
       })
 
       if (!response.ok) {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   FileText,
   Plus,
@@ -25,30 +25,11 @@ import {
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
 
-// Sample data
-const initialCategories = [
-  {
-    id: "1",
-    title: "Compliance Certificates",
-    certificates: [
-      { id: "1-1", title: "ISO 9001:2015", version: "v2024", issueDate: "2024-01-15", expiryDate: "2025-01-15", location: "QMS", highlighted: true, approved: true, paused: false },
-      { id: "1-2", title: "ISO 14001:2015", version: "v2024", issueDate: "2024-02-01", expiryDate: "2025-02-01", location: "ENV", highlighted: false, approved: true, paused: false },
-    ]
-  },
-  {
-    id: "2",
-    title: "Equipment Certificates",
-    certificates: [
-      { id: "2-1", title: "Calibration Certificate A", version: "v1.0", issueDate: "2024-03-10", expiryDate: "2025-03-10", location: "LAB", highlighted: false, approved: true, paused: false },
-      { id: "2-2", title: "Safety Inspection Cert", version: "v1.2", issueDate: "2024-04-05", expiryDate: "2024-10-05", location: "OPS", highlighted: false, approved: false, paused: true },
-    ]
-  },
-]
-
 type SortType = "name" | "date"
 
 export default function CertificatePage() {
-  const [categories, setCategories] = useState(initialCategories)
+  const [categories, setCategories] = useState<any[]>([])
+  const [archivedCategories, setArchivedCategories] = useState<any[]>([])
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1"])
   const [editingCategory, setEditingCategory] = useState<string | null>(null)
@@ -58,6 +39,7 @@ export default function CertificatePage() {
   const [sortType, setSortType] = useState<SortType>("name")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
   const [addingCertToCategory, setAddingCertToCategory] = useState<string | null>(null)
+  const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [newCertData, setNewCertData] = useState({
     title: "",
     version: "",
@@ -66,76 +48,319 @@ export default function CertificatePage() {
     issueDate: new Date().toISOString().split('T')[0]
   })
 
-  // Helper functions (same logic as Manual/Policies but adapted for certificates)
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      const token = localStorage.getItem("token")
+
+      // 1) Get categories
+      const catRes = await fetch("http://localhost:5000/api/categories", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      const categoriesData = await catRes.json()
+
+      // 2) Get active certificates
+      const certRes = await fetch("http://localhost:5000/api/certificates", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      const certificatesData = await certRes.json()
+
+      // 3) Get archived certificates
+      const archivedRes = await fetch("http://localhost:5000/api/certificates/archived/all", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      const archivedData = archivedRes.ok ? await archivedRes.json() : []
+
+      // 4) Merge active certificates inside categories
+      const merged = categoriesData
+        .filter((cat: any) => !cat.isArchived && !cat.archived)
+        .map((cat: any) => ({
+          id: cat._id,
+          title: cat.name,
+          certificates: certificatesData
+            .filter((c: any) => c.category?._id === cat._id && !c.archived)
+            .map((c: any) => ({
+              id: c._id,
+              title: c.title,
+              version: c.version,
+              issueDate: c.issueDate,
+              expiryDate: c.expiryDate,
+              location: c.location,
+              highlighted: c.highlighted || false,
+              approved: c.approved || false,
+              paused: c.paused || false
+            }))
+        }))
+
+      // 5) Merge archived certificates inside archived categories
+      const mergedArchived = categoriesData
+        .filter((cat: any) => cat.isArchived || cat.archived)
+        .map((cat: any) => ({
+          id: cat._id,
+          title: cat.name,
+          certificates: archivedData
+            .filter((c: any) => c.category?._id === cat._id)
+            .map((c: any) => ({
+              id: c._id,
+              title: c.title,
+              version: c.version,
+              issueDate: c.issueDate,
+              expiryDate: c.expiryDate,
+              location: c.location,
+              highlighted: c.highlighted || false,
+              approved: c.approved || false,
+              paused: c.paused || false
+            }))
+        }))
+
+      setCategories(merged)
+      setArchivedCategories(mergedArchived)
+    } catch (err) {
+      console.log(err)
+    }
+  }
+
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories(prev =>
       prev.includes(categoryId) ? prev.filter(id => id !== categoryId) : [...prev, categoryId]
     )
   }
 
-  const toggleHighlight = (categoryId: string, certId: string) => {
-    setCategories(prev =>
-      prev.map(cat =>
-        cat.id === categoryId
-          ? {
-            ...cat,
-            certificates: cat.certificates.map(c =>
-              c.id === certId ? { ...c, highlighted: !c.highlighted } : c
-            )
-          }
-          : cat
-      )
-    )
+  const archiveCategory = async (categoryId: string) => {
+    if (!confirm("Archive this category?")) return
+
+    try {
+      setLoadingAction(`archive-category-${categoryId}`)
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/archive`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) throw new Error("Failed to archive category")
+
+      await loadData()
+    } catch (err) {
+      console.error("Error archiving category:", err)
+      alert("Failed to archive category")
+    } finally {
+      setLoadingAction(null)
+    }
   }
 
-  const toggleApprove = (categoryId: string, certId: string) => {
-    setCategories(prev =>
-      prev.map(cat =>
-        cat.id === categoryId
-          ? {
-            ...cat,
-            certificates: cat.certificates.map(c =>
-              c.id === certId ? { ...c, approved: !c.approved } : c
-            )
-          }
-          : cat
-      )
-    )
+  const unarchiveCategory = async (categoryId: string) => {
+    if (!confirm("Unarchive this category?")) return
+
+    try {
+      setLoadingAction(`unarchive-category-${categoryId}`)
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/unarchive`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) throw new Error("Failed to unarchive category")
+
+      await loadData()
+    } catch (err) {
+      console.error("Error unarchiving category:", err)
+      alert("Failed to unarchive category")
+    } finally {
+      setLoadingAction(null)
+    }
   }
 
-  const togglePause = (categoryId: string, certId: string) => {
-    setCategories(prev =>
-      prev.map(cat =>
-        cat.id === categoryId
-          ? {
-            ...cat,
-            certificates: cat.certificates.map(c =>
-              c.id === certId ? { ...c, paused: !c.paused } : c
-            )
-          }
-          : cat
-      )
-    )
-  }
+  const toggleHighlight = async (categoryId: string, certId: string) => {
+    try {
+      setLoadingAction(`highlight-${certId}`)
+      const token = localStorage.getItem("token")
+      const certificate = categories
+        .find(c => c.id === categoryId)
+        ?.certificates.find((c: any) => c.id === certId)
 
-  const deleteCertificate = (categoryId: string, certId: string) => {
-    if (confirm("Are you sure you want to delete this certificate?")) {
+      if (!certificate) return
+
+      const response = await fetch(`http://localhost:5000/api/certificates/${certId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ highlighted: !certificate.highlighted })
+      })
+
+      if (!response.ok) throw new Error("Failed to update highlight")
+
       setCategories(prev =>
         prev.map(cat =>
           cat.id === categoryId
             ? {
               ...cat,
-              certificates: cat.certificates.filter(c => c.id !== certId)
+              certificates: cat.certificates.map((c: any) =>
+                c.id === certId
+                  ? { ...c, highlighted: !c.highlighted }
+                  : c
+              )
             }
             : cat
         )
       )
+    } catch (err) {
+      console.error("Error toggling highlight:", err)
+      alert("Failed to update highlight status")
+    } finally {
+      setLoadingAction(null)
     }
   }
 
-  const deleteCategory = (categoryId: string) => {
-    if (confirm("Are you sure you want to delete this category?")) {
-      setCategories(prev => prev.filter(cat => cat.id !== categoryId))
+  const toggleApprove = async (categoryId: string, certId: string) => {
+    try {
+      setLoadingAction(`approve-${certId}`)
+      const token = localStorage.getItem("token")
+      const certificate = categories
+        .find(c => c.id === categoryId)
+        ?.certificates.find((c: any) => c.id === certId)
+
+      if (!certificate) return
+
+      const response = await fetch(`http://localhost:5000/api/certificates/${certId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ approved: !certificate.approved })
+      })
+
+      if (!response.ok) throw new Error("Failed to update approval")
+
+      setCategories(prev =>
+        prev.map(cat =>
+          cat.id === categoryId
+            ? {
+              ...cat,
+              certificates: cat.certificates.map((c: any) =>
+                c.id === certId
+                  ? { ...c, approved: !c.approved }
+                  : c
+              )
+            }
+            : cat
+        )
+      )
+    } catch (err) {
+      console.error("Error toggling approve:", err)
+      alert("Failed to update approval status")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const togglePause = async (categoryId: string, certId: string) => {
+    try {
+      setLoadingAction(`pause-${certId}`)
+      const token = localStorage.getItem("token")
+      const certificate = categories
+        .find(c => c.id === categoryId)
+        ?.certificates.find((c: any) => c.id === certId)
+
+      if (!certificate) return
+
+      const response = await fetch(`http://localhost:5000/api/certificates/${certId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ paused: !certificate.paused })
+      })
+
+      if (!response.ok) throw new Error("Failed to update pause status")
+
+      setCategories(prev =>
+        prev.map(cat =>
+          cat.id === categoryId
+            ? {
+              ...cat,
+              certificates: cat.certificates.map((c: any) =>
+                c.id === certId
+                  ? { ...c, paused: !c.paused }
+                  : c
+              )
+            }
+            : cat
+        )
+      )
+    } catch (err) {
+      console.error("Error toggling pause:", err)
+      alert("Failed to update pause status")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const deleteCertificate = async (categoryId: any, certId: any) => {
+    if (!confirm("Are you sure you want to delete this certificate?")) return
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/certificates/${certId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete certificate")
+      }
+
+      await loadData()
+    } catch (err) {
+      console.error("Error deleting certificate:", err)
+      alert("Failed to delete certificate")
+    }
+  }
+
+  const deleteCategory = async (categoryId: any) => {
+    if (!confirm("Are you sure you want to delete this category?")) return
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete category")
+      }
+
+      await loadData()
+    } catch (err) {
+      console.error("Error deleting category:", err)
+      alert("Failed to delete category")
     }
   }
 
@@ -144,53 +369,95 @@ export default function CertificatePage() {
     setEditTitle(currentTitle)
   }
 
-  const saveEditCategory = (categoryId: string) => {
-    if (editTitle.trim()) {
+  const saveEditCategory = async (categoryId: string) => {
+    if (!editTitle.trim()) return
+
+    try {
+      const token = localStorage.getItem("token")
+
+      await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: editTitle.trim() })
+      })
+
       setCategories(prev =>
         prev.map(cat =>
           cat.id === categoryId ? { ...cat, title: editTitle.trim() } : cat
         )
       )
+    } catch (err) {
+      console.error("Error updating category:", err)
     }
+
     setEditingCategory(null)
     setEditTitle("")
   }
 
-  const addCategory = () => {
-    if (newCategoryTitle.trim()) {
-      const newCategory = {
-        id: Date.now().toString(),
-        title: newCategoryTitle.trim(),
-        certificates: []
+  const addCategory = async () => {
+    if (!newCategoryTitle.trim()) {
+      alert("Please enter a category name")
+      return
+    }
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch("http://localhost:5000/api/categories", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: newCategoryTitle })
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to add category")
       }
-      setCategories(prev => [...prev, newCategory])
+
       setNewCategoryTitle("")
       setShowAddCategory(false)
+      await loadData()
+    } catch (err) {
+      console.error("Error adding category:", err)
+      alert("Failed to add category")
     }
   }
 
-  const addCertToCategory = (categoryId: string) => {
-    if (newCertData.title.trim()) {
-      const newCert = {
-        id: `${categoryId}-${Date.now()}`,
-        title: newCertData.title.trim(),
-        version: newCertData.version.trim() || "v1.0",
-        location: newCertData.location.trim() || "N/A",
-        issueDate: newCertData.issueDate,
-        expiryDate: newCertData.expiryDate || new Date(Date.now() + 31536000000).toISOString().split('T')[0], // +1 year
-        highlighted: false,
-        approved: false,
-        paused: false
+  const addCertToCategory = async (categoryId: any) => {
+    if (!newCertData.title.trim()) {
+      alert("Please enter a certificate title")
+      return
+    }
+
+    try {
+      const token = localStorage.getItem("token")
+
+      const response = await fetch("http://localhost:5000/api/certificates", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: newCertData.title,
+          version: newCertData.version || "v1.0",
+          location: newCertData.location || "N/A",
+          issueDate: newCertData.issueDate,
+          expiryDate: newCertData.expiryDate || new Date(Date.now() + 31536000000).toISOString().split('T')[0],
+          category: categoryId
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to add certificate")
       }
 
-      setCategories(prev =>
-        prev.map(cat =>
-          cat.id === categoryId
-            ? { ...cat, certificates: [...cat.certificates, newCert] }
-            : cat
-        )
-      )
-
+      setAddingCertToCategory(null)
       setNewCertData({
         title: "",
         version: "",
@@ -198,7 +465,10 @@ export default function CertificatePage() {
         expiryDate: "",
         issueDate: new Date().toISOString().split('T')[0]
       })
-      setAddingCertToCategory(null)
+      await loadData()
+    } catch (err) {
+      console.error("Error adding certificate:", err)
+      alert("Failed to add certificate")
     }
   }
 
@@ -360,7 +630,7 @@ export default function CertificatePage() {
               }}
               onClick={() => setShowArchived(false)}
             >
-              Active ({categories.reduce((acc, cat) => acc + cat.certificates.length, 0)})
+              Active ({categories.length})
             </button>
             <button
               className="px-6 py-3 font-semibold border-b-2 transition-all"
@@ -370,14 +640,14 @@ export default function CertificatePage() {
               }}
               onClick={() => setShowArchived(true)}
             >
-              Archived (0)
+              Archived ({archivedCategories.length})
             </button>
           </div>
         </div>
 
         {/* Categories */}
         <div className="space-y-4">
-          {categories.map((category) => {
+          {(showArchived ? archivedCategories : categories).map((category) => {
             const sortedCerts = sortCertificates(category.certificates)
             const isExpanded = expandedCategories.includes(category.id)
 
@@ -436,16 +706,31 @@ export default function CertificatePage() {
                     >
                       <Plus className="w-5 h-5" />
                     </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                      }}
-                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
-                      title="Archive Category"
-                      style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
-                    >
-                      <Archive className="w-5 h-5" />
-                    </button>
+                    {showArchived ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          unarchiveCategory(category.id)
+                        }}
+                        className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
+                        title="Unarchive Category"
+                        style={{ background: COLORS.bgWhite, color: COLORS.green600 }}
+                      >
+                        <Archive className="w-5 h-5" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          archiveCategory(category.id)
+                        }}
+                        className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
+                        title="Archive Category"
+                        style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
+                      >
+                        <Archive className="w-5 h-5" />
+                      </button>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
