@@ -32,10 +32,12 @@ export const GET = withAuth(
           queryParams += `&_id=${user.id}`
         }
 
+        console.log("🔍 Trying Method 1: /users endpoint with role filter")
         const response = await fetch(`${API_URL}/users${queryParams}`, { headers })
 
         if (response.ok) {
           let users = await response.json()
+          console.log("✅ Method 1 success: Got", users.length, "users")
           
           // Filter for Organization role users
           let organizations = users.filter((u: any) => 
@@ -48,19 +50,25 @@ export const GET = withAuth(
           }
 
           if (organizations.length > 0) {
+            console.log("✅ Returning", organizations.length, "organizations from Method 1")
             return NextResponse.json(organizations)
           }
+        } else {
+          console.log("⚠️ Method 1 failed with status:", response.status)
         }
       } catch (error) {
-        console.log("Method 1 failed, trying alternative")
+        console.log("❌ Method 1 failed:", error instanceof Error ? error.message : "Unknown error")
+        console.log("🔄 Trying Method 2...")
       }
 
       // Method 2: Try dedicated /organizations endpoint
       try {
+        console.log("🔍 Trying Method 2: /organizations endpoint")
         const response = await fetch(`${API_URL}/organizations`, { headers })
         
         if (response.ok) {
           let organizations = await response.json()
+          console.log("✅ Method 2 success: Got", organizations.length, "organizations")
           
           // Filter for current organization if needed
           if (user.role === "organization" && user.id) {
@@ -68,15 +76,20 @@ export const GET = withAuth(
           }
           
           if (organizations.length > 0) {
+            console.log("✅ Returning", organizations.length, "organizations from Method 2")
             return NextResponse.json(organizations)
           }
+        } else {
+          console.log("⚠️ Method 2 failed with status:", response.status)
         }
       } catch (error) {
-        console.log("Method 2 failed, using fallback")
+        console.log("❌ Method 2 failed:", error instanceof Error ? error.message : "Unknown error")
+        console.log("🔄 Using fallback...")
       }
 
       // Method 3: Fallback - return current user if they're an organization
       if (user.role === "organization") {
+        console.log("✅ Fallback: Returning current user as organization")
         return NextResponse.json([
           {
             _id: user.id,
@@ -89,6 +102,8 @@ export const GET = withAuth(
       }
       
       // For admin with no organizations found, return empty array
+      console.log("⚠️ No organizations found - Backend may not be running or no organizations exist")
+      console.log("💡 To fix: Start your backend server or create an organization user")
       return NextResponse.json([])
     } catch (error) {
       console.error("Error fetching organizations:", error)

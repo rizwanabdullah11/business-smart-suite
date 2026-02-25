@@ -31,23 +31,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Check if token exists
       const token = localStorage.getItem("token")
       if (!token) {
+        console.log("⚠️ Auth: No token found")
         setUser(null)
         setLoading(false)
         return
       }
 
+      console.log("🔍 Auth: Fetching user data...")
       const response = await fetch("/api/auth/me")
       if (response.ok) {
         const userData = await response.json()
+        console.log("✅ Auth: User loaded -", userData.name, `(${userData.role})`)
         setUser(userData)
       } else {
         // Token invalid or expired
+        console.log("❌ Auth: Token invalid or expired")
         setUser(null)
         localStorage.removeItem("token")
         localStorage.removeItem("user")
       }
     } catch (error) {
-      console.error("Error fetching user:", error)
+      console.error("❌ Auth: Error fetching user:", error)
       setUser(null)
     } finally {
       setLoading(false)
@@ -57,9 +61,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     fetchUser()
 
-    // Listen for storage changes (login/logout in other tabs)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "token") {
+    // Listen for storage changes (login/logout in other tabs or same tab)
+    const handleStorageChange = (e: StorageEvent | Event) => {
+      // For custom storage events (triggered by login/logout)
+      if (e instanceof Event && e.type === 'storage') {
+        console.log("🔄 Auth: Storage event detected, refreshing user...")
+        fetchUser()
+        return
+      }
+      
+      // For actual storage events from other tabs
+      if (e instanceof StorageEvent && e.key === "token") {
+        console.log("🔄 Auth: Token changed, refreshing user...")
         if (e.newValue) {
           // Token added/changed - refresh user
           fetchUser()
@@ -71,11 +84,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     window.addEventListener("storage", handleStorageChange)
-    return () => window.removeEventListener("storage", handleStorageChange)
+    
+    // Also listen for custom auth events
+    const handleAuthChange = () => {
+      console.log("🔄 Auth: Auth change event detected, refreshing user...")
+      fetchUser()
+    }
+    
+    window.addEventListener("auth-change", handleAuthChange)
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange)
+      window.removeEventListener("auth-change", handleAuthChange)
+    }
   }, [])
 
   const logout = async () => {
     try {
+      console.log("🚪 Auth: Logging out...")
+      
       // Call your logout API endpoint if you have one
       await fetch("/api/auth/logout", { method: "POST" }).catch(() => {})
       
@@ -86,13 +113,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Clear cookies
       document.cookie = "token=; path=/; max-age=0"
       
-      // Clear user state
+      // Clear user state immediately
       setUser(null)
       
-      // Redirect to login
+      console.log("✅ Auth: Logout complete, redirecting to login...")
+      
+      // Redirect to login (no hard reload needed)
       window.location.href = "/login"
     } catch (error) {
       console.error("Error logging out:", error)
+      // Still clear everything even if API call fails
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
+      setUser(null)
+      window.location.href = "/login"
     }
   }
 

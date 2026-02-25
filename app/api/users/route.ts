@@ -38,6 +38,12 @@ export const GET = withAuth(
 
         if (response.ok) {
           let users = await response.json()
+          
+          // IMPORTANT: Ensure users is always an array
+          if (!Array.isArray(users)) {
+            console.log("⚠️ Backend returned single user object, wrapping in array")
+            users = [users]
+          }
 
           // Additional frontend filtering as fallback
           if (user.role === "organization" && user.id) {
@@ -61,6 +67,7 @@ export const GET = withAuth(
             return u
           })
 
+          console.log(`✅ Returning ${enrichedUsers.length} users from backend`)
           return NextResponse.json(enrichedUsers)
         }
       } catch (error) {

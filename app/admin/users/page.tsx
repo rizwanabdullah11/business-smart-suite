@@ -377,6 +377,7 @@ export default function UsersPage() {
       {showAddModal && (
         <AddUserModal
           isAdmin={isAdmin}
+          isOrganization={isOrganization}
           onClose={() => setShowAddModal(false)}
           onSuccess={() => {
             setShowAddModal(false)
@@ -390,11 +391,12 @@ export default function UsersPage() {
 
 interface AddUserModalProps {
   isAdmin: boolean
+  isOrganization: boolean
   onClose: () => void
   onSuccess: () => void
 }
 
-function AddUserModal({ isAdmin, onClose, onSuccess }: AddUserModalProps) {
+function AddUserModal({ isAdmin, isOrganization, onClose, onSuccess }: AddUserModalProps) {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -406,14 +408,17 @@ function AddUserModal({ isAdmin, onClose, onSuccess }: AddUserModalProps) {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (isAdmin) {
+    // Load organizations when component mounts and user can create employees
+    if (isAdmin || isOrganization) {
       loadOrganizations()
     }
-  }, [isAdmin])
+  }, [isAdmin, isOrganization])
 
   const loadOrganizations = async () => {
     try {
       const token = localStorage.getItem("token")
+      console.log("🔄 Loading organizations...")
+      
       const response = await fetch("/api/organizations", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -422,13 +427,19 @@ function AddUserModal({ isAdmin, onClose, onSuccess }: AddUserModalProps) {
 
       if (response.ok) {
         const data = await response.json()
-        console.log("📋 Organizations loaded:", data.length, data)
+        console.log("✅ Organizations loaded:", data.length, "organizations")
+        console.log("📋 Organizations data:", data)
         setOrganizations(data)
+        
+        if (data.length === 0) {
+          console.warn("⚠️ No organizations found. Backend may not be running or no organizations exist.")
+        }
       } else {
-        console.error("❌ Failed to load organizations:", response.status)
+        console.error("❌ Failed to load organizations:", response.status, response.statusText)
       }
     } catch (error) {
       console.error("❌ Error loading organizations:", error)
+      console.log("💡 Tip: Make sure your backend server is running at http://localhost:5000")
     }
   }
 

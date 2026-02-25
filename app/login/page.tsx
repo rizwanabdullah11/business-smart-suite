@@ -52,11 +52,20 @@ export default function LoginPage() {
 
             // Success Logic
             if (data.token) {
+                // Clear any existing auth data first
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                document.cookie = "token=; path=/; max-age=0";
+                
+                // Set new auth data
                 localStorage.setItem("token", data.token);
                 if (data.user) {
                     localStorage.setItem("user", JSON.stringify(data.user));
                 }
                 document.cookie = `token=${data.token}; path=/; max-age=86400; SameSite=Strict`;
+                
+                // Trigger storage event to refresh auth context
+                window.dispatchEvent(new Event('storage'));
             }
 
             toast({
@@ -65,7 +74,10 @@ export default function LoginPage() {
                 variant: "default",
             });
 
-            router.push("/dashboard");
+            // Small delay to ensure auth context updates
+            setTimeout(() => {
+                router.push("/dashboard");
+            }, 100);
 
         } catch (error: any) {
             toast({
