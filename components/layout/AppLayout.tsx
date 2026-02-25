@@ -22,14 +22,9 @@ export function AppLayout({ children }: AppLayoutProps) {
     const { toast } = useToast()
     const [user, setUser] = useState<any>(null)
     const [isLoading, setIsLoading] = useState(true)
-    const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
     const [isCreateSectionOpen, setIsCreateSectionOpen] = useState(false)
 
-    // Don't show layout on login page
-    if (pathname === '/login') {
-        return <>{children}</>
-    }
-
+    // Check auth - must be called before any conditional returns
     useEffect(() => {
         const checkAuth = async () => {
             const token = localStorage.getItem('token')
@@ -75,6 +70,10 @@ export function AppLayout({ children }: AppLayoutProps) {
         localStorage.removeItem('token')
         localStorage.removeItem('user')
         document.cookie = 'token=; path=/; max-age=0'
+        
+        // Trigger storage event for other tabs
+        window.dispatchEvent(new Event('storage'))
+        
         router.push('/login')
         toast({
             title: "Logged out",
@@ -84,6 +83,11 @@ export function AppLayout({ children }: AppLayoutProps) {
 
     const handleAddFolder = () => {
         setIsCreateSectionOpen(true)
+    }
+
+    // Don't show layout on login page - check AFTER all hooks
+    if (pathname === '/login') {
+        return <>{children}</>
     }
 
     if (isLoading) {
@@ -99,23 +103,17 @@ export function AppLayout({ children }: AppLayoutProps) {
 
     return (
         <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
-            {/* Sidebar */}
-            <Sidebar
-                isExpanded={isSidebarExpanded}
-                onHover={setIsSidebarExpanded}
-            />
+            {/* Sidebar - Always expanded */}
+            <Sidebar />
 
-            {/* Main Content Area */}
+            {/* Main Content Area - Fixed margin for static sidebar */}
             <div
-                className="transition-all duration-300"
-                style={{
-                    marginLeft: isSidebarExpanded ? '280px' : '80px'
-                }}
+                className="ml-[280px]"
             >
                 {/* Top Navbar */}
                 <TopNavbar
                     user={user}
-                    isCollapsed={!isSidebarExpanded}
+                    isCollapsed={false}
                     onLogout={handleLogout}
                     onAddFolder={handleAddFolder}
                 />
