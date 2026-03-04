@@ -5,12 +5,11 @@ import { useRouter, usePathname } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 import { useToast } from "@/components/ui/use-toast"
+import { useAuth } from "@/contexts/auth-context"
 import { Sidebar } from "@/components/dashboard/Sidebar"
 import { TopNavbar } from "@/components/dashboard/TopNavbar"
 import { Footer } from "@/components/dashboard/Footer"
 import { CreateSectionDialog } from "@/components/dashboard/CreateSectionDialog"
-
-const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api"
 
 interface AppLayoutProps {
     children: React.ReactNode
@@ -20,62 +19,20 @@ export function AppLayout({ children }: AppLayoutProps) {
     const router = useRouter()
     const pathname = usePathname()
     const { toast } = useToast()
-    const [user, setUser] = useState<any>(null)
-    const [isLoading, setIsLoading] = useState(true)
-    const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
+    const { user, loading, isAuthenticated, logout: authLogout } = useAuth()
     const [isCreateSectionOpen, setIsCreateSectionOpen] = useState(false)
 
-    // Don't show layout on login page
-    if (pathname === '/login') {
-        return <>{children}</>
-    }
-
+    // Redirect to login if not authenticated
     useEffect(() => {
-        const checkAuth = async () => {
-            const token = localStorage.getItem('token')
-
-            if (!token) {
-                router.push('/login')
-                return
-            }
-
-            try {
-                const response = await fetch(`${API_URL}/auth/dashboard`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                })
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch dashboard data')
-                }
-
-                const data = await response.json()
-                setUser(data.user)
-
-            } catch (error) {
-                console.error('Auth error:', error)
-                toast({
-                    title: "Session Expired",
-                    description: "Please log in again.",
-                    variant: "destructive"
-                })
-                localStorage.removeItem('token')
-                localStorage.removeItem('user')
-                router.push('/login')
-            } finally {
-                setIsLoading(false)
-            }
+        if (!loading && !isAuthenticated && pathname !== '/login') {
+            console.log("🔒 AppLayout: Not authenticated, redirecting to login...")
+            router.push('/login')
         }
+    }, [loading, isAuthenticated, pathname, router])
 
-        checkAuth()
-    }, [router, toast])
-
-    const handleLogout = () => {
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        document.cookie = 'token=; path=/; max-age=0'
-        router.push('/login')
+    const handleLogout = async () => {
+        console.log("🚪 AppLayout: Logout clicked")
+        await authLogout()
         toast({
             title: "Logged out",
             description: "See you next time!",
@@ -86,7 +43,13 @@ export function AppLayout({ children }: AppLayoutProps) {
         setIsCreateSectionOpen(true)
     }
 
-    if (isLoading) {
+    // Don't show layout on login page
+    if (pathname === '/login') {
+        return <>{children}</>
+    }
+
+    // Show loading state
+    if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center" style={{ background: COLORS.bgWhite }}>
                 <div className="flex flex-col items-center gap-4">
@@ -97,25 +60,24 @@ export function AppLayout({ children }: AppLayoutProps) {
         )
     }
 
+    // Don't render layout if not authenticated
+    if (!isAuthenticated) {
+        return null
+    }
+
     return (
         <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
-            {/* Sidebar */}
-            <Sidebar
-                isExpanded={isSidebarExpanded}
-                onHover={setIsSidebarExpanded}
-            />
+            {/* Sidebar - Always expanded */}
+            <Sidebar />
 
-            {/* Main Content Area */}
+            {/* Main Content Area - Fixed margin for static sidebar */}
             <div
-                className="transition-all duration-300"
-                style={{
-                    marginLeft: isSidebarExpanded ? '280px' : '80px'
-                }}
+                className="ml-[280px]"
             >
                 {/* Top Navbar */}
                 <TopNavbar
                     user={user}
-                    isCollapsed={!isSidebarExpanded}
+                    isCollapsed={false}
                     onLogout={handleLogout}
                     onAddFolder={handleAddFolder}
                 />
