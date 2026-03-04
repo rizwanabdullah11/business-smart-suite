@@ -52,6 +52,8 @@ export default function LoginPage() {
 
             // Success Logic
             if (data.token) {
+                console.log("✅ Login: Token received, setting auth data...");
+                
                 // Clear any existing auth data first
                 localStorage.removeItem("token");
                 localStorage.removeItem("user");
@@ -64,20 +66,22 @@ export default function LoginPage() {
                 }
                 document.cookie = `token=${data.token}; path=/; max-age=86400; SameSite=Strict`;
                 
+                console.log("✅ Login: Auth data set, triggering refresh...");
+                
                 // Trigger storage event to refresh auth context
                 window.dispatchEvent(new Event('storage'));
-            }
+                
+                toast({
+                    title: "Welcome back!",
+                    description: "Successfully logged in.",
+                    variant: "default",
+                });
 
-            toast({
-                title: "Welcome back!",
-                description: "Successfully logged in.",
-                variant: "default",
-            });
-
-            // Small delay to ensure auth context updates
-            setTimeout(() => {
+                // Navigate to dashboard
+                console.log("✅ Login: Redirecting to dashboard...");
                 router.push("/dashboard");
-            }, 100);
+                router.refresh(); // Force a refresh of the current route
+            }
 
         } catch (error: any) {
             toast({
