@@ -26,10 +26,10 @@ export default function PermissionsPage() {
 
   return (
     <div className="p-8">
-      <h1 className="text-3xl font-bold mb-6">Role Permissions Management</h1>
+      <h1 className="text-3xl font-bold mb-6 text-gray-900">Role Permissions Management</h1>
       
       <div className="mb-8">
-        <p className="text-gray-600">
+        <p className="text-gray-700">
           This page shows the permission matrix for all roles in the system.
           Only administrators can view this page.
         </p>
@@ -66,7 +66,7 @@ export default function PermissionsPage() {
 
       {/* Permission Comparison Table */}
       <div className="mt-12">
-        <h2 className="text-2xl font-bold mb-4">Permission Comparison</h2>
+        <h2 className="text-2xl font-bold mb-4 text-gray-900">Permission Comparison</h2>
         <PermissionComparisonTable />
       </div>
     </div>
@@ -92,21 +92,21 @@ function RoleCard({ role, title, description, permissions, color }: RoleCardProp
     <div className={`border-l-4 ${colorClasses[color]} p-6 rounded-lg`}>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-2xl font-bold">{title}</h2>
-          <p className="text-gray-600 mt-1">{description}</p>
+          <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+          <p className="text-gray-700 mt-1">{description}</p>
         </div>
-        <span className="px-4 py-2 bg-white rounded-full text-sm font-semibold">
+        <span className="px-4 py-2 bg-white rounded-full text-sm font-semibold text-gray-900">
           {permissions.length} permissions
         </span>
       </div>
 
       <div className="mt-4">
-        <h3 className="font-semibold mb-2">Permissions:</h3>
+        <h3 className="font-semibold mb-2 text-gray-900">Permissions:</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
           {permissions.map((permission) => (
             <div
               key={permission}
-              className="text-sm bg-white px-3 py-2 rounded border"
+              className="text-sm bg-white px-3 py-2 rounded border text-gray-800"
             >
               {formatPermission(permission)}
             </div>
@@ -165,11 +165,11 @@ function PermissionComparisonTable() {
       <table className="min-w-full bg-white border">
         <thead>
           <tr className="bg-gray-100">
-            <th className="px-6 py-3 text-left text-sm font-semibold">Category</th>
-            <th className="px-6 py-3 text-left text-sm font-semibold">Permission</th>
-            <th className="px-6 py-3 text-center text-sm font-semibold">Admin</th>
-            <th className="px-6 py-3 text-center text-sm font-semibold">Organization</th>
-            <th className="px-6 py-3 text-center text-sm font-semibold">Employee</th>
+            <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Category</th>
+            <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Permission</th>
+            <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900">Admin</th>
+            <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900">Organization</th>
+            <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900">Employee</th>
           </tr>
         </thead>
         <tbody>
@@ -179,20 +179,20 @@ function PermissionComparisonTable() {
                 <tr key={permission} className="border-t hover:bg-gray-50">
                   {index === 0 && (
                     <td
-                      className="px-6 py-3 font-semibold text-sm bg-gray-50"
+                      className="px-6 py-3 font-semibold text-sm bg-gray-50 text-gray-900"
                       rowSpan={permissions.length}
                     >
                       {category}
                     </td>
                   )}
-                  <td className="px-6 py-3 text-sm">{formatPermission(permission)}</td>
-                  <td className="px-6 py-3 text-center">
+                  <td className="px-6 py-3 text-sm text-gray-800">{formatPermission(permission)}</td>
+                  <td className="px-6 py-3 text-center text-gray-800 text-base">
                     {hasPermissionForRole(Role.ADMIN, permission) ? "✓" : "✗"}
                   </td>
-                  <td className="px-6 py-3 text-center">
+                  <td className="px-6 py-3 text-center text-gray-800 text-base">
                     {hasPermissionForRole(Role.ORGANIZATION, permission) ? "✓" : "✗"}
                   </td>
-                  <td className="px-6 py-3 text-center">
+                  <td className="px-6 py-3 text-center text-gray-800 text-base">
                     {hasPermissionForRole(Role.EMPLOYEE, permission) ? "✓" : "✗"}
                   </td>
                 </tr>
