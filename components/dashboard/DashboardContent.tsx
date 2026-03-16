@@ -1,77 +1,208 @@
 "use client"
 
+import { useEffect, useMemo, useState } from "react"
 import { TrendingUp, TrendingDown, FileText, Users, AlertCircle, CheckCircle } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 
+type DashboardStat = {
+  title: string
+  value: string
+  change: string
+  trend: "up" | "down"
+  icon: any
+  color: string
+  subtitle: string
+}
+
+type ActivityItem = {
+  action: string
+  item: string
+  time: string
+  user: string
+}
+
+type AnyDoc = {
+  _id?: string
+  title?: string
+  approved?: boolean
+  archived?: boolean
+  isArchived?: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+const MODULE_ENDPOINTS = [
+  "policies",
+  "procedures",
+  "forms",
+  "certificates",
+  "business-continuity",
+  "management-reviews",
+  "job-descriptions",
+  "work-instructions",
+  "risk-assessments",
+  "coshh",
+  "technical-file",
+  "ims-aspects-impacts",
+  "audit-schedule",
+  "interested-parties",
+  "organisational-context",
+  "objectives",
+  "maintenance",
+  "improvement-register",
+  "statement-of-applicability",
+  "legal-register",
+  "suppliers",
+  "training",
+  "energy-consumption",
+]
+
+function formatTimeAgo(dateValue?: string) {
+  if (!dateValue) return "Unknown time"
+  const now = Date.now()
+  const then = new Date(dateValue).getTime()
+  if (Number.isNaN(then)) return "Unknown time"
+  const diffMs = now - then
+  const mins = Math.floor(diffMs / 60000)
+  if (mins < 1) return "just now"
+  if (mins < 60) return `${mins} minute${mins > 1 ? "s" : ""} ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""} ago`
+  const days = Math.floor(hours / 24)
+  return `${days} day${days > 1 ? "s" : ""} ago`
+}
+
 export function DashboardContent() {
-    const stats = [
-        {
+  const [stats, setStats] = useState<DashboardStat[]>([
+    { title: "Total Documents", value: "-", change: "0%", trend: "up", icon: FileText, color: COLORS.blue500, subtitle: "live data" },
+    { title: "Active Users", value: "-", change: "0%", trend: "up", icon: Users, color: COLORS.emerald500, subtitle: "live data" },
+    { title: "Pending Reviews", value: "-", change: "0%", trend: "down", icon: AlertCircle, color: COLORS.orange500, subtitle: "live data" },
+    { title: "Completed Tasks", value: "-", change: "0%", trend: "up", icon: CheckCircle, color: COLORS.green500, subtitle: "live data" },
+  ])
+  const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([])
+  const [showAllActivities, setShowAllActivities] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      setLoading(true)
+      try {
+        const token = localStorage.getItem("token")
+        const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
+        const fetchJson = async (url: string) => {
+          const res = await fetch(url, { headers })
+          if (!res.ok) return null
+          return res.json()
+        }
+
+        const manualPromise = fetchJson("/api/manuals")
+        const modulePromises = MODULE_ENDPOINTS.map((module) => fetchJson(`/api/${module}`))
+        const usersPromise = fetchJson("/api/users")
+
+        const [manualsRaw, usersRaw, ...moduleRaw] = await Promise.all([
+          manualPromise,
+          usersPromise,
+          ...modulePromises,
+        ])
+
+        const manuals = Array.isArray(manualsRaw) ? manualsRaw : []
+        const moduleDocs = moduleRaw.flatMap((chunk) => (Array.isArray(chunk) ? chunk : []))
+        const allDocs: AnyDoc[] = [...manuals, ...moduleDocs]
+
+        const activeDocs = allDocs.filter((doc) => !doc.archived && !doc.isArchived)
+        const completedCount = activeDocs.filter((doc) => Boolean(doc.approved)).length
+        const pendingCount = activeDocs.filter((doc) => !doc.approved).length
+        const hasUsersAccess = Array.isArray(usersRaw)
+        const userCount = hasUsersAccess ? usersRaw.length : null
+
+        const nextStats: DashboardStat[] = [
+          {
             title: "Total Documents",
-            value: "1,234",
-            change: "+12.5%",
+            value: String(activeDocs.length),
+            change: "live",
             trend: "up",
             icon: FileText,
             color: COLORS.blue500,
-            subtitle: "from previous period"
-        },
-        {
+            subtitle: "current total",
+          },
+          {
             title: "Active Users",
-            value: "89",
-            change: "+5.2%",
+            value: userCount === null ? "-" : String(userCount),
+            change: "live",
             trend: "up",
             icon: Users,
             color: COLORS.emerald500,
-            subtitle: "from previous period"
-        },
-        {
+            subtitle: hasUsersAccess ? "users in system" : "permission required",
+          },
+          {
             title: "Pending Reviews",
-            value: "23",
-            change: "-8.1%",
+            value: String(pendingCount),
+            change: "live",
             trend: "down",
             icon: AlertCircle,
             color: COLORS.orange500,
-            subtitle: "from previous period"
-        },
-        {
+            subtitle: "not completed yet",
+          },
+          {
             title: "Completed Tasks",
-            value: "456",
-            change: "+15.3%",
+            value: String(completedCount),
+            change: "live",
             trend: "up",
             icon: CheckCircle,
             color: COLORS.green500,
-            subtitle: "from previous period"
-        }
-    ]
+            subtitle: "approved/completed",
+          },
+        ]
+        setStats(nextStats)
 
-    const recentActivities = [
-        { action: "Policy Updated", item: "Data Protection Policy", time: "2 hours ago", user: "John Doe" },
-        { action: "Document Approved", item: "Risk Assessment Report", time: "4 hours ago", user: "Jane Smith" },
-        { action: "New Certificate", item: "ISO 9001:2015", time: "1 day ago", user: "Admin" },
-        { action: "Training Completed", item: "Compliance Training", time: "2 days ago", user: "Mike Johnson" },
-    ]
+        const activities: ActivityItem[] = activeDocs
+          .map((doc) => {
+            const createdAt = doc.createdAt ? new Date(doc.createdAt).getTime() : 0
+            const updatedAt = doc.updatedAt ? new Date(doc.updatedAt).getTime() : 0
+            const action = doc.approved
+              ? "Document Approved"
+              : updatedAt > createdAt
+                ? "Document Updated"
+                : "Document Created"
+            return {
+              action,
+              item: doc.title || "Untitled Document",
+              time: formatTimeAgo(doc.updatedAt || doc.createdAt),
+              user: "System",
+              sortTime: updatedAt || createdAt,
+            }
+          })
+          .sort((a: any, b: any) => b.sortTime - a.sortTime)
+          .map(({ sortTime, ...rest }: any) => rest)
 
-    return (
-        <div className="space-y-8">
+        setRecentActivities(activities)
+      } catch (error) {
+        console.error("Failed to load dashboard data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadDashboardData()
+  }, [])
+
+  const gradients = useMemo(
+    () => [COLORS.gradientBlue, COLORS.gradientGreen, COLORS.gradientSunset, COLORS.gradientIndigo],
+    []
+  )
+  const shadows = useMemo(
+    () => [COLORS.shadowBlue, COLORS.shadowGreen, COLORS.shadowOrange, COLORS.shadowPurple],
+    []
+  )
+  const visibleActivities = showAllActivities ? recentActivities : recentActivities.slice(0, 6)
+
+  return (
+    <div className="space-y-8">
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {stats.map((stat, index) => {
                     const Icon = stat.icon
                     const TrendIcon = stat.trend === "up" ? TrendingUp : TrendingDown
-
-                    // Define gradient backgrounds for each card
-                    const gradients = [
-                        COLORS.gradientBlue,
-                        COLORS.gradientGreen,
-                        COLORS.gradientSunset,
-                        COLORS.gradientIndigo
-                    ]
-
-                    const shadows = [
-                        COLORS.shadowBlue,
-                        COLORS.shadowGreen,
-                        COLORS.shadowOrange,
-                        COLORS.shadowPurple
-                    ]
 
                     return (
                         <div
@@ -103,7 +234,7 @@ export function DashboardContent() {
                                 {stat.title}
                             </p>
                             <p className="text-sm text-white opacity-75">
-                                {stat.subtitle}
+                                {loading ? "loading..." : stat.subtitle}
                             </p>
                         </div>
                     )
@@ -123,40 +254,49 @@ export function DashboardContent() {
                         Recent Activity
                     </h2>
                     <button
+                        onClick={() => setShowAllActivities((prev) => !prev)}
                         className="text-base font-bold"
                         style={{ color: COLORS.primary }}
                     >
-                        View All
+                        {showAllActivities ? "View Less" : "View All"}
                     </button>
                 </div>
                 <div className="space-y-4">
-                    {recentActivities.map((activity, index) => (
-                        <div
-                            key={index}
-                            className="flex items-center justify-between p-5 rounded-lg transition-all duration-200 hover:bg-opacity-50"
-                            style={{ background: COLORS.bgGray }}
-                        >
-                            <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <span className="font-bold text-base" style={{ color: COLORS.textPrimary }}>
-                                        {activity.action}
-                                    </span>
-                                    <span
-                                        className="px-3 py-1 rounded text-sm font-semibold"
-                                        style={{
-                                            background: `${COLORS.primary}15`,
-                                            color: COLORS.primary
-                                        }}
-                                    >
-                                        {activity.item}
-                                    </span>
+                    {visibleActivities.length === 0 ? (
+                      <div className="p-5 rounded-lg" style={{ background: COLORS.bgGray }}>
+                        <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                          {loading ? "Loading recent activity..." : "No recent activity found."}
+                        </p>
+                      </div>
+                    ) : (
+                      visibleActivities.map((activity, index) => (
+                          <div
+                              key={index}
+                              className="flex items-center justify-between p-5 rounded-lg transition-all duration-200 hover:bg-opacity-50"
+                              style={{ background: COLORS.bgGray }}
+                          >
+                              <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-2">
+                                      <span className="font-bold text-base" style={{ color: COLORS.textPrimary }}>
+                                          {activity.action}
+                                      </span>
+                                      <span
+                                          className="px-3 py-1 rounded text-sm font-semibold"
+                                          style={{
+                                              background: `${COLORS.primary}15`,
+                                              color: COLORS.primary
+                                          }}
+                                      >
+                                          {activity.item}
+                                      </span>
+                                  </div>
+                                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                                      by {activity.user} • {activity.time}
+                                  </p>
                                 </div>
-                                <p className="text-sm" style={{ color: COLORS.textSecondary }}>
-                                    by {activity.user} • {activity.time}
-                                </p>
-                            </div>
-                        </div>
-                    ))}
+                          </div>
+                      ))
+                    )}
                 </div>
             </div>
 
@@ -231,6 +371,6 @@ export function DashboardContent() {
                     </div>
                 </div>
             </div>
-        </div>
-    )
+    </div>
+  )
 }
