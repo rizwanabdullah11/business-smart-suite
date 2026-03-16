@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
+import DynamicModulePage from "@/components/dynamic-module-page"
 
 // Sample data for Business Continuity
 const initialCategories = [
@@ -44,9 +45,12 @@ const initialCategories = [
 
 type SortType = "name" | "date"
 
-export default function BusinessContinuityPage() {
+function LegacyBusinessContinuityPage() {
   const [categories, setCategories] = useState(initialCategories)
   const [showArchived, setShowArchived] = useState(false)
+  const [categoryItemView, setCategoryItemView] = useState<
+    Record<string, "active" | "archived" | "completed" | "highlighted">
+  >({})
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1"])
   const [editingCategory, setEditingCategory] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState("")
@@ -107,6 +111,36 @@ export default function BusinessContinuityPage() {
             ...cat,
             businessContinuities: cat.businessContinuities.map(p =>
               p.id === planId ? { ...p, paused: !p.paused } : p
+            )
+          }
+          : cat
+      )
+    )
+  }
+
+  const archivePlan = (categoryId: string, planId: string) => {
+    setCategories(prev =>
+      prev.map(cat =>
+        cat.id === categoryId
+          ? {
+            ...cat,
+            businessContinuities: cat.businessContinuities.map(p =>
+              p.id === planId ? { ...p, archived: true, isArchived: true } : p
+            )
+          }
+          : cat
+      )
+    )
+  }
+
+  const unarchivePlan = (categoryId: string, planId: string) => {
+    setCategories(prev =>
+      prev.map(cat =>
+        cat.id === categoryId
+          ? {
+            ...cat,
+            businessContinuities: cat.businessContinuities.map(p =>
+              p.id === planId ? { ...p, archived: false, isArchived: false } : p
             )
           }
           : cat
@@ -335,7 +369,7 @@ export default function BusinessContinuityPage() {
               }}
               onClick={() => setShowArchived(false)}
             >
-              Active ({categories.reduce((acc, cat) => acc + cat.businessContinuities.length, 0)})
+              Active ({categories.reduce((acc, cat) => acc + cat.businessContinuities.filter((p: any) => !p.archived && !p.isArchived).length, 0)})
             </button>
             <button
               className="px-6 py-3 font-semibold border-b-2 transition-all"
@@ -345,7 +379,7 @@ export default function BusinessContinuityPage() {
               }}
               onClick={() => setShowArchived(true)}
             >
-              Archived (0)
+              Archived ({categories.reduce((acc, cat) => acc + cat.businessContinuities.filter((p: any) => p.archived || p.isArchived).length, 0)})
             </button>
           </div>
         </div>
@@ -353,7 +387,22 @@ export default function BusinessContinuityPage() {
         {/* Categories */}
         <div className="space-y-4">
           {categories.map((category) => {
-            const sortedPlans = sortPlans(category.businessContinuities)
+            const currentItemView = categoryItemView[category.id] ?? (showArchived ? "archived" : "active")
+            const categoryPlans = category.businessContinuities || []
+            const activePlans = categoryPlans.filter((p: any) => !p.archived && !p.isArchived)
+            const archivedPlans = categoryPlans.filter((p: any) => p.archived || p.isArchived)
+            const completedPlans = activePlans.filter((p: any) => p.approved)
+            const highlightedPlans = activePlans.filter((p: any) => p.highlighted)
+            const currentPlans =
+              currentItemView === "archived"
+                ? archivedPlans
+                : currentItemView === "completed"
+                  ? completedPlans
+                  : currentItemView === "highlighted"
+                    ? highlightedPlans
+                    : activePlans
+            const sortedPlans = sortPlans(currentPlans)
+            const isViewingArchivedItems = currentItemView === "archived"
             const isExpanded = expandedCategories.includes(category.id)
 
             return (
@@ -382,7 +431,7 @@ export default function BusinessContinuityPage() {
                     )}
                     <h2 className="text-xl font-bold">{category.title}</h2>
                     <span className="px-3 py-1 rounded-full text-sm font-medium bg-white bg-opacity-20">
-                      {category.businessContinuities.length} plans
+                      {currentPlans.length} plans
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
@@ -399,6 +448,9 @@ export default function BusinessContinuityPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
+                        if (isViewingArchivedItems) {
+                          setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))
+                        }
                         setAddingPlanToCategory(category.id)
                         if (!expandedCategories.includes(category.id)) {
                           setExpandedCategories(prev => [...prev, category.id])
@@ -482,8 +534,54 @@ export default function BusinessContinuityPage() {
                 {/* Plans List */}
                 {isExpanded && (
                   <div className="p-5">
+                    <div className="mb-4 flex gap-2">
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "active" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "active" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "active" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Active ({activePlans.length})
+                      </button>
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "archived" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "archived" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "archived" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "archived" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Archived ({archivedPlans.length})
+                      </button>
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "completed" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "completed" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "completed" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "completed" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Completed ({completedPlans.length})
+                      </button>
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "highlighted" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "highlighted" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "highlighted" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "highlighted" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Highlighted ({highlightedPlans.length})
+                      </button>
+                    </div>
                     {/* Add Plan Form */}
-                    {addingPlanToCategory === category.id && (
+                    {addingPlanToCategory === category.id && currentItemView === "active" && (
                       <div
                         className="mb-5 p-5 rounded-xl shadow-sm"
                         style={{
@@ -570,7 +668,15 @@ export default function BusinessContinuityPage() {
                     {sortedPlans.length === 0 ? (
                       <div className="text-center py-12">
                         <Shield className="w-12 h-12 mx-auto mb-3" style={{ color: COLORS.textLight }} />
-                        <p className="font-medium" style={{ color: COLORS.textSecondary }}>No plans in this category</p>
+                        <p className="font-medium" style={{ color: COLORS.textSecondary }}>
+                          {isViewingArchivedItems
+                            ? "No archived plans in this category"
+                            : currentItemView === "completed"
+                              ? "No completed plans in this category"
+                              : currentItemView === "highlighted"
+                                ? "No highlighted plans in this category"
+                                : "No plans in this category"}
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -610,7 +716,7 @@ export default function BusinessContinuityPage() {
                             <div className="flex items-center gap-1.5">
                               <div className="flex items-center gap-1 mr-2">
                                 <button onClick={() => toggleHighlight(category.id, plan.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: plan.highlighted ? COLORS.warning : "#FEF3C7", color: plan.highlighted ? COLORS.textWhite : "#92400E" }}><Star className="w-4 h-4" /></button>
-                                <button onClick={() => toggleApprove(category.id, plan.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: plan.approved ? COLORS.green500 : "#D1FAE5", color: plan.approved ? COLORS.textWhite : "#065F46" }}><Check className="w-4 h-4" /></button>
+                                <button onClick={() => toggleApprove(category.id, plan.id)} title={plan.approved ? "Mark as Incomplete" : "Mark as Completed"} className="p-2 rounded-lg hover:scale-105" style={{ background: plan.approved ? COLORS.green500 : "#D1FAE5", color: plan.approved ? COLORS.textWhite : "#065F46" }}><Check className="w-4 h-4" /></button>
                                 <button onClick={() => togglePause(category.id, plan.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: plan.paused ? COLORS.warning : "#FEF3C7", color: plan.paused ? COLORS.textWhite : "#92400E" }}><Pause className="w-4 h-4" /></button>
                               </div>
                               <div className="w-px h-6 bg-gray-300 mx-1"></div>
@@ -618,6 +724,11 @@ export default function BusinessContinuityPage() {
                                 <Link href={`/business-continuity/${plan.id}/edit`}><button className="p-2 rounded-lg hover:scale-105" style={{ background: "#DBEAFE", color: "#1E40AF" }}><Edit className="w-4 h-4" /></button></Link>
                                 <button className="p-2 rounded-lg hover:scale-105" style={{ background: "#E5E7EB", color: "#374151" }}><Copy className="w-4 h-4" /></button>
                                 <button className="p-2 rounded-lg hover:scale-105" style={{ background: "#E0E7FF", color: "#4338CA" }}><Download className="w-4 h-4" /></button>
+                                {!isViewingArchivedItems ? (
+                                  <button onClick={() => archivePlan(category.id, plan.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: "#FFEDD5", color: "#9A3412" }}><Archive className="w-4 h-4" /></button>
+                                ) : (
+                                  <button onClick={() => unarchivePlan(category.id, plan.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: "#DCFCE7", color: "#166534" }}><Archive className="w-4 h-4" /></button>
+                                )}
                                 <button onClick={() => deletePlan(category.id, plan.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: "#FEE2E2", color: "#991B1B" }}><Trash2 className="w-4 h-4" /></button>
                               </div>
                             </div>
@@ -633,5 +744,19 @@ export default function BusinessContinuityPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function BusinessContinuityPage() {
+  return (
+    <DynamicModulePage
+      moduleSlug="business-continuity"
+      title="Business Continuity"
+      description="Manage your business continuity plans"
+      itemLabel="Plan"
+      icon={Shield}
+      newItemHref="/business-continuity/new"
+      itemHrefPrefix="/business-continuity"
+    />
   )
 }

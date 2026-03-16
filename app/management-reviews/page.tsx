@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
+import DynamicModulePage from "@/components/dynamic-module-page"
 
 // Sample data for Management Reviews
 const initialCategories = [
@@ -44,9 +45,12 @@ const initialCategories = [
 
 type SortType = "name" | "date"
 
-export default function ManagementReviewsPage() {
+function LegacyManagementReviewsPage() {
   const [categories, setCategories] = useState(initialCategories)
   const [showArchived, setShowArchived] = useState(false)
+  const [categoryItemView, setCategoryItemView] = useState<
+    Record<string, "active" | "archived" | "completed" | "highlighted">
+  >({})
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1"])
   const [editingCategory, setEditingCategory] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState("")
@@ -106,6 +110,36 @@ export default function ManagementReviewsPage() {
             ...cat,
             managementReviews: cat.managementReviews.map(r =>
               r.id === reviewId ? { ...r, paused: !r.paused } : r
+            )
+          }
+          : cat
+      )
+    )
+  }
+
+  const archiveReview = (categoryId: string, reviewId: string) => {
+    setCategories(prev =>
+      prev.map(cat =>
+        cat.id === categoryId
+          ? {
+            ...cat,
+            managementReviews: cat.managementReviews.map(r =>
+              r.id === reviewId ? { ...r, archived: true, isArchived: true } : r
+            )
+          }
+          : cat
+      )
+    )
+  }
+
+  const unarchiveReview = (categoryId: string, reviewId: string) => {
+    setCategories(prev =>
+      prev.map(cat =>
+        cat.id === categoryId
+          ? {
+            ...cat,
+            managementReviews: cat.managementReviews.map(r =>
+              r.id === reviewId ? { ...r, archived: false, isArchived: false } : r
             )
           }
           : cat
@@ -332,7 +366,7 @@ export default function ManagementReviewsPage() {
               }}
               onClick={() => setShowArchived(false)}
             >
-              Active ({categories.reduce((acc, cat) => acc + cat.managementReviews.length, 0)})
+              Active ({categories.reduce((acc, cat) => acc + cat.managementReviews.filter((r: any) => !r.archived && !r.isArchived).length, 0)})
             </button>
             <button
               className="px-6 py-3 font-semibold border-b-2 transition-all"
@@ -342,7 +376,7 @@ export default function ManagementReviewsPage() {
               }}
               onClick={() => setShowArchived(true)}
             >
-              Archived (0)
+              Archived ({categories.reduce((acc, cat) => acc + cat.managementReviews.filter((r: any) => r.archived || r.isArchived).length, 0)})
             </button>
           </div>
         </div>
@@ -350,7 +384,22 @@ export default function ManagementReviewsPage() {
         {/* Categories */}
         <div className="space-y-4">
           {categories.map((category) => {
-            const sortedReviews = sortReviews(category.managementReviews)
+            const currentItemView = categoryItemView[category.id] ?? (showArchived ? "archived" : "active")
+            const categoryReviews = category.managementReviews || []
+            const activeReviews = categoryReviews.filter((r: any) => !r.archived && !r.isArchived)
+            const archivedReviews = categoryReviews.filter((r: any) => r.archived || r.isArchived)
+            const completedReviews = activeReviews.filter((r: any) => r.approved)
+            const highlightedReviews = activeReviews.filter((r: any) => r.highlighted)
+            const currentReviews =
+              currentItemView === "archived"
+                ? archivedReviews
+                : currentItemView === "completed"
+                  ? completedReviews
+                  : currentItemView === "highlighted"
+                    ? highlightedReviews
+                    : activeReviews
+            const sortedReviews = sortReviews(currentReviews)
+            const isViewingArchivedItems = currentItemView === "archived"
             const isExpanded = expandedCategories.includes(category.id)
 
             return (
@@ -379,7 +428,7 @@ export default function ManagementReviewsPage() {
                     )}
                     <h2 className="text-xl font-bold">{category.title}</h2>
                     <span className="px-3 py-1 rounded-full text-sm font-medium bg-white bg-opacity-20">
-                      {category.managementReviews.length} reviews
+                      {currentReviews.length} reviews
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
@@ -396,6 +445,9 @@ export default function ManagementReviewsPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
+                        if (isViewingArchivedItems) {
+                          setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))
+                        }
                         setAddingReviewToCategory(category.id)
                         if (!expandedCategories.includes(category.id)) {
                           setExpandedCategories(prev => [...prev, category.id])
@@ -480,7 +532,13 @@ export default function ManagementReviewsPage() {
                 {isExpanded && (
                   <div className="p-5">
                     {/* Add Review Form */}
-                    {addingReviewToCategory === category.id && (
+                    <div className="mb-4 flex gap-2">
+                      <button onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all" style={{ background: currentItemView === "active" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "active" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "active" ? COLORS.primary : COLORS.border }}>Active ({activeReviews.length})</button>
+                      <button onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "archived" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all" style={{ background: currentItemView === "archived" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "archived" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "archived" ? COLORS.primary : COLORS.border }}>Archived ({archivedReviews.length})</button>
+                      <button onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "completed" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all" style={{ background: currentItemView === "completed" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "completed" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "completed" ? COLORS.primary : COLORS.border }}>Completed ({completedReviews.length})</button>
+                      <button onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "highlighted" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all" style={{ background: currentItemView === "highlighted" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "highlighted" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "highlighted" ? COLORS.primary : COLORS.border }}>Highlighted ({highlightedReviews.length})</button>
+                    </div>
+                    {addingReviewToCategory === category.id && currentItemView === "active" && (
                       <div
                         className="mb-5 p-5 rounded-xl shadow-sm"
                         style={{
@@ -565,7 +623,9 @@ export default function ManagementReviewsPage() {
                     {sortedReviews.length === 0 ? (
                       <div className="text-center py-12">
                         <ClipboardCheck className="w-12 h-12 mx-auto mb-3" style={{ color: COLORS.textLight }} />
-                        <p className="font-medium" style={{ color: COLORS.textSecondary }}>No reviews in this category</p>
+                        <p className="font-medium" style={{ color: COLORS.textSecondary }}>
+                          {isViewingArchivedItems ? "No archived reviews in this category" : currentItemView === "completed" ? "No completed reviews in this category" : currentItemView === "highlighted" ? "No highlighted reviews in this category" : "No reviews in this category"}
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -606,7 +666,7 @@ export default function ManagementReviewsPage() {
                             <div className="flex items-center gap-1.5">
                               <div className="flex items-center gap-1 mr-2">
                                 <button onClick={() => toggleHighlight(category.id, review.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: review.highlighted ? COLORS.warning : "#FEF3C7", color: review.highlighted ? COLORS.textWhite : "#92400E" }}><Star className="w-4 h-4" /></button>
-                                <button onClick={() => toggleApprove(category.id, review.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: review.approved ? COLORS.green500 : "#D1FAE5", color: review.approved ? COLORS.textWhite : "#065F46" }}><Check className="w-4 h-4" /></button>
+                                <button onClick={() => toggleApprove(category.id, review.id)} title={review.approved ? "Mark as Incomplete" : "Mark as Completed"} className="p-2 rounded-lg hover:scale-105" style={{ background: review.approved ? COLORS.green500 : "#D1FAE5", color: review.approved ? COLORS.textWhite : "#065F46" }}><Check className="w-4 h-4" /></button>
                                 <button onClick={() => togglePause(category.id, review.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: review.paused ? COLORS.warning : "#FEF3C7", color: review.paused ? COLORS.textWhite : "#92400E" }}><Pause className="w-4 h-4" /></button>
                               </div>
                               <div className="w-px h-6 bg-gray-300 mx-1"></div>
@@ -614,6 +674,11 @@ export default function ManagementReviewsPage() {
                                 <Link href={`/management-reviews/${review.id}/edit`}><button className="p-2 rounded-lg hover:scale-105" style={{ background: "#DBEAFE", color: "#1E40AF" }}><Edit className="w-4 h-4" /></button></Link>
                                 <button className="p-2 rounded-lg hover:scale-105" style={{ background: "#E5E7EB", color: "#374151" }}><Copy className="w-4 h-4" /></button>
                                 <button className="p-2 rounded-lg hover:scale-105" style={{ background: "#E0E7FF", color: "#4338CA" }}><Download className="w-4 h-4" /></button>
+                                {!isViewingArchivedItems ? (
+                                  <button onClick={() => archiveReview(category.id, review.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: "#FFEDD5", color: "#9A3412" }}><Archive className="w-4 h-4" /></button>
+                                ) : (
+                                  <button onClick={() => unarchiveReview(category.id, review.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: "#DCFCE7", color: "#166534" }}><Archive className="w-4 h-4" /></button>
+                                )}
                                 <button onClick={() => deleteReview(category.id, review.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: "#FEE2E2", color: "#991B1B" }}><Trash2 className="w-4 h-4" /></button>
                               </div>
                             </div>
@@ -629,5 +694,19 @@ export default function ManagementReviewsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ManagementReviewsPage() {
+  return (
+    <DynamicModulePage
+      moduleSlug="management-reviews"
+      title="Management Reviews"
+      description="Manage management review records"
+      itemLabel="Review"
+      icon={ClipboardCheck}
+      newItemHref="/management-reviews/new"
+      itemHrefPrefix="/management-reviews"
+    />
   )
 }

@@ -6,6 +6,14 @@ const ALLOWED_MODULES = new Set([
   "forms",
   "certificates",
   "tasks",
+  "business-continuity",
+  "management-reviews",
+  "job-descriptions",
+  "work-instructions",
+  "risk-assessments",
+  "coshh",
+  "technical-file",
+  "ims-aspects-impacts",
 ])
 
 export function isSupportedModule(module: string) {
@@ -13,7 +21,12 @@ export function isSupportedModule(module: string) {
 }
 
 function toModelName(module: string) {
-  return `${module.charAt(0).toUpperCase()}${module.slice(1)}Item`
+  const normalized = module
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .map(part => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join("")
+  return `${normalized || "Module"}Item`
 }
 
 const moduleItemSchema = new Schema(
