@@ -71,16 +71,19 @@ const userSchema = new Schema<IUser>(
   }
 )
 
-userSchema.pre("save", function userPreSave(next) {
+userSchema.pre("save", function userPreSave() {
   this.email = this.email.toLowerCase().trim()
   this.role = normalizeRole(this.role)
-  next()
 })
 
 userSchema.methods.toJSON = function userToJSON() {
   const data = this.toObject()
   delete data.password
   return data
+}
+
+if (process.env.NODE_ENV === "development" && mongoose.models.User) {
+  mongoose.deleteModel("User")
 }
 
 const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>("User", userSchema)

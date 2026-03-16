@@ -76,17 +76,19 @@ const manualSchema = new Schema<IManual>(
   }
 )
 
-manualSchema.pre("save", function manualPreSave(next) {
+manualSchema.pre("save", function manualPreSave() {
   if (!this.category && this.categoryId) {
     this.category = this.categoryId
   }
   if (!this.categoryId && this.category) {
     this.categoryId = this.category
   }
-  next()
 })
 
-const Manual: Model<IManual> =
-  mongoose.models.Manual || mongoose.model<IManual>("Manual", manualSchema)
+if (process.env.NODE_ENV === "development" && mongoose.models.Manual) {
+  mongoose.deleteModel("Manual")
+}
+
+const Manual: Model<IManual> = mongoose.models.Manual || mongoose.model<IManual>("Manual", manualSchema)
 
 export default Manual

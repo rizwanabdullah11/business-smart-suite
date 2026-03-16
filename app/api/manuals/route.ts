@@ -5,6 +5,16 @@ import { connectToDatabase } from "@/lib/server/db"
 import Manual from "@/lib/server/models/Manual"
 import mongoose from "mongoose"
 
+function extractCategoryId(input: unknown): string | null {
+  if (!input) return null
+  if (typeof input === "string") return input
+  if (typeof input === "object" && input !== null && "_id" in input) {
+    const nested = (input as { _id?: unknown })._id
+    return typeof nested === "string" ? nested : null
+  }
+  return null
+}
+
 export const GET = withAuth(
   async (request: NextRequest) => {
     try {
@@ -24,10 +34,13 @@ export const GET = withAuth(
       }
 
       if (categoryFilter && mongoose.Types.ObjectId.isValid(categoryFilter)) {
+        const categoryObjectId = new mongoose.Types.ObjectId(categoryFilter)
         andConditions.push({
           $or: [
-          { category: new mongoose.Types.ObjectId(categoryFilter) },
-          { categoryId: new mongoose.Types.ObjectId(categoryFilter) },
+            { category: categoryObjectId },
+            { categoryId: categoryObjectId },
+            { category: categoryFilter },
+            { categoryId: categoryFilter },
           ],
         })
       }
@@ -61,19 +74,15 @@ export const POST = withAuth(
       }
 
       await connectToDatabase()
-      const categoryId = body.category || body.categoryId
-      const categoryObjectId =
-        categoryId && mongoose.Types.ObjectId.isValid(categoryId)
-          ? new mongoose.Types.ObjectId(categoryId)
-          : undefined
+      const rawCategoryId = extractCategoryId(body.category) || extractCategoryId(body.categoryId)
 
       const manual = await Manual.create({
         title: String(body.title).trim(),
         version: body.version || "v1.0",
         location: body.location || "QMS",
         issueDate: body.issueDate || new Date().toISOString().split("T")[0],
-        category: categoryObjectId,
-        categoryId: categoryObjectId,
+        category: rawCategoryId || body.category || body.categoryId || null,
+        categoryId: rawCategoryId || body.categoryId || body.category || null,
         highlighted: Boolean(body.highlighted),
         approved: Boolean(body.approved),
         paused: Boolean(body.paused),
@@ -82,9 +91,9 @@ export const POST = withAuth(
         createdBy: user.id,
       })
 
-      const created = await Manual.findById(manual._id).populate("category", "_id name").lean()
-      return NextResponse.json(created, { status: 201 })
+      return NextResponse.json(manual, { status: 201 })
     } catch (error) {
+      console.error("Error creating manual:", error)
       return NextResponse.json(
         { error: `Failed to create manual: ${error instanceof Error ? error.message : "Unknown error"}` },
         { status: 500 }

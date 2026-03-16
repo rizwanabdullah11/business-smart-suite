@@ -37,10 +37,9 @@ const moduleItemSchema = new Schema(
   }
 )
 
-moduleItemSchema.pre("save", function syncCategory(next) {
+moduleItemSchema.pre("save", function syncCategory() {
   if (!this.category && this.categoryId) this.category = this.categoryId
   if (!this.categoryId && this.category) this.categoryId = this.category
-  next()
 })
 
 export function getModuleModel(module: string): Model<mongoose.Document> {
