@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
+import DynamicModulePage from "@/components/dynamic-module-page"
 
 // Sample data for Improvement Register
 const initialCategories = [
@@ -43,7 +44,7 @@ const initialCategories = [
 
 type SortType = "name" | "date"
 
-export default function ImprovementRegisterPage() {
+function LegacyImprovementRegisterPage() {
   const [categories, setCategories] = useState(initialCategories)
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1", "2"])
@@ -658,5 +659,28 @@ export default function ImprovementRegisterPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ImprovementRegisterPage() {
+  return (
+    <DynamicModulePage
+      moduleSlug="improvement-register"
+      title="Improvement Register"
+      description="Manage NCRs and opportunities for improvement"
+      itemLabel="Record"
+      icon={TrendingUp}
+      newItemHref="/improvement-register/new"
+      itemHrefPrefix="/improvement-register"
+      dateFieldKey="date"
+      formFields={[
+        { key: "title", label: "Title", required: true, placeholder: "Improvement title..." },
+        { key: "source", label: "Source", type: "select", options: ["Internal Audit", "Customer Complaint", "Employee Suggestion", "External Audit"], defaultValue: "Internal Audit" },
+        { key: "date", label: "Date", type: "date" },
+        { key: "assignee", label: "Assignee", placeholder: "Assignee..." },
+        { key: "status", label: "Status", type: "select", options: ["Open", "In Progress", "Closed"], defaultValue: "Open" },
+      ]}
+      listFieldKeys={["source", "date", "status", "assignee"]}
+    />
   )
 }

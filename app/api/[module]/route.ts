@@ -76,17 +76,22 @@ export const POST = withAuth(
           ? new mongoose.Types.ObjectId(categoryId)
           : undefined
 
+      const rest = { ...(body || {}) }
+      delete rest._id
+      delete rest.id
+      delete rest.category
+      delete rest.categoryId
+      delete rest.createdAt
+      delete rest.updatedAt
+
       const created = await Model.create({
+        ...rest,
         title: String(body.title).trim(),
-        version: body.version || "v1.0",
-        location: body.location || "N/A",
-        issueDate: body.issueDate || new Date().toISOString().split("T")[0],
-        expiryDate: body.expiryDate || null,
         category: categoryObjectId,
         categoryId: categoryObjectId,
-        highlighted: Boolean(body.highlighted),
-        approved: Boolean(body.approved),
-        paused: Boolean(body.paused),
+        highlighted: Boolean(body.highlighted ?? false),
+        approved: Boolean(body.approved ?? false),
+        paused: Boolean(body.paused ?? false),
         archived: false,
         isArchived: false,
         createdBy: user.id,

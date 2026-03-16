@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import {
   Plus,
@@ -25,6 +25,17 @@ import {
 import { COLORS } from "@/constant/colors"
 
 type SortType = "name" | "date"
+type FieldType = "text" | "number" | "date" | "textarea" | "select" | "checkbox"
+
+type ModuleField = {
+  key: string
+  label: string
+  type?: FieldType
+  placeholder?: string
+  options?: string[]
+  defaultValue?: string | number | boolean
+  required?: boolean
+}
 
 type DynamicModulePageProps = {
   moduleSlug: string
@@ -34,6 +45,31 @@ type DynamicModulePageProps = {
   icon: LucideIcon
   newItemHref: string
   itemHrefPrefix: string
+  titleFieldKey?: string
+  dateFieldKey?: string
+  formFields?: ModuleField[]
+  listFieldKeys?: string[]
+}
+
+const defaultFields: ModuleField[] = [
+  { key: "title", label: "Title", type: "text", required: true, placeholder: "Enter title..." },
+  { key: "version", label: "Version", type: "text", defaultValue: "v1.0", placeholder: "e.g., v1.0" },
+  { key: "location", label: "Location", type: "text", defaultValue: "N/A", placeholder: "e.g., QMS" },
+  { key: "issueDate", label: "Issue Date", type: "date", defaultValue: new Date().toISOString().split("T")[0] },
+]
+
+function toIdString(value: any) {
+  if (!value) return null
+  if (typeof value === "string") return value
+  if (typeof value === "object" && "_id" in value) return String((value as any)._id)
+  return String(value)
+}
+
+function toFieldValue(field: ModuleField) {
+  if (field.defaultValue !== undefined) return field.defaultValue
+  if (field.type === "checkbox") return false
+  if (field.type === "date") return new Date().toISOString().split("T")[0]
+  return ""
 }
 
 export default function DynamicModulePage({
@@ -44,12 +80,14 @@ export default function DynamicModulePage({
   icon: Icon,
   newItemHref,
   itemHrefPrefix,
+  titleFieldKey = "title",
+  dateFieldKey = "issueDate",
+  formFields = defaultFields,
+  listFieldKeys,
 }: DynamicModulePageProps) {
   const [categories, setCategories] = useState<any[]>([])
   const [archivedCategories, setArchivedCategories] = useState<any[]>([])
-  const [categoryItemView, setCategoryItemView] = useState<
-    Record<string, "active" | "archived" | "completed" | "highlighted">
-  >({})
+  const [categoryItemView, setCategoryItemView] = useState<Record<string, "active" | "archived" | "completed" | "highlighted">>({})
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>([])
   const [editingCategory, setEditingCategory] = useState<string | null>(null)
@@ -60,86 +98,65 @@ export default function DynamicModulePage({
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
   const [addingItemToCategory, setAddingItemToCategory] = useState<string | null>(null)
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
-  const [newItemData, setNewItemData] = useState({
-    title: "",
-    version: "",
-    location: "",
-    issueDate: new Date().toISOString().split("T")[0],
-  })
+  const [newItemData, setNewItemData] = useState<Record<string, any>>({})
+
+  const defaultNewItemData = useMemo(() => {
+    const base: Record<string, any> = {}
+    formFields.forEach((field) => {
+      base[field.key] = toFieldValue(field)
+    })
+    if (!base[titleFieldKey]) base[titleFieldKey] = ""
+    return base
+  }, [formFields, titleFieldKey])
+
+  useEffect(() => {
+    setNewItemData(defaultNewItemData)
+  }, [defaultNewItemData])
 
   useEffect(() => {
     loadData()
   }, [])
-
-  const toIdString = (value: any) => {
-    if (!value) return null
-    if (typeof value === "string") return value
-    if (typeof value === "object" && "_id" in value) return String((value as any)._id)
-    return String(value)
-  }
 
   const getItemCategoryId = (item: any) => {
     const raw = item?.category?._id || item?.categoryId || item?.category || null
     return toIdString(raw)
   }
 
+  const getItemTitle = (item: any) => String(item?.[titleFieldKey] || item?.title || "")
+
+  const normalizeItem = (item: any) => ({
+    ...item,
+    id: String(item?._id || item?.id),
+    title: String(item?.title || item?.[titleFieldKey] || ""),
+  })
+
   const loadData = async () => {
     try {
       const token = localStorage.getItem("token")
 
-      const catRes = await fetch(`/api/categories?type=${moduleSlug}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const catRes = await fetch(`/api/categories?type=${moduleSlug}`, { headers: { Authorization: `Bearer ${token}` } })
       const categoriesData = await catRes.json()
-
-      const itemsRes = await fetch(`/api/${moduleSlug}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const itemsRes = await fetch(`/api/${moduleSlug}`, { headers: { Authorization: `Bearer ${token}` } })
       const itemsData = await itemsRes.json()
-
-      const archivedRes = await fetch(`/api/${moduleSlug}/archived/all`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const archivedRes = await fetch(`/api/${moduleSlug}/archived/all`, { headers: { Authorization: `Bearer ${token}` } })
       const archivedData = archivedRes.ok ? await archivedRes.json() : []
 
       const archivedById = new Map<string, any>()
-      archivedData.forEach((item: any) => {
-        if (item?._id) archivedById.set(String(item._id), item)
-      })
+      archivedData.forEach((item: any) => item?._id && archivedById.set(String(item._id), item))
       itemsData
         .filter((item: any) => item?.archived || item?.isArchived)
-        .forEach((item: any) => {
-          if (item?._id) archivedById.set(String(item._id), item)
-        })
+        .forEach((item: any) => item?._id && archivedById.set(String(item._id), item))
+
       const archivedItems = Array.from(archivedById.values())
 
       const allCategories = categoriesData.map((cat: any) => {
         const categoryId = toIdString(cat._id)
         const activeItems = itemsData
           .filter((i: any) => getItemCategoryId(i) === categoryId && !i.archived && !i.isArchived)
-          .map((i: any) => ({
-            id: i._id,
-            title: i.title,
-            version: i.version,
-            issueDate: i.issueDate,
-            location: i.location,
-            highlighted: i.highlighted || false,
-            approved: i.approved || false,
-            paused: i.paused || false,
-          }))
-
+          .map(normalizeItem)
         const categoryArchivedItems = archivedItems
           .filter((i: any) => getItemCategoryId(i) === categoryId)
-          .map((i: any) => ({
-            id: i._id,
-            title: i.title,
-            version: i.version,
-            issueDate: i.issueDate,
-            location: i.location,
-            highlighted: i.highlighted || false,
-            approved: i.approved || false,
-            paused: i.paused || false,
-          }))
+          .map(normalizeItem)
 
         return {
           id: categoryId,
@@ -154,13 +171,11 @@ export default function DynamicModulePage({
       })
 
       const merged = allCategories.filter((cat: any) => !cat.isArchived && !cat.archived)
-      const mergedArchived = allCategories.filter(
-        (cat: any) => cat.archivedItems.length > 0 || cat.isArchived || cat.archived
-      )
+      const mergedArchived = allCategories.filter((cat: any) => cat.archivedItems.length > 0 || cat.isArchived || cat.archived)
 
       setCategories(merged)
       setArchivedCategories(mergedArchived)
-      setExpandedCategories(merged.length ? [merged[0].id] : [])
+      setExpandedCategories((prev) => (prev.length ? prev : merged.length ? [merged[0].id] : []))
       setCategoryItemView((prev) => {
         const next = { ...prev }
         allCategories.forEach((cat: any) => {
@@ -174,9 +189,7 @@ export default function DynamicModulePage({
   }
 
   const toggleCategory = (categoryId: string) => {
-    setExpandedCategories((prev) =>
-      prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId]
-    )
+    setExpandedCategories((prev) => (prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId]))
   }
 
   const updateItem = async (itemId: string, payload: Record<string, unknown>, actionKey: string) => {
@@ -185,10 +198,7 @@ export default function DynamicModulePage({
       const token = localStorage.getItem("token")
       const response = await fetch(`/api/${moduleSlug}/${itemId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
       })
       if (!response.ok) throw new Error("Failed to update item")
@@ -211,8 +221,7 @@ export default function DynamicModulePage({
       })
       if (!response.ok) throw new Error("Failed to archive category")
       await loadData()
-    } catch (err) {
-      console.error("Archive category failed:", err)
+    } catch {
       alert("Failed to archive category")
     }
   }
@@ -227,8 +236,7 @@ export default function DynamicModulePage({
       })
       if (!response.ok) throw new Error("Failed to unarchive category")
       await loadData()
-    } catch (err) {
-      console.error("Unarchive category failed:", err)
+    } catch {
       alert("Failed to unarchive category")
     }
   }
@@ -237,14 +245,10 @@ export default function DynamicModulePage({
     if (!confirm("Are you sure you want to delete this item?")) return
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`/api/${moduleSlug}/${itemId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const response = await fetch(`/api/${moduleSlug}/${itemId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
       if (!response.ok) throw new Error("Failed to delete item")
       await loadData()
-    } catch (err) {
-      console.error("Delete item failed:", err)
+    } catch {
       alert("Failed to delete item")
     }
   }
@@ -253,27 +257,29 @@ export default function DynamicModulePage({
     try {
       setLoadingAction(`copy-${item.id}`)
       const token = localStorage.getItem("token")
+      const copyPayload: Record<string, any> = { ...item }
+      delete copyPayload.id
+      delete copyPayload._id
+      delete copyPayload.createdAt
+      delete copyPayload.updatedAt
+      copyPayload[titleFieldKey] = `${getItemTitle(item)} (Copy)`
+      copyPayload.title = copyPayload[titleFieldKey]
+      copyPayload.category = categoryId
+      copyPayload.categoryId = categoryId
+      copyPayload.highlighted = false
+      copyPayload.approved = false
+      copyPayload.paused = false
+      copyPayload.archived = false
+      copyPayload.isArchived = false
+
       const response = await fetch(`/api/${moduleSlug}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: `${item.title} (Copy)`,
-          version: item.version || "v1.0",
-          location: item.location || "N/A",
-          issueDate: item.issueDate || new Date().toISOString().split("T")[0],
-          category: categoryId,
-          highlighted: false,
-          approved: false,
-          paused: false,
-        }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(copyPayload),
       })
       if (!response.ok) throw new Error("Failed to copy item")
       await loadData()
-    } catch (err) {
-      console.error("Copy item failed:", err)
+    } catch {
       alert("Failed to copy item")
     } finally {
       setLoadingAction(null)
@@ -284,14 +290,10 @@ export default function DynamicModulePage({
     if (!confirm("Are you sure you want to delete this category?")) return
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`/api/categories/${categoryId}?type=${moduleSlug}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const response = await fetch(`/api/categories/${categoryId}?type=${moduleSlug}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
       if (!response.ok) throw new Error("Failed to delete category")
       await loadData()
-    } catch (err) {
-      console.error("Delete category failed:", err)
+    } catch {
       alert("Failed to delete category")
     }
   }
@@ -302,15 +304,12 @@ export default function DynamicModulePage({
       const token = localStorage.getItem("token")
       await fetch(`/api/categories/${categoryId}?type=${moduleSlug}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name: editTitle.trim() }),
       })
       await loadData()
-    } catch (err) {
-      console.error("Edit category failed:", err)
+    } catch {
+      alert("Failed to update category")
     }
     setEditingCategory(null)
     setEditTitle("")
@@ -322,51 +321,37 @@ export default function DynamicModulePage({
       const token = localStorage.getItem("token")
       const response = await fetch("/api/categories", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name: newCategoryTitle, type: moduleSlug }),
       })
       if (!response.ok) throw new Error("Failed to add category")
       setNewCategoryTitle("")
       setShowAddCategory(false)
       await loadData()
-    } catch (err) {
-      console.error("Add category failed:", err)
+    } catch {
       alert("Failed to add category")
     }
   }
 
   const addItemToCategory = async (categoryId: string) => {
-    if (!newItemData.title.trim()) return
+    const titleValue = String(newItemData[titleFieldKey] || "").trim()
+    if (!titleValue) {
+      alert(`${itemLabel} title is required`)
+      return
+    }
     try {
       const token = localStorage.getItem("token")
+      const payload = { ...newItemData, title: titleValue, category: categoryId, categoryId }
       const response = await fetch(`/api/${moduleSlug}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: newItemData.title,
-          version: newItemData.version || "v1.0",
-          location: newItemData.location || "N/A",
-          issueDate: newItemData.issueDate,
-          category: categoryId,
-        }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
       })
       if (!response.ok) throw new Error("Failed to add item")
       setAddingItemToCategory(null)
-      setNewItemData({
-        title: "",
-        version: "",
-        location: "",
-        issueDate: new Date().toISOString().split("T")[0],
-      })
+      setNewItemData(defaultNewItemData)
       await loadData()
-    } catch (err) {
-      console.error("Add item failed:", err)
+    } catch {
       alert("Failed to add item")
     }
   }
@@ -374,21 +359,71 @@ export default function DynamicModulePage({
   const sortItems = (items: any[]) => {
     const sorted = [...items]
     if (sortType === "name") {
-      sorted.sort((a, b) => a.title.localeCompare(b.title))
+      sorted.sort((a, b) => getItemTitle(a).localeCompare(getItemTitle(b)))
     } else {
-      sorted.sort((a, b) => new Date(a.issueDate).getTime() - new Date(b.issueDate).getTime())
+      sorted.sort((a, b) => new Date(a?.[dateFieldKey] || 0).getTime() - new Date(b?.[dateFieldKey] || 0).getTime())
     }
     return sortDirection === "asc" ? sorted : sorted.reverse()
   }
 
-  const toggleSort = (type: SortType) => {
-    if (sortType === type) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))
-    } else {
-      setSortType(type)
-      setSortDirection("asc")
+  const renderInputField = (field: ModuleField) => {
+    const value = newItemData[field.key]
+    const commonClass = "w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+    const commonStyle = { borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }
+
+    if (field.type === "textarea") {
+      return (
+        <textarea
+          value={String(value || "")}
+          onChange={(e) => setNewItemData((prev) => ({ ...prev, [field.key]: e.target.value }))}
+          placeholder={field.placeholder}
+          rows={3}
+          className={commonClass}
+          style={commonStyle}
+        />
+      )
     }
+    if (field.type === "select") {
+      return (
+        <select
+          value={String(value ?? "")}
+          onChange={(e) => setNewItemData((prev) => ({ ...prev, [field.key]: e.target.value }))}
+          className={commonClass}
+          style={commonStyle}
+        >
+          {(field.options || []).map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      )
+    }
+    if (field.type === "checkbox") {
+      return (
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={Boolean(value)}
+            onChange={(e) => setNewItemData((prev) => ({ ...prev, [field.key]: e.target.checked }))}
+          />
+          <span style={{ color: COLORS.textPrimary }}>{field.label}</span>
+        </label>
+      )
+    }
+    return (
+      <input
+        type={field.type || "text"}
+        value={value ?? ""}
+        onChange={(e) => setNewItemData((prev) => ({ ...prev, [field.key]: field.type === "number" ? e.target.value : e.target.value }))}
+        placeholder={field.placeholder}
+        className={commonClass}
+        style={commonStyle}
+      />
+    )
   }
+
+  const displayKeys = listFieldKeys?.length ? listFieldKeys : formFields.map((f) => f.key).filter((k) => k !== titleFieldKey).slice(0, 4)
 
   return (
     <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
@@ -441,12 +476,9 @@ export default function DynamicModulePage({
 
         <div className="mb-4 flex items-center gap-3">
           <span className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Sort by:</span>
-          <button onClick={() => toggleSort("name")} className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2" style={{ background: sortType === "name" ? COLORS.primaryGradient : COLORS.bgWhite, color: sortType === "name" ? COLORS.textWhite : COLORS.textPrimary, border: `1px solid ${sortType === "name" ? COLORS.primary : COLORS.border}` }}>
-            <Type className="w-4 h-4" /> Name {sortType === "name" && <ArrowUpDown className={`w-3 h-3 ${sortDirection === "desc" ? "rotate-180" : ""}`} />}
-          </button>
-          <button onClick={() => toggleSort("date")} className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2" style={{ background: sortType === "date" ? COLORS.primaryGradient : COLORS.bgWhite, color: sortType === "date" ? COLORS.textWhite : COLORS.textPrimary, border: `1px solid ${sortType === "date" ? COLORS.primary : COLORS.border}` }}>
-            <Calendar className="w-4 h-4" /> Date {sortType === "date" && <ArrowUpDown className={`w-3 h-3 ${sortDirection === "desc" ? "rotate-180" : ""}`} />}
-          </button>
+          <button onClick={() => setSortType("name")} className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2" style={{ background: sortType === "name" ? COLORS.primaryGradient : COLORS.bgWhite, color: sortType === "name" ? COLORS.textWhite : COLORS.textPrimary, border: `1px solid ${sortType === "name" ? COLORS.primary : COLORS.border}` }}><Type className="w-4 h-4" />Name <ArrowUpDown className={`w-3 h-3 ${sortDirection === "desc" ? "rotate-180" : ""}`} /></button>
+          <button onClick={() => setSortType("date")} className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2" style={{ background: sortType === "date" ? COLORS.primaryGradient : COLORS.bgWhite, color: sortType === "date" ? COLORS.textWhite : COLORS.textPrimary, border: `1px solid ${sortType === "date" ? COLORS.primary : COLORS.border}` }}><Calendar className="w-4 h-4" />Date</button>
+          <button onClick={() => setSortDirection((d) => (d === "asc" ? "desc" : "asc"))} className="px-3 py-2 rounded-lg border" style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}>Toggle</button>
         </div>
 
         <div className="space-y-4">
@@ -498,11 +530,16 @@ export default function DynamicModulePage({
 
                     {addingItemToCategory === category.id && currentItemView === "active" && (
                       <div className="mb-5 p-5 rounded-xl shadow-sm" style={{ background: COLORS.bgGray, border: `2px dashed ${COLORS.border}` }}>
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                          <input type="text" value={newItemData.title} onChange={(e) => setNewItemData((prev) => ({ ...prev, title: e.target.value }))} placeholder={`Enter ${itemLabel.toLowerCase()} title...`} className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400" style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }} />
-                          <input type="text" value={newItemData.version} onChange={(e) => setNewItemData((prev) => ({ ...prev, version: e.target.value }))} placeholder="e.g., v1.0" className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400" style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }} />
-                          <input type="text" value={newItemData.location} onChange={(e) => setNewItemData((prev) => ({ ...prev, location: e.target.value }))} placeholder="e.g., QMS" className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400" style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }} />
-                          <input type="date" value={newItemData.issueDate} onChange={(e) => setNewItemData((prev) => ({ ...prev, issueDate: e.target.value }))} className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500" style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }} />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          {formFields.map((field) => (
+                            <div key={field.key} className={field.type === "textarea" ? "md:col-span-2" : ""}>
+                              <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                                {field.label}
+                                {field.required ? " *" : ""}
+                              </label>
+                              {renderInputField(field)}
+                            </div>
+                          ))}
                         </div>
                         <div className="flex gap-3">
                           <button onClick={() => addItemToCategory(category.id)} className="px-6 py-2.5 rounded-lg font-medium" style={{ background: COLORS.primary, color: COLORS.textWhite }}>Add {itemLabel}</button>
@@ -523,11 +560,13 @@ export default function DynamicModulePage({
                           <div key={item.id} className="flex items-center gap-3 p-4 rounded-lg hover:shadow-md transition-all" style={{ background: item.paused ? `${COLORS.warning}05` : item.highlighted ? `${COLORS.primary}05` : COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
                             <button className="cursor-move hover:bg-gray-50 h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200"><GripVertical className="w-5 h-5" style={{ color: "#9CA3AF" }} /></button>
                             <div className="flex-1">
-                              <Link href={`${itemHrefPrefix}/${item.id}`} className="font-semibold hover:underline text-lg" style={{ color: COLORS.textPrimary }}>{item.title}</Link>
-                              <div className="flex gap-4 text-sm mt-1.5" style={{ color: COLORS.textSecondary }}>
-                                <span><span className="font-medium">Version:</span> {item.version}</span>
-                                <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{item.issueDate}</span>
-                                <span><span className="font-medium">Location:</span> {item.location}</span>
+                              <Link href={`${itemHrefPrefix}/${item.id}`} className="font-semibold hover:underline text-lg" style={{ color: COLORS.textPrimary }}>{getItemTitle(item)}</Link>
+                              <div className="flex gap-4 text-sm mt-1.5 flex-wrap" style={{ color: COLORS.textSecondary }}>
+                                {displayKeys.map((key) => (
+                                  <span key={key}>
+                                    <span className="font-medium">{key}:</span> {String(item?.[key] ?? "-")}
+                                  </span>
+                                ))}
                               </div>
                             </div>
                             <div className="flex items-center gap-1.5">

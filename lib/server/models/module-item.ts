@@ -14,6 +14,17 @@ const ALLOWED_MODULES = new Set([
   "coshh",
   "technical-file",
   "ims-aspects-impacts",
+  "audit-schedule",
+  "interested-parties",
+  "organisational-context",
+  "objectives",
+  "maintenance",
+  "improvement-register",
+  "statement-of-applicability",
+  "legal-register",
+  "suppliers",
+  "training",
+  "energy-consumption",
 ])
 
 export function isSupportedModule(module: string) {

@@ -23,6 +23,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
+import DynamicModulePage from "@/components/dynamic-module-page"
 
 // Sample data for Energy Consumption
 const initialCategories = [
@@ -50,7 +51,7 @@ const initialCategories = [
 
 type SortType = "date" | "cost"
 
-export default function EnergyConsumptionPage() {
+function LegacyEnergyConsumptionPage() {
   const [categories, setCategories] = useState(initialCategories)
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1", "2", "3"])
@@ -686,5 +687,30 @@ export default function EnergyConsumptionPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function EnergyConsumptionPage() {
+  return (
+    <DynamicModulePage
+      moduleSlug="energy-consumption"
+      title="Energy Consumption"
+      description="Track utility consumption and associated costs"
+      itemLabel="Reading"
+      icon={Zap}
+      newItemHref="/energy-consumption/new"
+      itemHrefPrefix="/energy-consumption"
+      dateFieldKey="date"
+      formFields={[
+        { key: "title", label: "Reading Title", required: true, placeholder: "Meter/period..." },
+        { key: "reading", label: "Reading", type: "number", placeholder: "0" },
+        { key: "unit", label: "Unit", type: "select", options: ["kWh", "m3", "L"], defaultValue: "kWh" },
+        { key: "cost", label: "Cost", type: "number", placeholder: "0.00" },
+        { key: "date", label: "Date", type: "date" },
+        { key: "location", label: "Location", placeholder: "Location..." },
+        { key: "status", label: "Status", type: "select", options: ["Pending", "Verified"], defaultValue: "Pending" },
+      ]}
+      listFieldKeys={["reading", "unit", "cost", "date", "status", "location"]}
+    />
   )
 }

@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
+import DynamicModulePage from "@/components/dynamic-module-page"
 
 // Sample data for Objectives and KPIs
 const initialCategories = [
@@ -43,7 +44,7 @@ const initialCategories = [
 
 type SortType = "name" | "deadline"
 
-export default function ObjectivesPage() {
+function LegacyObjectivesPage() {
   const [categories, setCategories] = useState(initialCategories)
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1", "2"])
@@ -658,5 +659,29 @@ export default function ObjectivesPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ObjectivesPage() {
+  return (
+    <DynamicModulePage
+      moduleSlug="objectives"
+      title="Objectives"
+      description="Define and track objectives and KPIs"
+      itemLabel="Objective"
+      icon={BarChart}
+      newItemHref="/objectives/new"
+      itemHrefPrefix="/objectives"
+      dateFieldKey="deadline"
+      formFields={[
+        { key: "title", label: "Title", required: true, placeholder: "Objective title..." },
+        { key: "target", label: "Target", placeholder: "Target..." },
+        { key: "current", label: "Current", placeholder: "Current status..." },
+        { key: "deadline", label: "Deadline", type: "date" },
+        { key: "status", label: "Status", type: "select", options: ["On Track", "At Risk", "Behind", "Completed"], defaultValue: "On Track" },
+        { key: "owner", label: "Owner", placeholder: "Owner..." },
+      ]}
+      listFieldKeys={["target", "current", "deadline", "status", "owner"]}
+    />
   )
 }
