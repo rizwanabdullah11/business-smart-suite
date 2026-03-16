@@ -45,31 +45,17 @@ export function hasAnyRole(user: User | null, roles: Role[]): boolean {
 }
 
 /**
- * Get user from token (to be implemented with your backend)
- * This should decode JWT or validate session token
+ * Get user from token via local Next.js API
  */
 export async function getUserFromToken(token: string): Promise<User | null> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api"
-    
-    // TODO: Replace this with your actual backend endpoint
-    const response = await fetch(`${apiUrl}/auth/me`, {
+    const response = await fetch("/api/auth/me", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     })
     
     if (!response.ok) {
-      // For development: return mock user if backend is not available
-      if (process.env.NODE_ENV === "development") {
-        console.warn("Backend not available, using mock user for development")
-        return {
-          id: "1",
-          name: "Demo User",
-          email: "demo@example.com",
-          role: Role.ADMIN,
-        }
-      }
       return null
     }
     
@@ -95,8 +81,6 @@ export async function getUserFromToken(token: string): Promise<User | null> {
       userRole = "employee"
     }
     
-    console.log(`User role normalized: "${userData.role}" → "${userRole}"`)
-    
     // Map backend response to User type
     return {
       id: userData.id || userData._id,
@@ -107,18 +91,6 @@ export async function getUserFromToken(token: string): Promise<User | null> {
     }
   } catch (error) {
     console.error("Error validating token:", error)
-    
-    // For development: return mock user if there's an error
-    if (process.env.NODE_ENV === "development") {
-      console.warn("Using mock user for development")
-      return {
-        id: "1",
-        name: "Demo User",
-        email: "demo@example.com",
-        role: Role.ADMIN,
-      }
-    }
-    
     return null
   }
 }
@@ -129,18 +101,6 @@ export async function getUserFromToken(token: string): Promise<User | null> {
  * In production, this should get user from session/cookie and validate with backend
  */
 export async function getUser(): Promise<User | null> {
-  // In development, return a mock user for testing
-  if (process.env.NODE_ENV === "development") {
-    return {
-      id: "1",
-      name: "Demo User",
-      email: "demo@example.com",
-      role: Role.ADMIN, // Change to ORGANIZATION or EMPLOYEE to test different roles
-    }
-  }
-  
-  // In production, implement actual user retrieval
-  // Example: Get token from cookie and validate
   try {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
     if (!token) return null

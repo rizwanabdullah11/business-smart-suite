@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api"
+const BASE_URL = process.env.INTERNAL_API_URL || "http://localhost:3000/api"
 
 async function getServerHeaders() {
   const cookieStore = cookies()

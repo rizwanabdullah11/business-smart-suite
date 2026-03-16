@@ -1,68 +1,91 @@
 import { NextRequest, NextResponse } from "next/server"
+import { withAuth } from "@/lib/middleware/auth-middleware"
+import { Permission } from "@/lib/types/permissions"
+import { connectToDatabase } from "@/lib/server/db"
+import Category from "@/lib/server/models/Category"
+import mongoose from "mongoose"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
-
-async function getHeaders(request: NextRequest): Promise<HeadersInit> {
-  const token =
-    request.cookies.get("token")?.value ||
-    request.headers.get("authorization")?.replace("Bearer ", "")
-
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-  }
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
-  }
-
-  return headers
+const TYPE_ALIASES: Record<string, string> = {
+  manuals: "manual",
+  manual: "manual",
+  policies: "policy",
+  policy: "policy",
+  procedures: "procedure",
+  procedure: "procedure",
+  forms: "form",
+  form: "form",
+  certificates: "certificate",
+  certificate: "certificate",
+  tasks: "task",
+  task: "task",
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const headers = await getHeaders(request)
+function normalizeCategoryType(type?: string | null): string | null {
+  if (!type) return null
+  const key = type.trim().toLowerCase()
+  return TYPE_ALIASES[key] || key
+}
 
-    const response = await fetch(`${API_URL}/categories`, { headers })
+export const GET = withAuth(
+  async (request: NextRequest) => {
+    try {
+      await connectToDatabase()
+      const { searchParams } = new URL(request.url)
+      const archivedOnly = searchParams.get("archived") === "true"
+      const normalizedType = normalizeCategoryType(searchParams.get("type"))
 
-    if (!response.ok) {
-      throw new Error(`Backend error: ${response.statusText}`)
+      const query: Record<string, unknown> = {}
+      if (archivedOnly) {
+        query.$or = [{ archived: true }, { isArchived: true }]
+      }
+      if (normalizedType) {
+        query.type = normalizedType
+      }
+
+      const categories = await Category.find(query).sort({ createdAt: -1 }).lean()
+      return NextResponse.json(categories)
+    } catch (error) {
+      return NextResponse.json(
+        { error: `Failed to fetch categories: ${error instanceof Error ? error.message : "Unknown error"}` },
+        { status: 500 }
+      )
     }
-
-    const categories = await response.json()
-
-    return NextResponse.json(categories)
-  } catch (error) {
-    console.error("Error fetching categories:", error)
-    return NextResponse.json(
-      { error: `Failed to fetch categories: ${error instanceof Error ? error.message : "Unknown error"}` },
-      { status: 500 }
-    )
+  },
+  {
+    requiredPermissions: [Permission.VIEW_CATEGORIES],
   }
-}
+)
 
-export async function POST(request: NextRequest) {
-  try {
-    const headers = await getHeaders(request)
-    const body = await request.json()
+export const POST = withAuth(
+  async (request: NextRequest) => {
+    try {
+      const body = await request.json()
+      if (!body?.name) {
+        return NextResponse.json({ error: "Category name is required" }, { status: 400 })
+      }
 
-    const response = await fetch(`${API_URL}/categories`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-    })
+      await connectToDatabase()
+      const normalizedType = normalizeCategoryType(body.type) || "manual"
+      const category = await Category.create({
+        name: String(body.name).trim(),
+        type: normalizedType,
+        archived: false,
+        isArchived: false,
+        highlighted: false,
+      })
 
-    if (!response.ok) {
-      throw new Error(`Backend error: ${response.statusText}`)
+      return NextResponse.json(category, { status: 201 })
+    } catch (error) {
+      if (error instanceof mongoose.Error.ValidationError) {
+        return NextResponse.json({ error: error.message }, { status: 400 })
+      }
+      return NextResponse.json(
+        { error: `Failed to create category: ${error instanceof Error ? error.message : "Unknown error"}` },
+        { status: 500 }
+      )
     }
-
-    const category = await response.json()
-
-    return NextResponse.json(category, { status: 201 })
-  } catch (error) {
-    console.error("Error creating category:", error)
-    return NextResponse.json(
-      { error: `Failed to create category: ${error instanceof Error ? error.message : "Unknown error"}` },
-      { status: 500 }
-    )
+  },
+  {
+    requiredPermissions: [Permission.CREATE_CATEGORY],
   }
-}
+)

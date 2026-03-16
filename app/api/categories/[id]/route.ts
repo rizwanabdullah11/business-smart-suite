@@ -1,106 +1,133 @@
 import { NextRequest, NextResponse } from "next/server"
+import { withAuth } from "@/lib/middleware/auth-middleware"
+import { Permission } from "@/lib/types/permissions"
+import { connectToDatabase } from "@/lib/server/db"
+import Category from "@/lib/server/models/Category"
+import mongoose from "mongoose"
+import Manual from "@/lib/server/models/Manual"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
-
-async function getHeaders(request: NextRequest): Promise<HeadersInit> {
-  const token =
-    request.cookies.get("token")?.value ||
-    request.headers.get("authorization")?.replace("Bearer ", "")
-
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-  }
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
-  }
-
-  return headers
+const TYPE_ALIASES: Record<string, string> = {
+  manuals: "manual",
+  manual: "manual",
+  policies: "policy",
+  policy: "policy",
+  procedures: "procedure",
+  procedure: "procedure",
+  forms: "form",
+  form: "form",
+  certificates: "certificate",
+  certificate: "certificate",
+  tasks: "task",
+  task: "task",
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const { id } = params
-    const headers = await getHeaders(request)
+function normalizeCategoryType(type?: string | null): string | null {
+  if (!type) return null
+  const key = type.trim().toLowerCase()
+  return TYPE_ALIASES[key] || key
+}
 
-    const response = await fetch(`${API_URL}/categories/${id}`, { headers })
+function typeMismatch() {
+  return NextResponse.json({ error: "Category does not belong to selected module" }, { status: 403 })
+}
 
-    if (!response.ok) {
+function notFound() {
+  return NextResponse.json({ error: "Category not found" }, { status: 404 })
+}
+
+export const GET = withAuth(
+  async (request: NextRequest, _user, { params }: { params: { id: string } }) => {
+    try {
+      const { id } = params
+      if (!mongoose.Types.ObjectId.isValid(id)) return notFound()
+      const requestedType = normalizeCategoryType(new URL(request.url).searchParams.get("type"))
+
+      await connectToDatabase()
+      const category = await Category.findById(id).lean()
+      if (!category) return notFound()
+      if (requestedType && category.type && normalizeCategoryType(String(category.type)) !== requestedType) {
+        return typeMismatch()
+      }
+      return NextResponse.json(category)
+    } catch (error) {
       return NextResponse.json(
-        { error: `Category not found: ${response.statusText}` },
-        { status: response.status }
+        { error: `Failed to fetch category: ${error instanceof Error ? error.message : "Unknown error"}` },
+        { status: 500 }
       )
     }
-
-    const category = await response.json()
-
-    return NextResponse.json(category)
-  } catch (error) {
-    console.error("Error fetching category:", error)
-    return NextResponse.json(
-      { error: `Failed to fetch category: ${error instanceof Error ? error.message : "Unknown error"}` },
-      { status: 500 }
-    )
+  },
+  {
+    requiredPermissions: [Permission.VIEW_CATEGORIES],
   }
-}
+)
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const { id } = params
-    const headers = await getHeaders(request)
-    const body = await request.json()
+export const PUT = withAuth(
+  async (request: NextRequest, _user, { params }: { params: { id: string } }) => {
+    try {
+      const { id } = params
+      if (!mongoose.Types.ObjectId.isValid(id)) return notFound()
+      const requestedType = normalizeCategoryType(new URL(request.url).searchParams.get("type"))
 
-    const response = await fetch(`${API_URL}/categories/${id}`, {
-      method: "PUT",
-      headers,
-      body: JSON.stringify(body),
-    })
+      const body = await request.json()
+      await connectToDatabase()
+      const existingCategory = await Category.findById(id).lean()
+      if (!existingCategory) return notFound()
+      if (requestedType && existingCategory.type && normalizeCategoryType(String(existingCategory.type)) !== requestedType) {
+        return typeMismatch()
+      }
 
-    if (!response.ok) {
-      throw new Error(`Backend error: ${response.statusText}`)
+      const updatedCategory = await Category.findByIdAndUpdate(
+        id,
+        { $set: body },
+        { new: true }
+      ).lean()
+
+      if (!updatedCategory) return notFound()
+      return NextResponse.json(updatedCategory)
+    } catch (error) {
+      return NextResponse.json(
+        { error: `Failed to update category: ${error instanceof Error ? error.message : "Unknown error"}` },
+        { status: 500 }
+      )
     }
-
-    const updatedCategory = await response.json()
-
-    return NextResponse.json(updatedCategory)
-  } catch (error) {
-    console.error("Error updating category:", error)
-    return NextResponse.json(
-      { error: `Failed to update category: ${error instanceof Error ? error.message : "Unknown error"}` },
-      { status: 500 }
-    )
+  },
+  {
+    requiredPermissions: [Permission.EDIT_CATEGORY],
   }
-}
+)
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const { id } = params
-    const headers = await getHeaders(request)
+export const DELETE = withAuth(
+  async (request: NextRequest, _user, { params }: { params: { id: string } }) => {
+    try {
+      const { id } = params
+      if (!mongoose.Types.ObjectId.isValid(id)) return notFound()
+      const requestedType = normalizeCategoryType(new URL(request.url).searchParams.get("type"))
 
-    const response = await fetch(`${API_URL}/categories/${id}`, {
-      method: "DELETE",
-      headers,
-    })
+      await connectToDatabase()
+      const existingCategory = await Category.findById(id).lean()
+      if (!existingCategory) return notFound()
+      if (requestedType && existingCategory.type && normalizeCategoryType(String(existingCategory.type)) !== requestedType) {
+        return typeMismatch()
+      }
 
-    if (!response.ok) {
-      throw new Error(`Backend error: ${response.statusText}`)
+      const deleted = await Category.findByIdAndDelete(id).lean()
+      if (!deleted) return notFound()
+
+      // Keep data consistent with old behavior by archiving linked manuals.
+      await Manual.updateMany(
+        { $or: [{ category: id }, { categoryId: id }] },
+        { $set: { archived: true, isArchived: true } }
+      )
+
+      return NextResponse.json({ success: true, message: "Category deleted" })
+    } catch (error) {
+      return NextResponse.json(
+        { error: `Failed to delete category: ${error instanceof Error ? error.message : "Unknown error"}` },
+        { status: 500 }
+      )
     }
-
-    return NextResponse.json({ success: true, message: "Category deleted" })
-  } catch (error) {
-    console.error("Error deleting category:", error)
-    return NextResponse.json(
-      { error: `Failed to delete category: ${error instanceof Error ? error.message : "Unknown error"}` },
-      { status: 500 }
-    )
+  },
+  {
+    requiredPermissions: [Permission.DELETE_CATEGORY],
   }
-}
+)

@@ -30,6 +30,9 @@ type SortType = "name" | "date"
 export default function PoliciesPage() {
   const [categories, setCategories] = useState<any[]>([])
   const [archivedCategories, setArchivedCategories] = useState<any[]>([])
+  const [categoryItemView, setCategoryItemView] = useState<
+    Record<string, "active" | "archived" | "completed" | "highlighted">
+  >({})
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1"])
   const [editingCategory, setEditingCategory] = useState<string | null>(null)
@@ -51,12 +54,24 @@ export default function PoliciesPage() {
     loadData()
   }, [])
 
+  const toIdString = (value: any) => {
+    if (!value) return null
+    if (typeof value === "string") return value
+    if (typeof value === "object" && "_id" in value) return String((value as any)._id)
+    return String(value)
+  }
+
+  const getItemCategoryId = (item: any) => {
+    const raw = item?.category?._id || item?.categoryId || item?.category || null
+    return toIdString(raw)
+  }
+
   const loadData = async () => {
     try {
       const token = localStorage.getItem("token")
 
       // 1) Get categories
-      const catRes = await fetch("http://localhost:5000/api/categories", {
+      const catRes = await fetch("/api/categories?type=policy", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -64,7 +79,7 @@ export default function PoliciesPage() {
       const categoriesData = await catRes.json()
 
       // 2) Get active policies
-      const polRes = await fetch("http://localhost:5000/api/policies", {
+      const polRes = await fetch("/api/policies", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -72,55 +87,78 @@ export default function PoliciesPage() {
       const policiesData = await polRes.json()
 
       // 3) Get archived policies
-      const archivedRes = await fetch("http://localhost:5000/api/policies/archived/all", {
+      const archivedRes = await fetch("/api/policies/archived/all", {
         headers: {
           Authorization: `Bearer ${token}`
         }
       })
       const archivedData = archivedRes.ok ? await archivedRes.json() : []
 
-      // 4) Merge active policies inside categories
-      const merged = categoriesData
-        .filter((cat: any) => !cat.isArchived && !cat.archived)
-        .map((cat: any) => ({
-          id: cat._id,
-          title: cat.name,
-          policies: policiesData
-            .filter((p: any) => p.category?._id === cat._id && !p.archived)
-            .map((p: any) => ({
-              id: p._id,
-              title: p.title,
-              version: p.version,
-              issueDate: p.issueDate,
-              location: p.location,
-              highlighted: p.highlighted || false,
-              approved: p.approved || false,
-              paused: p.paused || false
-            }))
-        }))
+      const archivedById = new Map<string, any>()
+      archivedData.forEach((item: any) => {
+        if (item?._id) archivedById.set(String(item._id), item)
+      })
+      policiesData
+        .filter((item: any) => item?.archived || item?.isArchived)
+        .forEach((item: any) => {
+          if (item?._id) archivedById.set(String(item._id), item)
+        })
+      const archivedPolicies = Array.from(archivedById.values())
 
-      // 5) Merge archived policies inside archived categories
-      const mergedArchived = categoriesData
-        .filter((cat: any) => cat.isArchived || cat.archived)
-        .map((cat: any) => ({
-          id: cat._id,
+      const allCategories = categoriesData.map((cat: any) => {
+        const categoryId = toIdString(cat._id)
+        const activePolicies = policiesData
+          .filter((p: any) => getItemCategoryId(p) === categoryId && !p.archived && !p.isArchived)
+          .map((p: any) => ({
+            id: p._id,
+            title: p.title,
+            version: p.version,
+            issueDate: p.issueDate,
+            location: p.location,
+            highlighted: p.highlighted || false,
+            approved: p.approved || false,
+            paused: p.paused || false,
+          }))
+
+        const categoryArchivedPolicies = archivedPolicies
+          .filter((p: any) => getItemCategoryId(p) === categoryId)
+          .map((p: any) => ({
+            id: p._id,
+            title: p.title,
+            version: p.version,
+            issueDate: p.issueDate,
+            location: p.location,
+            highlighted: p.highlighted || false,
+            approved: p.approved || false,
+            paused: p.paused || false,
+          }))
+
+        return {
+          id: categoryId,
           title: cat.name,
-          policies: archivedData
-            .filter((p: any) => p.category?._id === cat._id)
-            .map((p: any) => ({
-              id: p._id,
-              title: p.title,
-              version: p.version,
-              issueDate: p.issueDate,
-              location: p.location,
-              highlighted: p.highlighted || false,
-              approved: p.approved || false,
-              paused: p.paused || false
-            }))
-        }))
+          isArchived: Boolean(cat.isArchived),
+          archived: Boolean(cat.archived),
+          policies: activePolicies,
+          archivedPolicies: categoryArchivedPolicies,
+          completedPolicies: activePolicies.filter((p: any) => Boolean(p.approved)),
+          highlightedPolicies: activePolicies.filter((p: any) => Boolean(p.highlighted)),
+        }
+      })
+
+      const merged = allCategories.filter((cat: any) => !cat.isArchived && !cat.archived)
+      const mergedArchived = allCategories.filter(
+        (cat: any) => cat.archivedPolicies.length > 0 || cat.isArchived || cat.archived
+      )
 
       setCategories(merged)
       setArchivedCategories(mergedArchived)
+      setCategoryItemView((prev) => {
+        const next = { ...prev }
+        allCategories.forEach((cat: any) => {
+          if (!next[cat.id]) next[cat.id] = "active"
+        })
+        return next
+      })
     } catch (err) {
       console.log(err)
     }
@@ -141,7 +179,7 @@ export default function PoliciesPage() {
       setLoadingAction(`archive-category-${categoryId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/archive`, {
+      const response = await fetch(`/api/categories/${categoryId}/archive?type=policy`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -167,7 +205,7 @@ export default function PoliciesPage() {
       setLoadingAction(`unarchive-category-${categoryId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/unarchive`, {
+      const response = await fetch(`/api/categories/${categoryId}/unarchive?type=policy`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -196,7 +234,7 @@ export default function PoliciesPage() {
 
       if (!policy) return
 
-      const response = await fetch(`http://localhost:5000/api/policies/${policyId}`, {
+      const response = await fetch(`/api/policies/${policyId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -239,7 +277,7 @@ export default function PoliciesPage() {
 
       if (!policy) return
 
-      const response = await fetch(`http://localhost:5000/api/policies/${policyId}`, {
+      const response = await fetch(`/api/policies/${policyId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -282,7 +320,7 @@ export default function PoliciesPage() {
 
       if (!policy) return
 
-      const response = await fetch(`http://localhost:5000/api/policies/${policyId}`, {
+      const response = await fetch(`/api/policies/${policyId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -315,13 +353,57 @@ export default function PoliciesPage() {
     }
   }
 
+  const archivePolicy = async (policyId: string) => {
+    try {
+      setLoadingAction(`archive-${policyId}`)
+      const token = localStorage.getItem("token")
+      const response = await fetch(`/api/policies/${policyId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ archived: true, isArchived: true })
+      })
+      if (!response.ok) throw new Error("Failed to archive policy")
+      await loadData()
+    } catch (err) {
+      console.error("Error archiving policy:", err)
+      alert("Failed to archive policy")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const unarchivePolicy = async (policyId: string) => {
+    try {
+      setLoadingAction(`unarchive-${policyId}`)
+      const token = localStorage.getItem("token")
+      const response = await fetch(`/api/policies/${policyId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ archived: false, isArchived: false })
+      })
+      if (!response.ok) throw new Error("Failed to unarchive policy")
+      await loadData()
+    } catch (err) {
+      console.error("Error unarchiving policy:", err)
+      alert("Failed to unarchive policy")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
   const deletePolicy = async (categoryId: any, policyId: any) => {
     if (!confirm("Are you sure you want to delete this policy?")) return
 
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/policies/${policyId}`, {
+      const response = await fetch(`/api/policies/${policyId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
@@ -345,7 +427,7 @@ export default function PoliciesPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+      const response = await fetch(`/api/categories/${categoryId}?type=policy`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
@@ -374,7 +456,7 @@ export default function PoliciesPage() {
     try {
       const token = localStorage.getItem("token")
 
-      await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+      await fetch(`/api/categories/${categoryId}?type=policy`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -405,13 +487,13 @@ export default function PoliciesPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch("http://localhost:5000/api/categories", {
+      const response = await fetch("/api/categories", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ name: newCategoryTitle })
+        body: JSON.stringify({ name: newCategoryTitle, type: "policy" })
       })
 
       if (!response.ok) {
@@ -436,7 +518,7 @@ export default function PoliciesPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch("http://localhost:5000/api/policies", {
+      const response = await fetch("/api/policies", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -682,7 +764,17 @@ export default function PoliciesPage() {
         {/* Categories */}
         <div className="space-y-4">
           {(showArchived ? archivedCategories : categories).map((category) => {
-            const sortedPolicies = sortPolicies(category.policies)
+            const currentItemView = categoryItemView[category.id] ?? (showArchived ? "archived" : "active")
+            const currentPolicies =
+              currentItemView === "archived"
+                ? (category.archivedPolicies || [])
+                : currentItemView === "completed"
+                  ? (category.completedPolicies || [])
+                  : currentItemView === "highlighted"
+                    ? (category.highlightedPolicies || [])
+                    : (category.policies || [])
+            const sortedPolicies = sortPolicies(currentPolicies)
+            const isViewingArchivedItems = currentItemView === "archived"
             const isExpanded = expandedCategories.includes(category.id)
 
             return (
@@ -711,7 +803,7 @@ export default function PoliciesPage() {
                     )}
                     <h2 className="text-xl font-bold">{category.title}</h2>
                     <span className="px-3 py-1 rounded-full text-sm font-medium bg-white bg-opacity-20">
-                      {category.policies.length} policies
+                      {currentPolicies.length} policies
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -729,6 +821,9 @@ export default function PoliciesPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
+                        if (isViewingArchivedItems) {
+                          setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))
+                        }
                         setAddingPolicyToCategory(category.id)
                         if (!expandedCategories.includes(category.id)) {
                           setExpandedCategories(prev => [...prev, category.id])
@@ -843,8 +938,54 @@ export default function PoliciesPage() {
                 {/* Policies List */}
                 {isExpanded && (
                   <div className="p-5">
+                    <div className="mb-4 flex gap-2">
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "active" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "active" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "active" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Active ({(category.policies || []).length})
+                      </button>
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "archived" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "archived" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "archived" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "archived" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Archived ({(category.archivedPolicies || []).length})
+                      </button>
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "completed" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "completed" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "completed" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "completed" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Completed ({(category.completedPolicies || []).length})
+                      </button>
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "highlighted" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "highlighted" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "highlighted" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "highlighted" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Highlighted ({(category.highlightedPolicies || []).length})
+                      </button>
+                    </div>
                     {/* Add Policy Form */}
-                    {addingPolicyToCategory === category.id && (
+                    {addingPolicyToCategory === category.id && currentItemView === "active" && (
                       <div
                         className="mb-5 p-5 rounded-xl shadow-sm"
                         style={{
@@ -962,10 +1103,22 @@ export default function PoliciesPage() {
                       <div className="text-center py-12">
                         <FileText className="w-12 h-12 mx-auto mb-3" style={{ color: COLORS.textLight }} />
                         <p className="font-medium" style={{ color: COLORS.textSecondary }}>
-                          No policies in this category
+                          {isViewingArchivedItems
+                            ? "No archived policies in this category"
+                            : currentItemView === "completed"
+                              ? "No completed policies in this category"
+                              : currentItemView === "highlighted"
+                                ? "No highlighted policies in this category"
+                                : "No policies in this category"}
                         </p>
                         <p className="text-sm mt-1" style={{ color: COLORS.textLight }}>
-                          Click the + button above to add your first policy
+                          {isViewingArchivedItems
+                            ? "Archive a policy to see it here"
+                            : currentItemView === "completed"
+                              ? "Mark a policy as completed to see it here"
+                              : currentItemView === "highlighted"
+                                ? "Star a policy to see it here"
+                                : "Click the + button above to add your first policy"}
                         </p>
                       </div>
                     ) : (
@@ -1022,7 +1175,7 @@ export default function PoliciesPage() {
                                   style={{
                                     color: policy.approved ? "#22C55E" : "#D1D5DB",
                                   }}
-                                  title={policy.approved ? "Unapprove" : "Approve"}
+                                  title={policy.approved ? "Mark as Incomplete" : "Mark as Completed"}
                                 >
                                   <Check className="w-5 h-5" />
                                 </button>
@@ -1072,6 +1225,33 @@ export default function PoliciesPage() {
                                 >
                                   <Download className="w-5 h-5" />
                                 </button>
+                                {!isViewingArchivedItems ? (
+                                  <button
+                                    onClick={() => archivePolicy(policy.id)}
+                                    disabled={loadingAction === `archive-${policy.id}`}
+                                    className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200"
+                                    style={{
+                                      color: "#F97316",
+                                      opacity: loadingAction === `archive-${policy.id}` ? 0.6 : 1,
+                                    }}
+                                    title="Archive"
+                                  >
+                                    <Archive className="w-5 h-5" />
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => unarchivePolicy(policy.id)}
+                                    disabled={loadingAction === `unarchive-${policy.id}`}
+                                    className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200"
+                                    style={{
+                                      color: "#22C55E",
+                                      opacity: loadingAction === `unarchive-${policy.id}` ? 0.6 : 1,
+                                    }}
+                                    title="Unarchive"
+                                  >
+                                    <Archive className="w-5 h-5" />
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => deletePolicy(category.id, policy.id)}
                                   className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200"
@@ -1095,7 +1275,7 @@ export default function PoliciesPage() {
           })}
         </div>
 
-        {showArchived && (
+        {showArchived && archivedCategories.length === 0 && (
           <div className="mt-12 text-center py-16">
             <Archive className="w-16 h-16 mx-auto mb-4" style={{ color: COLORS.textLight }} />
             <h3 className="text-xl font-semibold mb-2" style={{ color: COLORS.textPrimary }}>

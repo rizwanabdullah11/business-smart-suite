@@ -30,6 +30,9 @@ type SortType = "name" | "date"
 export default function CertificatePage() {
   const [categories, setCategories] = useState<any[]>([])
   const [archivedCategories, setArchivedCategories] = useState<any[]>([])
+  const [categoryItemView, setCategoryItemView] = useState<
+    Record<string, "active" | "archived" | "completed" | "highlighted">
+  >({})
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1"])
   const [editingCategory, setEditingCategory] = useState<string | null>(null)
@@ -52,12 +55,24 @@ export default function CertificatePage() {
     loadData()
   }, [])
 
+  const toIdString = (value: any) => {
+    if (!value) return null
+    if (typeof value === "string") return value
+    if (typeof value === "object" && "_id" in value) return String((value as any)._id)
+    return String(value)
+  }
+
+  const getItemCategoryId = (item: any) => {
+    const raw = item?.category?._id || item?.categoryId || item?.category || null
+    return toIdString(raw)
+  }
+
   const loadData = async () => {
     try {
       const token = localStorage.getItem("token")
 
       // 1) Get categories
-      const catRes = await fetch("http://localhost:5000/api/categories", {
+      const catRes = await fetch("/api/categories?type=certificate", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -65,7 +80,7 @@ export default function CertificatePage() {
       const categoriesData = await catRes.json()
 
       // 2) Get active certificates
-      const certRes = await fetch("http://localhost:5000/api/certificates", {
+      const certRes = await fetch("/api/certificates", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -73,57 +88,80 @@ export default function CertificatePage() {
       const certificatesData = await certRes.json()
 
       // 3) Get archived certificates
-      const archivedRes = await fetch("http://localhost:5000/api/certificates/archived/all", {
+      const archivedRes = await fetch("/api/certificates/archived/all", {
         headers: {
           Authorization: `Bearer ${token}`
         }
       })
       const archivedData = archivedRes.ok ? await archivedRes.json() : []
 
-      // 4) Merge active certificates inside categories
-      const merged = categoriesData
-        .filter((cat: any) => !cat.isArchived && !cat.archived)
-        .map((cat: any) => ({
-          id: cat._id,
-          title: cat.name,
-          certificates: certificatesData
-            .filter((c: any) => c.category?._id === cat._id && !c.archived)
-            .map((c: any) => ({
-              id: c._id,
-              title: c.title,
-              version: c.version,
-              issueDate: c.issueDate,
-              expiryDate: c.expiryDate,
-              location: c.location,
-              highlighted: c.highlighted || false,
-              approved: c.approved || false,
-              paused: c.paused || false
-            }))
-        }))
+      const archivedById = new Map<string, any>()
+      archivedData.forEach((item: any) => {
+        if (item?._id) archivedById.set(String(item._id), item)
+      })
+      certificatesData
+        .filter((item: any) => item?.archived || item?.isArchived)
+        .forEach((item: any) => {
+          if (item?._id) archivedById.set(String(item._id), item)
+        })
+      const archivedCertificates = Array.from(archivedById.values())
 
-      // 5) Merge archived certificates inside archived categories
-      const mergedArchived = categoriesData
-        .filter((cat: any) => cat.isArchived || cat.archived)
-        .map((cat: any) => ({
-          id: cat._id,
+      const allCategories = categoriesData.map((cat: any) => {
+        const categoryId = toIdString(cat._id)
+        const activeCertificates = certificatesData
+          .filter((c: any) => getItemCategoryId(c) === categoryId && !c.archived && !c.isArchived)
+          .map((c: any) => ({
+            id: c._id,
+            title: c.title,
+            version: c.version,
+            issueDate: c.issueDate,
+            expiryDate: c.expiryDate,
+            location: c.location,
+            highlighted: c.highlighted || false,
+            approved: c.approved || false,
+            paused: c.paused || false,
+          }))
+
+        const categoryArchivedCertificates = archivedCertificates
+          .filter((c: any) => getItemCategoryId(c) === categoryId)
+          .map((c: any) => ({
+            id: c._id,
+            title: c.title,
+            version: c.version,
+            issueDate: c.issueDate,
+            expiryDate: c.expiryDate,
+            location: c.location,
+            highlighted: c.highlighted || false,
+            approved: c.approved || false,
+            paused: c.paused || false,
+          }))
+
+        return {
+          id: categoryId,
           title: cat.name,
-          certificates: archivedData
-            .filter((c: any) => c.category?._id === cat._id)
-            .map((c: any) => ({
-              id: c._id,
-              title: c.title,
-              version: c.version,
-              issueDate: c.issueDate,
-              expiryDate: c.expiryDate,
-              location: c.location,
-              highlighted: c.highlighted || false,
-              approved: c.approved || false,
-              paused: c.paused || false
-            }))
-        }))
+          isArchived: Boolean(cat.isArchived),
+          archived: Boolean(cat.archived),
+          certificates: activeCertificates,
+          archivedCertificates: categoryArchivedCertificates,
+          completedCertificates: activeCertificates.filter((c: any) => Boolean(c.approved)),
+          highlightedCertificates: activeCertificates.filter((c: any) => Boolean(c.highlighted)),
+        }
+      })
+
+      const merged = allCategories.filter((cat: any) => !cat.isArchived && !cat.archived)
+      const mergedArchived = allCategories.filter(
+        (cat: any) => cat.archivedCertificates.length > 0 || cat.isArchived || cat.archived
+      )
 
       setCategories(merged)
       setArchivedCategories(mergedArchived)
+      setCategoryItemView((prev) => {
+        const next = { ...prev }
+        allCategories.forEach((cat: any) => {
+          if (!next[cat.id]) next[cat.id] = "active"
+        })
+        return next
+      })
     } catch (err) {
       console.log(err)
     }
@@ -142,7 +180,7 @@ export default function CertificatePage() {
       setLoadingAction(`archive-category-${categoryId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/archive`, {
+      const response = await fetch(`/api/categories/${categoryId}/archive?type=certificate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -168,7 +206,7 @@ export default function CertificatePage() {
       setLoadingAction(`unarchive-category-${categoryId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/unarchive`, {
+      const response = await fetch(`/api/categories/${categoryId}/unarchive?type=certificate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -197,7 +235,7 @@ export default function CertificatePage() {
 
       if (!certificate) return
 
-      const response = await fetch(`http://localhost:5000/api/certificates/${certId}`, {
+      const response = await fetch(`/api/certificates/${certId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -240,7 +278,7 @@ export default function CertificatePage() {
 
       if (!certificate) return
 
-      const response = await fetch(`http://localhost:5000/api/certificates/${certId}`, {
+      const response = await fetch(`/api/certificates/${certId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -283,7 +321,7 @@ export default function CertificatePage() {
 
       if (!certificate) return
 
-      const response = await fetch(`http://localhost:5000/api/certificates/${certId}`, {
+      const response = await fetch(`/api/certificates/${certId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -316,13 +354,57 @@ export default function CertificatePage() {
     }
   }
 
+  const archiveCertificate = async (certId: string) => {
+    try {
+      setLoadingAction(`archive-${certId}`)
+      const token = localStorage.getItem("token")
+      const response = await fetch(`/api/certificates/${certId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ archived: true, isArchived: true })
+      })
+      if (!response.ok) throw new Error("Failed to archive certificate")
+      await loadData()
+    } catch (err) {
+      console.error("Error archiving certificate:", err)
+      alert("Failed to archive certificate")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const unarchiveCertificate = async (certId: string) => {
+    try {
+      setLoadingAction(`unarchive-${certId}`)
+      const token = localStorage.getItem("token")
+      const response = await fetch(`/api/certificates/${certId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ archived: false, isArchived: false })
+      })
+      if (!response.ok) throw new Error("Failed to unarchive certificate")
+      await loadData()
+    } catch (err) {
+      console.error("Error unarchiving certificate:", err)
+      alert("Failed to unarchive certificate")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
   const deleteCertificate = async (categoryId: any, certId: any) => {
     if (!confirm("Are you sure you want to delete this certificate?")) return
 
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/certificates/${certId}`, {
+      const response = await fetch(`/api/certificates/${certId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
@@ -346,7 +428,7 @@ export default function CertificatePage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+      const response = await fetch(`/api/categories/${categoryId}?type=certificate`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
@@ -375,7 +457,7 @@ export default function CertificatePage() {
     try {
       const token = localStorage.getItem("token")
 
-      await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+      await fetch(`/api/categories/${categoryId}?type=certificate`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -406,13 +488,13 @@ export default function CertificatePage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch("http://localhost:5000/api/categories", {
+      const response = await fetch("/api/categories", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ name: newCategoryTitle })
+        body: JSON.stringify({ name: newCategoryTitle, type: "certificate" })
       })
 
       if (!response.ok) {
@@ -437,7 +519,7 @@ export default function CertificatePage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch("http://localhost:5000/api/certificates", {
+      const response = await fetch("/api/certificates", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -648,7 +730,17 @@ export default function CertificatePage() {
         {/* Categories */}
         <div className="space-y-4">
           {(showArchived ? archivedCategories : categories).map((category) => {
-            const sortedCerts = sortCertificates(category.certificates)
+            const currentItemView = categoryItemView[category.id] ?? (showArchived ? "archived" : "active")
+            const currentCerts =
+              currentItemView === "archived"
+                ? (category.archivedCertificates || [])
+                : currentItemView === "completed"
+                  ? (category.completedCertificates || [])
+                  : currentItemView === "highlighted"
+                    ? (category.highlightedCertificates || [])
+                    : (category.certificates || [])
+            const sortedCerts = sortCertificates(currentCerts)
+            const isViewingArchivedItems = currentItemView === "archived"
             const isExpanded = expandedCategories.includes(category.id)
 
             return (
@@ -677,7 +769,7 @@ export default function CertificatePage() {
                     )}
                     <h2 className="text-2xl font-bold">{category.title}</h2>
                     <span className="px-3 py-1 rounded-full text-base font-medium bg-white bg-opacity-20">
-                      {category.certificates.length} certificates
+                      {currentCerts.length} certificates
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -695,6 +787,9 @@ export default function CertificatePage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
+                        if (isViewingArchivedItems) {
+                          setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))
+                        }
                         setAddingCertToCategory(category.id)
                         if (!expandedCategories.includes(category.id)) {
                           setExpandedCategories(prev => [...prev, category.id])
@@ -805,8 +900,54 @@ export default function CertificatePage() {
                 {/* Certificates List */}
                 {isExpanded && (
                   <div className="p-5">
+                    <div className="mb-4 flex gap-2">
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "active" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "active" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "active" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Active ({(category.certificates || []).length})
+                      </button>
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "archived" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "archived" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "archived" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "archived" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Archived ({(category.archivedCertificates || []).length})
+                      </button>
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "completed" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "completed" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "completed" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "completed" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Completed ({(category.completedCertificates || []).length})
+                      </button>
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "highlighted" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "highlighted" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "highlighted" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "highlighted" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Highlighted ({(category.highlightedCertificates || []).length})
+                      </button>
+                    </div>
                     {/* Add Certificate Form */}
-                    {addingCertToCategory === category.id && (
+                    {addingCertToCategory === category.id && currentItemView === "active" && (
                       <div
                         className="mb-5 p-5 rounded-xl shadow-sm"
                         style={{
@@ -827,8 +968,8 @@ export default function CertificatePage() {
                               value={newCertData.title}
                               onChange={(e) => setNewCertData(prev => ({ ...prev, title: e.target.value }))}
                               placeholder="Enter certificate title..."
-                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              style={{ borderColor: COLORS.border }}
+                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                              style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                             />
                           </div>
                           <div>
@@ -840,8 +981,8 @@ export default function CertificatePage() {
                               value={newCertData.version}
                               onChange={(e) => setNewCertData(prev => ({ ...prev, version: e.target.value }))}
                               placeholder="e.g., v1.0"
-                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              style={{ borderColor: COLORS.border }}
+                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                              style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                             />
                           </div>
                           <div>
@@ -853,8 +994,8 @@ export default function CertificatePage() {
                               value={newCertData.location}
                               onChange={(e) => setNewCertData(prev => ({ ...prev, location: e.target.value }))}
                               placeholder="e.g., QMS"
-                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              style={{ borderColor: COLORS.border }}
+                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                              style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                             />
                           </div>
                           <div>
@@ -866,7 +1007,7 @@ export default function CertificatePage() {
                               value={newCertData.expiryDate}
                               onChange={(e) => setNewCertData(prev => ({ ...prev, expiryDate: e.target.value }))}
                               className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              style={{ borderColor: COLORS.border }}
+                              style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                             />
                           </div>
                         </div>
@@ -892,7 +1033,15 @@ export default function CertificatePage() {
                     {sortedCerts.length === 0 ? (
                       <div className="text-center py-12">
                         <Award className="w-12 h-12 mx-auto mb-3" style={{ color: COLORS.textLight }} />
-                        <p className="font-medium" style={{ color: COLORS.textSecondary }}>No certificates in this category</p>
+                        <p className="font-medium" style={{ color: COLORS.textSecondary }}>
+                          {isViewingArchivedItems
+                            ? "No archived certificates in this category"
+                            : currentItemView === "completed"
+                              ? "No completed certificates in this category"
+                              : currentItemView === "highlighted"
+                                ? "No highlighted certificates in this category"
+                                : "No certificates in this category"}
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -937,7 +1086,7 @@ export default function CertificatePage() {
                               {/* Actions */}
                               <div className="flex items-center gap-1 mr-2">
                                 <button onClick={() => toggleHighlight(category.id, cert.id)} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: cert.highlighted ? "#EAB308" : "#D1D5DB" }}><Star className="w-5 h-5" /></button>
-                                <button onClick={() => toggleApprove(category.id, cert.id)} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: cert.approved ? "#22C55E" : "#D1D5DB" }}><Check className="w-5 h-5" /></button>
+                                <button onClick={() => toggleApprove(category.id, cert.id)} title={cert.approved ? "Mark as Incomplete" : "Mark as Completed"} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: cert.approved ? "#22C55E" : "#D1D5DB" }}><Check className="w-5 h-5" /></button>
                                 <button onClick={() => togglePause(category.id, cert.id)} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: cert.paused ? "#F59E0B" : "#D1D5DB" }}><Pause className="w-5 h-5" /></button>
                               </div>
                               <div className="w-px h-6 bg-gray-300 mx-1"></div>
@@ -945,6 +1094,11 @@ export default function CertificatePage() {
                                 <Link href={`/certificate/${cert.id}/edit`}><button className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#3B82F6" }}><Edit className="w-5 h-5" /></button></Link>
                                 <button className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#6B7280" }}><Copy className="w-5 h-5" /></button>
                                 <button className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#3B82F6" }}><Download className="w-5 h-5" /></button>
+                                {!isViewingArchivedItems ? (
+                                  <button onClick={() => archiveCertificate(cert.id)} disabled={loadingAction === `archive-${cert.id}`} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#F97316", opacity: loadingAction === `archive-${cert.id}` ? 0.6 : 1 }}><Archive className="w-5 h-5" /></button>
+                                ) : (
+                                  <button onClick={() => unarchiveCertificate(cert.id)} disabled={loadingAction === `unarchive-${cert.id}`} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#22C55E", opacity: loadingAction === `unarchive-${cert.id}` ? 0.6 : 1 }}><Archive className="w-5 h-5" /></button>
+                                )}
                                 <button onClick={() => deleteCertificate(category.id, cert.id)} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#F97316" }}><Trash2 className="w-5 h-5" /></button>
                               </div>
                             </div>

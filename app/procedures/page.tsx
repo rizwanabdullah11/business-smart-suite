@@ -28,6 +28,9 @@ type SortType = "name" | "date"
 export default function ProceduresPage() {
   const [categories, setCategories] = useState<any[]>([])
   const [archivedCategories, setArchivedCategories] = useState<any[]>([])
+  const [categoryItemView, setCategoryItemView] = useState<
+    Record<string, "active" | "archived" | "completed" | "highlighted">
+  >({})
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1"])
   const [editingCategory, setEditingCategory] = useState<string | null>(null)
@@ -49,12 +52,24 @@ export default function ProceduresPage() {
     loadData()
   }, [])
 
+  const toIdString = (value: any) => {
+    if (!value) return null
+    if (typeof value === "string") return value
+    if (typeof value === "object" && "_id" in value) return String((value as any)._id)
+    return String(value)
+  }
+
+  const getItemCategoryId = (item: any) => {
+    const raw = item?.category?._id || item?.categoryId || item?.category || null
+    return toIdString(raw)
+  }
+
   const loadData = async () => {
     try {
       const token = localStorage.getItem("token")
 
       // 1) Get categories
-      const catRes = await fetch("http://localhost:5000/api/categories", {
+      const catRes = await fetch("/api/categories?type=procedure", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -62,7 +77,7 @@ export default function ProceduresPage() {
       const categoriesData = await catRes.json()
 
       // 2) Get active procedures
-      const procRes = await fetch("http://localhost:5000/api/procedures", {
+      const procRes = await fetch("/api/procedures", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -70,55 +85,78 @@ export default function ProceduresPage() {
       const proceduresData = await procRes.json()
 
       // 3) Get archived procedures
-      const archivedRes = await fetch("http://localhost:5000/api/procedures/archived/all", {
+      const archivedRes = await fetch("/api/procedures/archived/all", {
         headers: {
           Authorization: `Bearer ${token}`
         }
       })
       const archivedData = archivedRes.ok ? await archivedRes.json() : []
 
-      // 4) Merge active procedures inside categories
-      const merged = categoriesData
-        .filter((cat: any) => !cat.isArchived && !cat.archived)
-        .map((cat: any) => ({
-          id: cat._id,
-          title: cat.name,
-          procedures: proceduresData
-            .filter((p: any) => p.category?._id === cat._id && !p.archived)
-            .map((p: any) => ({
-              id: p._id,
-              title: p.title,
-              version: p.version,
-              issueDate: p.issueDate,
-              location: p.location,
-              highlighted: p.highlighted || false,
-              approved: p.approved || false,
-              paused: p.paused || false
-            }))
-        }))
+      const archivedById = new Map<string, any>()
+      archivedData.forEach((item: any) => {
+        if (item?._id) archivedById.set(String(item._id), item)
+      })
+      proceduresData
+        .filter((item: any) => item?.archived || item?.isArchived)
+        .forEach((item: any) => {
+          if (item?._id) archivedById.set(String(item._id), item)
+        })
+      const archivedProcedures = Array.from(archivedById.values())
 
-      // 5) Merge archived procedures inside archived categories
-      const mergedArchived = categoriesData
-        .filter((cat: any) => cat.isArchived || cat.archived)
-        .map((cat: any) => ({
-          id: cat._id,
+      const allCategories = categoriesData.map((cat: any) => {
+        const categoryId = toIdString(cat._id)
+        const activeProcedures = proceduresData
+          .filter((p: any) => getItemCategoryId(p) === categoryId && !p.archived && !p.isArchived)
+          .map((p: any) => ({
+            id: p._id,
+            title: p.title,
+            version: p.version,
+            issueDate: p.issueDate,
+            location: p.location,
+            highlighted: p.highlighted || false,
+            approved: p.approved || false,
+            paused: p.paused || false,
+          }))
+
+        const categoryArchivedProcedures = archivedProcedures
+          .filter((p: any) => getItemCategoryId(p) === categoryId)
+          .map((p: any) => ({
+            id: p._id,
+            title: p.title,
+            version: p.version,
+            issueDate: p.issueDate,
+            location: p.location,
+            highlighted: p.highlighted || false,
+            approved: p.approved || false,
+            paused: p.paused || false,
+          }))
+
+        return {
+          id: categoryId,
           title: cat.name,
-          procedures: archivedData
-            .filter((p: any) => p.category?._id === cat._id)
-            .map((p: any) => ({
-              id: p._id,
-              title: p.title,
-              version: p.version,
-              issueDate: p.issueDate,
-              location: p.location,
-              highlighted: p.highlighted || false,
-              approved: p.approved || false,
-              paused: p.paused || false
-            }))
-        }))
+          isArchived: Boolean(cat.isArchived),
+          archived: Boolean(cat.archived),
+          procedures: activeProcedures,
+          archivedProcedures: categoryArchivedProcedures,
+          completedProcedures: activeProcedures.filter((p: any) => Boolean(p.approved)),
+          highlightedProcedures: activeProcedures.filter((p: any) => Boolean(p.highlighted)),
+        }
+      })
+
+      const merged = allCategories.filter((cat: any) => !cat.isArchived && !cat.archived)
+      const mergedArchived = allCategories.filter(
+        (cat: any) => cat.archivedProcedures.length > 0 || cat.isArchived || cat.archived
+      )
 
       setCategories(merged)
       setArchivedCategories(mergedArchived)
+      setCategoryItemView((prev) => {
+        const next = { ...prev }
+        allCategories.forEach((cat: any) => {
+          if (!next[cat.id]) next[cat.id] = "active"
+        })
+        return next
+      })
     } catch (err) {
       console.log(err)
     }
@@ -137,7 +175,7 @@ export default function ProceduresPage() {
       setLoadingAction(`archive-category-${categoryId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/archive`, {
+      const response = await fetch(`/api/categories/${categoryId}/archive?type=procedure`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -163,7 +201,7 @@ export default function ProceduresPage() {
       setLoadingAction(`unarchive-category-${categoryId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/unarchive`, {
+      const response = await fetch(`/api/categories/${categoryId}/unarchive?type=procedure`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -192,7 +230,7 @@ export default function ProceduresPage() {
 
       if (!procedure) return
 
-      const response = await fetch(`http://localhost:5000/api/procedures/${procId}`, {
+      const response = await fetch(`/api/procedures/${procId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -235,7 +273,7 @@ export default function ProceduresPage() {
 
       if (!procedure) return
 
-      const response = await fetch(`http://localhost:5000/api/procedures/${procId}`, {
+      const response = await fetch(`/api/procedures/${procId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -278,7 +316,7 @@ export default function ProceduresPage() {
 
       if (!procedure) return
 
-      const response = await fetch(`http://localhost:5000/api/procedures/${procId}`, {
+      const response = await fetch(`/api/procedures/${procId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -311,13 +349,57 @@ export default function ProceduresPage() {
     }
   }
 
+  const archiveProcedure = async (procId: string) => {
+    try {
+      setLoadingAction(`archive-${procId}`)
+      const token = localStorage.getItem("token")
+      const response = await fetch(`/api/procedures/${procId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ archived: true, isArchived: true })
+      })
+      if (!response.ok) throw new Error("Failed to archive procedure")
+      await loadData()
+    } catch (err) {
+      console.error("Error archiving procedure:", err)
+      alert("Failed to archive procedure")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const unarchiveProcedure = async (procId: string) => {
+    try {
+      setLoadingAction(`unarchive-${procId}`)
+      const token = localStorage.getItem("token")
+      const response = await fetch(`/api/procedures/${procId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ archived: false, isArchived: false })
+      })
+      if (!response.ok) throw new Error("Failed to unarchive procedure")
+      await loadData()
+    } catch (err) {
+      console.error("Error unarchiving procedure:", err)
+      alert("Failed to unarchive procedure")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
   const deleteProcedure = async (categoryId: any, procId: any) => {
     if (!confirm("Are you sure you want to delete this procedure?")) return
 
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/procedures/${procId}`, {
+      const response = await fetch(`/api/procedures/${procId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
@@ -341,7 +423,7 @@ export default function ProceduresPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+      const response = await fetch(`/api/categories/${categoryId}?type=procedure`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
@@ -370,7 +452,7 @@ export default function ProceduresPage() {
     try {
       const token = localStorage.getItem("token")
 
-      await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+      await fetch(`/api/categories/${categoryId}?type=procedure`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -401,13 +483,13 @@ export default function ProceduresPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch("http://localhost:5000/api/categories", {
+      const response = await fetch("/api/categories", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ name: newCategoryTitle })
+        body: JSON.stringify({ name: newCategoryTitle, type: "procedure" })
       })
 
       if (!response.ok) {
@@ -432,7 +514,7 @@ export default function ProceduresPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch("http://localhost:5000/api/procedures", {
+      const response = await fetch("/api/procedures", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -632,7 +714,17 @@ export default function ProceduresPage() {
         {/* Categories */}
         <div className="space-y-4">
           {(showArchived ? archivedCategories : categories).map((category) => {
-            const sortedProcedures = sortProcedures(category.procedures)
+            const currentItemView = categoryItemView[category.id] ?? (showArchived ? "archived" : "active")
+            const currentProcedures =
+              currentItemView === "archived"
+                ? (category.archivedProcedures || [])
+                : currentItemView === "completed"
+                  ? (category.completedProcedures || [])
+                  : currentItemView === "highlighted"
+                    ? (category.highlightedProcedures || [])
+                    : (category.procedures || [])
+            const sortedProcedures = sortProcedures(currentProcedures)
+            const isViewingArchivedItems = currentItemView === "archived"
             const isExpanded = expandedCategories.includes(category.id)
 
             return (
@@ -661,7 +753,7 @@ export default function ProceduresPage() {
                     )}
                     <h2 className="text-2xl font-bold">{category.title}</h2>
                     <span className="px-3 py-1 rounded-full text-base font-medium bg-white bg-opacity-20">
-                      {category.procedures.length} procedures
+                      {currentProcedures.length} procedures
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -679,6 +771,9 @@ export default function ProceduresPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
+                        if (isViewingArchivedItems) {
+                          setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))
+                        }
                         setAddingProcedureToCategory(category.id)
                         if (!expandedCategories.includes(category.id)) {
                           setExpandedCategories(prev => [...prev, category.id])
@@ -789,8 +884,54 @@ export default function ProceduresPage() {
                 {/* Procedures List */}
                 {isExpanded && (
                   <div className="p-5">
+                    <div className="mb-4 flex gap-2">
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "active" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "active" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "active" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Active ({(category.procedures || []).length})
+                      </button>
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "archived" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "archived" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "archived" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "archived" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Archived ({(category.archivedProcedures || []).length})
+                      </button>
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "completed" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "completed" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "completed" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "completed" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Completed ({(category.completedProcedures || []).length})
+                      </button>
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "highlighted" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "highlighted" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "highlighted" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "highlighted" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Highlighted ({(category.highlightedProcedures || []).length})
+                      </button>
+                    </div>
                     {/* Add Procedure Form */}
-                    {addingProcedureToCategory === category.id && (
+                    {addingProcedureToCategory === category.id && currentItemView === "active" && (
                       <div
                         className="mb-5 p-5 rounded-xl shadow-sm"
                         style={{
@@ -811,8 +952,8 @@ export default function ProceduresPage() {
                               value={newProcedureData.title}
                               onChange={(e) => setNewProcedureData(prev => ({ ...prev, title: e.target.value }))}
                               placeholder="Enter procedure title..."
-                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              style={{ borderColor: COLORS.border }}
+                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                              style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                             />
                           </div>
                           <div>
@@ -824,8 +965,8 @@ export default function ProceduresPage() {
                               value={newProcedureData.version}
                               onChange={(e) => setNewProcedureData(prev => ({ ...prev, version: e.target.value }))}
                               placeholder="e.g., v1.0"
-                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              style={{ borderColor: COLORS.border }}
+                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                              style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                             />
                           </div>
                           <div>
@@ -837,8 +978,8 @@ export default function ProceduresPage() {
                               value={newProcedureData.location}
                               onChange={(e) => setNewProcedureData(prev => ({ ...prev, location: e.target.value }))}
                               placeholder="e.g., PROD"
-                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              style={{ borderColor: COLORS.border }}
+                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                              style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                             />
                           </div>
                         </div>
@@ -864,7 +1005,15 @@ export default function ProceduresPage() {
                     {sortedProcedures.length === 0 ? (
                       <div className="text-center py-12">
                         <List className="w-12 h-12 mx-auto mb-3" style={{ color: COLORS.textLight }} />
-                        <p className="font-medium" style={{ color: COLORS.textSecondary }}>No procedures in this category</p>
+                        <p className="font-medium" style={{ color: COLORS.textSecondary }}>
+                          {isViewingArchivedItems
+                            ? "No archived procedures in this category"
+                            : currentItemView === "completed"
+                              ? "No completed procedures in this category"
+                              : currentItemView === "highlighted"
+                                ? "No highlighted procedures in this category"
+                                : "No procedures in this category"}
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -905,7 +1054,7 @@ export default function ProceduresPage() {
                               {/* Actions */}
                               <div className="flex items-center gap-1 mr-2">
                                 <button onClick={() => toggleHighlight(category.id, proc.id)} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: proc.highlighted ? "#EAB308" : "#D1D5DB" }}><Star className="w-5 h-5" /></button>
-                                <button onClick={() => toggleApprove(category.id, proc.id)} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: proc.approved ? "#22C55E" : "#D1D5DB" }}><Check className="w-5 h-5" /></button>
+                                <button onClick={() => toggleApprove(category.id, proc.id)} title={proc.approved ? "Mark as Incomplete" : "Mark as Completed"} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: proc.approved ? "#22C55E" : "#D1D5DB" }}><Check className="w-5 h-5" /></button>
                                 <button onClick={() => togglePause(category.id, proc.id)} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: proc.paused ? "#F59E0B" : "#D1D5DB" }}><Pause className="w-5 h-5" /></button>
                               </div>
                               <div className="w-px h-6 bg-gray-300 mx-1"></div>
@@ -913,6 +1062,11 @@ export default function ProceduresPage() {
                                 <Link href={`/procedures/${proc.id}/edit`}><button className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#3B82F6" }}><Edit className="w-5 h-5" /></button></Link>
                                 <button className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#6B7280" }}><Copy className="w-5 h-5" /></button>
                                 <button className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#3B82F6" }}><Download className="w-5 h-5" /></button>
+                                {!isViewingArchivedItems ? (
+                                  <button onClick={() => archiveProcedure(proc.id)} disabled={loadingAction === `archive-${proc.id}`} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#F97316", opacity: loadingAction === `archive-${proc.id}` ? 0.6 : 1 }}><Archive className="w-5 h-5" /></button>
+                                ) : (
+                                  <button onClick={() => unarchiveProcedure(proc.id)} disabled={loadingAction === `unarchive-${proc.id}`} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#22C55E", opacity: loadingAction === `unarchive-${proc.id}` ? 0.6 : 1 }}><Archive className="w-5 h-5" /></button>
+                                )}
                                 <button onClick={() => deleteProcedure(category.id, proc.id)} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#F97316" }}><Trash2 className="w-5 h-5" /></button>
                               </div>
                             </div>

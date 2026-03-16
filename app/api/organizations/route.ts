@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { withAuth } from "@/lib/middleware/auth-middleware"
-import { Permission, Role } from "@/lib/types/permissions"
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api"
+import { Permission } from "@/lib/types/permissions"
+import { connectToDatabase } from "@/lib/server/db"
+import User from "@/lib/server/models/User"
+import { ROLE } from "@/lib/server/utils/roles"
+import mongoose from "mongoose"
 
 /**
  * GET /api/organizations - Get organizations list (dynamic based on role)
@@ -15,113 +17,32 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_B
 export const GET = withAuth(
   async (request: NextRequest, user) => {
     try {
-      const token =
-        request.cookies.get("token")?.value ||
-        request.headers.get("authorization")?.replace("Bearer ", "")
-
-      const headers: HeadersInit = {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+      if (user.role === "employee") {
+        return NextResponse.json(
+          { error: "Forbidden", message: "Employees cannot access organizations" },
+          { status: 403 }
+        )
       }
 
-      // Method 1: Try /users endpoint with role filter
-      try {
-        let queryParams = "?role=Organization"
-        
-        if (user.role === "organization" && user.id) {
-          queryParams += `&_id=${user.id}`
-        }
+      await connectToDatabase()
+      const query: Record<string, unknown> = { role: ROLE.ORGANIZATION }
 
-        console.log("🔍 Trying Method 1: /users endpoint with role filter")
-        const response = await fetch(`${API_URL}/users${queryParams}`, { headers })
-
-        if (response.ok) {
-          let users = await response.json()
-          console.log("✅ Method 1 success: Got", users.length, "users")
-          
-          // Filter for Organization role users
-          let organizations = users.filter((u: any) => 
-            u.role && u.role.toLowerCase() === "organization"
-          )
-
-          // Additional filtering for Organization role
-          if (user.role === "organization" && user.id) {
-            organizations = organizations.filter((org: any) => org._id === user.id)
-          }
-
-          if (organizations.length > 0) {
-            console.log("✅ Returning", organizations.length, "organizations from Method 1")
-            return NextResponse.json(organizations)
-          }
-        } else {
-          console.log("⚠️ Method 1 failed with status:", response.status)
-        }
-      } catch (error) {
-        console.log("❌ Method 1 failed:", error instanceof Error ? error.message : "Unknown error")
-        console.log("🔄 Trying Method 2...")
-      }
-
-      // Method 2: Try dedicated /organizations endpoint
-      try {
-        console.log("🔍 Trying Method 2: /organizations endpoint")
-        const response = await fetch(`${API_URL}/organizations`, { headers })
-        
-        if (response.ok) {
-          let organizations = await response.json()
-          console.log("✅ Method 2 success: Got", organizations.length, "organizations")
-          
-          // Filter for current organization if needed
-          if (user.role === "organization" && user.id) {
-            organizations = organizations.filter((org: any) => org._id === user.id)
-          }
-          
-          if (organizations.length > 0) {
-            console.log("✅ Returning", organizations.length, "organizations from Method 2")
-            return NextResponse.json(organizations)
-          }
-        } else {
-          console.log("⚠️ Method 2 failed with status:", response.status)
-        }
-      } catch (error) {
-        console.log("❌ Method 2 failed:", error instanceof Error ? error.message : "Unknown error")
-        console.log("🔄 Using fallback...")
-      }
-
-      // Method 3: Fallback - return current user if they're an organization
       if (user.role === "organization") {
-        console.log("✅ Fallback: Returning current user as organization")
-        return NextResponse.json([
-          {
-            _id: user.id,
-            name: user.name,
-            email: user.email,
-            role: "Organization",
-            createdAt: new Date().toISOString(),
-          }
-        ])
+        query._id = new mongoose.Types.ObjectId(user.id)
       }
-      
-      // For admin with no organizations found, return empty array
-      console.log("⚠️ No organizations found - Backend may not be running or no organizations exist")
-      console.log("💡 To fix: Start your backend server or create an organization user")
-      return NextResponse.json([])
+
+      const organizations = await User.find(query)
+        .select("-password")
+        .sort({ createdAt: -1 })
+        .lean()
+
+      return NextResponse.json(organizations)
     } catch (error) {
       console.error("Error fetching organizations:", error)
-      
-      // Return current user if they're an organization
-      if (user.role === "organization") {
-        return NextResponse.json([
-          {
-            _id: user.id,
-            name: user.name,
-            email: user.email,
-            role: "Organization",
-            createdAt: new Date().toISOString(),
-          }
-        ])
-      }
-      
-      return NextResponse.json([])
+      return NextResponse.json(
+        { error: "Failed to fetch organizations", message: error instanceof Error ? error.message : "Unknown error" },
+        { status: 500 }
+      )
     }
   },
   {
