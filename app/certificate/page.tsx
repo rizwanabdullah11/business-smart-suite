@@ -57,7 +57,7 @@ export default function CertificatePage() {
       const token = localStorage.getItem("token")
 
       // 1) Get categories
-      const catRes = await fetch("http://localhost:5000/api/categories", {
+      const catRes = await fetch("/api/categories?type=certificate", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -65,7 +65,7 @@ export default function CertificatePage() {
       const categoriesData = await catRes.json()
 
       // 2) Get active certificates
-      const certRes = await fetch("http://localhost:5000/api/certificates", {
+      const certRes = await fetch("/api/certificates", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -73,7 +73,7 @@ export default function CertificatePage() {
       const certificatesData = await certRes.json()
 
       // 3) Get archived certificates
-      const archivedRes = await fetch("http://localhost:5000/api/certificates/archived/all", {
+      const archivedRes = await fetch("/api/certificates/archived/all", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -142,7 +142,7 @@ export default function CertificatePage() {
       setLoadingAction(`archive-category-${categoryId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/archive`, {
+      const response = await fetch(`/api/categories/${categoryId}/archive?type=certificate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -168,7 +168,7 @@ export default function CertificatePage() {
       setLoadingAction(`unarchive-category-${categoryId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/unarchive`, {
+      const response = await fetch(`/api/categories/${categoryId}/unarchive?type=certificate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -197,7 +197,7 @@ export default function CertificatePage() {
 
       if (!certificate) return
 
-      const response = await fetch(`http://localhost:5000/api/certificates/${certId}`, {
+      const response = await fetch(`/api/certificates/${certId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -240,7 +240,7 @@ export default function CertificatePage() {
 
       if (!certificate) return
 
-      const response = await fetch(`http://localhost:5000/api/certificates/${certId}`, {
+      const response = await fetch(`/api/certificates/${certId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -283,7 +283,7 @@ export default function CertificatePage() {
 
       if (!certificate) return
 
-      const response = await fetch(`http://localhost:5000/api/certificates/${certId}`, {
+      const response = await fetch(`/api/certificates/${certId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -322,7 +322,7 @@ export default function CertificatePage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/certificates/${certId}`, {
+      const response = await fetch(`/api/certificates/${certId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
@@ -346,7 +346,7 @@ export default function CertificatePage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+      const response = await fetch(`/api/categories/${categoryId}?type=certificate`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
@@ -375,7 +375,7 @@ export default function CertificatePage() {
     try {
       const token = localStorage.getItem("token")
 
-      await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+      await fetch(`/api/categories/${categoryId}?type=certificate`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -406,13 +406,13 @@ export default function CertificatePage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch("http://localhost:5000/api/categories", {
+      const response = await fetch("/api/categories", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ name: newCategoryTitle })
+        body: JSON.stringify({ name: newCategoryTitle, type: "certificate" })
       })
 
       if (!response.ok) {
@@ -437,7 +437,7 @@ export default function CertificatePage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch("http://localhost:5000/api/certificates", {
+      const response = await fetch("/api/certificates", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

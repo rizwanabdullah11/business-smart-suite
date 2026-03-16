@@ -24,7 +24,7 @@ export default function EditManualPage({ params }: { params: Promise<{ id: strin
     const fetchManual = async () => {
       try {
         const token = localStorage.getItem("token")
-        const response = await fetch(`http://localhost:5000/api/manuals/${id}`, {
+        const response = await fetch(`/api/manuals/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -75,7 +75,7 @@ export default function EditManualPage({ params }: { params: Promise<{ id: strin
 
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`http://localhost:5000/api/manuals/${id}`, {
+      const response = await fetch(`/api/manuals/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

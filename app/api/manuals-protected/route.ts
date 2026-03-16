@@ -1,34 +1,25 @@
 import { NextRequest, NextResponse } from "next/server"
 import { withAuth } from "@/lib/middleware/auth-middleware"
 import { Permission } from "@/lib/types/permissions"
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+import { connectToDatabase } from "@/lib/server/db"
+import Manual from "@/lib/server/models/Manual"
 
 /**
  * Example: Protected GET endpoint - requires VIEW_MANUALS permission
  */
 export const GET = withAuth(
-  async (request: NextRequest, user) => {
+  async (_request: NextRequest, user) => {
     try {
-      const token =
-        request.cookies.get("token")?.value ||
-        request.headers.get("authorization")?.replace("Bearer ", "")
-
-      const headers: HeadersInit = {
-        "Content-Type": "application/json",
-      }
-
-      if (token) {
-        headers.Authorization = `Bearer ${token}`
-      }
-
-      const response = await fetch(`${API_URL}/manuals`, { headers })
-
-      if (!response.ok) {
-        throw new Error(`Backend error: ${response.statusText}`)
-      }
-
-      const manuals = await response.json()
+      await connectToDatabase()
+      const manuals = await Manual.find({
+        $and: [
+          { $or: [{ archived: { $exists: false } }, { archived: false }] },
+          { $or: [{ isArchived: { $exists: false } }, { isArchived: false }] },
+        ],
+      })
+        .populate("category", "_id name")
+        .sort({ createdAt: -1 })
+        .lean()
 
       return NextResponse.json({
         manuals,
@@ -57,34 +48,12 @@ export const GET = withAuth(
 export const POST = withAuth(
   async (request: NextRequest, user) => {
     try {
-      const token =
-        request.cookies.get("token")?.value ||
-        request.headers.get("authorization")?.replace("Bearer ", "")
-
       const body = await request.json()
-
-      const headers: HeadersInit = {
-        "Content-Type": "application/json",
-      }
-
-      if (token) {
-        headers.Authorization = `Bearer ${token}`
-      }
-
-      const response = await fetch(`${API_URL}/manuals`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          ...body,
-          createdBy: user.id,
-        }),
+      await connectToDatabase()
+      const manual = await Manual.create({
+        ...body,
+        createdBy: user.id,
       })
-
-      if (!response.ok) {
-        throw new Error(`Backend error: ${response.statusText}`)
-      }
-
-      const manual = await response.json()
 
       return NextResponse.json(manual, { status: 201 })
     } catch (error) {
@@ -114,26 +83,8 @@ export const DELETE = withAuth(
         return NextResponse.json({ error: "Manual ID is required" }, { status: 400 })
       }
 
-      const token =
-        request.cookies.get("token")?.value ||
-        request.headers.get("authorization")?.replace("Bearer ", "")
-
-      const headers: HeadersInit = {
-        "Content-Type": "application/json",
-      }
-
-      if (token) {
-        headers.Authorization = `Bearer ${token}`
-      }
-
-      const response = await fetch(`${API_URL}/manuals/${id}`, {
-        method: "DELETE",
-        headers,
-      })
-
-      if (!response.ok) {
-        throw new Error(`Backend error: ${response.statusText}`)
-      }
+      await connectToDatabase()
+      await Manual.findByIdAndDelete(id)
 
       return NextResponse.json({ success: true, message: "Manual deleted successfully" })
     } catch (error) {

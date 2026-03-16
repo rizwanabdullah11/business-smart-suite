@@ -56,7 +56,7 @@ export default function PoliciesPage() {
       const token = localStorage.getItem("token")
 
       // 1) Get categories
-      const catRes = await fetch("http://localhost:5000/api/categories", {
+      const catRes = await fetch("/api/categories?type=policy", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -64,7 +64,7 @@ export default function PoliciesPage() {
       const categoriesData = await catRes.json()
 
       // 2) Get active policies
-      const polRes = await fetch("http://localhost:5000/api/policies", {
+      const polRes = await fetch("/api/policies", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -72,7 +72,7 @@ export default function PoliciesPage() {
       const policiesData = await polRes.json()
 
       // 3) Get archived policies
-      const archivedRes = await fetch("http://localhost:5000/api/policies/archived/all", {
+      const archivedRes = await fetch("/api/policies/archived/all", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -141,7 +141,7 @@ export default function PoliciesPage() {
       setLoadingAction(`archive-category-${categoryId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/archive`, {
+      const response = await fetch(`/api/categories/${categoryId}/archive?type=policy`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -167,7 +167,7 @@ export default function PoliciesPage() {
       setLoadingAction(`unarchive-category-${categoryId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/unarchive`, {
+      const response = await fetch(`/api/categories/${categoryId}/unarchive?type=policy`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -196,7 +196,7 @@ export default function PoliciesPage() {
 
       if (!policy) return
 
-      const response = await fetch(`http://localhost:5000/api/policies/${policyId}`, {
+      const response = await fetch(`/api/policies/${policyId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -239,7 +239,7 @@ export default function PoliciesPage() {
 
       if (!policy) return
 
-      const response = await fetch(`http://localhost:5000/api/policies/${policyId}`, {
+      const response = await fetch(`/api/policies/${policyId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -282,7 +282,7 @@ export default function PoliciesPage() {
 
       if (!policy) return
 
-      const response = await fetch(`http://localhost:5000/api/policies/${policyId}`, {
+      const response = await fetch(`/api/policies/${policyId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -321,7 +321,7 @@ export default function PoliciesPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/policies/${policyId}`, {
+      const response = await fetch(`/api/policies/${policyId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
@@ -345,7 +345,7 @@ export default function PoliciesPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+      const response = await fetch(`/api/categories/${categoryId}?type=policy`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
@@ -374,7 +374,7 @@ export default function PoliciesPage() {
     try {
       const token = localStorage.getItem("token")
 
-      await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+      await fetch(`/api/categories/${categoryId}?type=policy`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -405,13 +405,13 @@ export default function PoliciesPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch("http://localhost:5000/api/categories", {
+      const response = await fetch("/api/categories", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ name: newCategoryTitle })
+        body: JSON.stringify({ name: newCategoryTitle, type: "policy" })
       })
 
       if (!response.ok) {
@@ -436,7 +436,7 @@ export default function PoliciesPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch("http://localhost:5000/api/policies", {
+      const response = await fetch("/api/policies", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

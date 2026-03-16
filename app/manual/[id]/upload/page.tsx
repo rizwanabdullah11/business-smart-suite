@@ -35,7 +35,7 @@ export default function UploadManualPage({ params }: { params: Promise<{ id: str
       const formData = new FormData()
       formData.append("file", selectedFile)
 
-      const response = await fetch(`http://localhost:5000/api/manuals/${id}/upload`, {
+      const response = await fetch(`/api/manuals/${id}/upload`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`

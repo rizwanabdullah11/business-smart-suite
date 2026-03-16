@@ -11,10 +11,10 @@ interface User {
   _id: string
   name: string
   email: string
-  role: string
+  role?: string
   organizationId?: string
   organizationName?: string
-  createdAt: string
+  createdAt?: string
 }
 
 export default function UsersPage() {
@@ -25,6 +25,8 @@ export default function UsersPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [filterRole, setFilterRole] = useState<string>("all")
   const [showAdmins, setShowAdmins] = useState(true) // Toggle to show/hide admin users
+
+  const roleOf = (user: User) => (user.role || "employee").toLowerCase()
 
   useEffect(() => {
     if (!permLoading && !can(Permission.VIEW_USERS)) {
@@ -49,8 +51,14 @@ export default function UsersPage() {
 
       if (response.ok) {
         const data = await response.json()
-        // Data is already enriched by the API
-        setUsers(data)
+        // Normalize legacy/incomplete records to prevent UI crashes.
+        const safeUsers = Array.isArray(data)
+          ? data.map((u: User) => ({
+              ...u,
+              role: u?.role || "Employee",
+            }))
+          : []
+        setUsers(safeUsers)
       }
     } catch (error) {
       console.error("Error loading users:", error)
@@ -85,12 +93,12 @@ export default function UsersPage() {
     if (filterRole === "all") {
       matchesRole = true
     } else {
-      matchesRole = user.role.toLowerCase() === filterRole
+      matchesRole = roleOf(user) === filterRole
     }
     
     // Then apply admin visibility filter
     let matchesAdminFilter = true
-    if (!showAdmins && user.role.toLowerCase() === "admin") {
+    if (!showAdmins && roleOf(user) === "admin") {
       matchesAdminFilter = false
     }
     
@@ -159,7 +167,7 @@ export default function UsersPage() {
                 border: `1px solid ${COLORS.border}`,
               }}
             >
-              All Users ({users.filter(u => showAdmins || u.role.toLowerCase() !== "admin").length})
+              All Users ({users.filter((u) => showAdmins || roleOf(u) !== "admin").length})
             </button>
             {isAdmin && (
               <>
@@ -174,7 +182,7 @@ export default function UsersPage() {
                     border: `1px solid ${COLORS.border}`,
                   }}
                 >
-                  Organizations ({users.filter((u) => u.role.toLowerCase() === "organization").length})
+                  Organizations ({users.filter((u) => roleOf(u) === "organization").length})
                 </button>
                 <button
                   onClick={() => setFilterRole("admin")}
@@ -187,7 +195,7 @@ export default function UsersPage() {
                     border: `1px solid ${COLORS.border}`,
                   }}
                 >
-                  Admins ({users.filter((u) => u.role.toLowerCase() === "admin").length})
+                  Admins ({users.filter((u) => roleOf(u) === "admin").length})
                 </button>
               </>
             )}
@@ -202,7 +210,7 @@ export default function UsersPage() {
                 border: `1px solid ${COLORS.border}`,
               }}
             >
-              Employees ({users.filter((u) => u.role.toLowerCase() === "employee").length})
+              Employees ({users.filter((u) => roleOf(u) === "employee").length})
             </button>
           </div>
           
@@ -266,20 +274,20 @@ export default function UsersPage() {
                         className="w-10 h-10 rounded-full flex items-center justify-center"
                         style={{
                           background:
-                            user.role.toLowerCase() === "admin"
+                            roleOf(user) === "admin"
                               ? `${COLORS.blue500}20`
-                              : user.role.toLowerCase() === "organization"
+                              : roleOf(user) === "organization"
                               ? `${COLORS.green500}20`
                               : `${COLORS.gray500}20`,
                           color:
-                            user.role.toLowerCase() === "admin"
+                            roleOf(user) === "admin"
                               ? COLORS.blue500
-                              : user.role.toLowerCase() === "organization"
+                              : roleOf(user) === "organization"
                               ? COLORS.green500
                               : COLORS.gray500,
                         }}
                       >
-                        {user.role.toLowerCase() === "organization" ? (
+                        {roleOf(user) === "organization" ? (
                           <Building2 className="w-5 h-5" />
                         ) : (
                           <User className="w-5 h-5" />
@@ -300,15 +308,15 @@ export default function UsersPage() {
                       className="px-3 py-1 rounded-full text-sm font-medium capitalize"
                       style={{
                         background:
-                          user.role.toLowerCase() === "admin"
+                          roleOf(user) === "admin"
                             ? `${COLORS.blue500}20`
-                            : user.role.toLowerCase() === "organization"
+                            : roleOf(user) === "organization"
                             ? `${COLORS.green500}20`
                             : `${COLORS.gray500}20`,
                         color:
-                          user.role.toLowerCase() === "admin"
+                          roleOf(user) === "admin"
                             ? COLORS.blue500
-                            : user.role.toLowerCase() === "organization"
+                            : roleOf(user) === "organization"
                             ? COLORS.green500
                             : COLORS.gray500,
                       }}
@@ -325,7 +333,7 @@ export default function UsersPage() {
                   )}
                   <td className="px-6 py-4">
                     <span className="text-sm" style={{ color: COLORS.textSecondary }}>
-                      {new Date(user.createdAt).toLocaleDateString()}
+                      {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-"}
                     </span>
                   </td>
                   <td className="px-6 py-4">

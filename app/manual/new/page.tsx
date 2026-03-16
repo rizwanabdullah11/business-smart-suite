@@ -30,7 +30,7 @@ export default function NewManualPage() {
     const fetchCategories = async () => {
       try {
         const token = localStorage.getItem("token")
-        const response = await fetch("http://localhost:5000/api/categories", {
+        const response = await fetch("/api/categories?type=manual", {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -63,7 +63,7 @@ export default function NewManualPage() {
 
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch("http://localhost:5000/api/manuals", {
+      const response = await fetch("/api/manuals", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

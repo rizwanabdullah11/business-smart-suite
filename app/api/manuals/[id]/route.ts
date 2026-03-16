@@ -1,106 +1,93 @@
 import { NextRequest, NextResponse } from "next/server"
+import { withAuth } from "@/lib/middleware/auth-middleware"
+import { Permission } from "@/lib/types/permissions"
+import { connectToDatabase } from "@/lib/server/db"
+import Manual from "@/lib/server/models/Manual"
+import mongoose from "mongoose"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
-
-async function getHeaders(request: NextRequest): Promise<HeadersInit> {
-  const token =
-    request.cookies.get("token")?.value ||
-    request.headers.get("authorization")?.replace("Bearer ", "")
-
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-  }
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
-  }
-
-  return headers
+function notFound() {
+  return NextResponse.json({ error: "Manual not found" }, { status: 404 })
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const { id } = params
-    const headers = await getHeaders(request)
+export const GET = withAuth(
+  async (_request: NextRequest, _user, { params }: { params: { id: string } }) => {
+    try {
+      const { id } = params
+      if (!mongoose.Types.ObjectId.isValid(id)) return notFound()
+      await connectToDatabase()
 
-    const response = await fetch(`${API_URL}/manuals/${id}`, { headers })
-
-    if (!response.ok) {
+      const manual = await Manual.findById(id).populate("category", "_id name").lean()
+      if (!manual) return notFound()
+      return NextResponse.json(manual)
+    } catch (error) {
       return NextResponse.json(
-        { error: `Manual not found: ${response.statusText}` },
-        { status: response.status }
+        { error: `Failed to fetch manual: ${error instanceof Error ? error.message : "Unknown error"}` },
+        { status: 500 }
       )
     }
-
-    const manual = await response.json()
-
-    return NextResponse.json(manual)
-  } catch (error) {
-    console.error("Error fetching manual:", error)
-    return NextResponse.json(
-      { error: `Failed to fetch manual: ${error instanceof Error ? error.message : "Unknown error"}` },
-      { status: 500 }
-    )
+  },
+  {
+    requiredPermissions: [Permission.VIEW_MANUALS],
   }
-}
+)
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const { id } = params
-    const headers = await getHeaders(request)
-    const body = await request.json()
+export const PUT = withAuth(
+  async (request: NextRequest, _user, { params }: { params: { id: string } }) => {
+    try {
+      const { id } = params
+      if (!mongoose.Types.ObjectId.isValid(id)) return notFound()
+      const body = await request.json()
 
-    const response = await fetch(`${API_URL}/manuals/${id}`, {
-      method: "PUT",
-      headers,
-      body: JSON.stringify(body),
-    })
+      await connectToDatabase()
+      const payload = { ...body } as Record<string, unknown>
 
-    if (!response.ok) {
-      throw new Error(`Backend error: ${response.statusText}`)
+      const categoryId = payload.category || payload.categoryId
+      if (categoryId && typeof categoryId === "string" && mongoose.Types.ObjectId.isValid(categoryId)) {
+        payload.category = new mongoose.Types.ObjectId(categoryId)
+        payload.categoryId = new mongoose.Types.ObjectId(categoryId)
+      }
+
+      const updatedManual = await Manual.findByIdAndUpdate(
+        id,
+        { $set: payload },
+        { new: true }
+      )
+        .populate("category", "_id name")
+        .lean()
+
+      if (!updatedManual) return notFound()
+      return NextResponse.json(updatedManual)
+    } catch (error) {
+      return NextResponse.json(
+        { error: `Failed to update manual: ${error instanceof Error ? error.message : "Unknown error"}` },
+        { status: 500 }
+      )
     }
-
-    const updatedManual = await response.json()
-
-    return NextResponse.json(updatedManual)
-  } catch (error) {
-    console.error("Error updating manual:", error)
-    return NextResponse.json(
-      { error: `Failed to update manual: ${error instanceof Error ? error.message : "Unknown error"}` },
-      { status: 500 }
-    )
+  },
+  {
+    requiredPermissions: [Permission.EDIT_MANUAL],
   }
-}
+)
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const { id } = params
-    const headers = await getHeaders(request)
+export const DELETE = withAuth(
+  async (_request: NextRequest, _user, { params }: { params: { id: string } }) => {
+    try {
+      const { id } = params
+      if (!mongoose.Types.ObjectId.isValid(id)) return notFound()
+      await connectToDatabase()
 
-    const response = await fetch(`${API_URL}/manuals/${id}`, {
-      method: "DELETE",
-      headers,
-    })
+      const deleted = await Manual.findByIdAndDelete(id).lean()
+      if (!deleted) return notFound()
 
-    if (!response.ok) {
-      throw new Error(`Backend error: ${response.statusText}`)
+      return NextResponse.json({ success: true, message: "Manual deleted" })
+    } catch (error) {
+      return NextResponse.json(
+        { error: `Failed to delete manual: ${error instanceof Error ? error.message : "Unknown error"}` },
+        { status: 500 }
+      )
     }
-
-    return NextResponse.json({ success: true, message: "Manual deleted" })
-  } catch (error) {
-    console.error("Error deleting manual:", error)
-    return NextResponse.json(
-      { error: `Failed to delete manual: ${error instanceof Error ? error.message : "Unknown error"}` },
-      { status: 500 }
-    )
+  },
+  {
+    requiredPermissions: [Permission.DELETE_MANUAL],
   }
-}
+)

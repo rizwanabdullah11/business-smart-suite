@@ -1,67 +1,56 @@
 import { NextRequest, NextResponse } from "next/server"
+import mongoose from "mongoose"
+import { withAuth } from "@/lib/middleware/auth-middleware"
+import { Permission } from "@/lib/types/permissions"
+import { connectToDatabase } from "@/lib/server/db"
+import Manual from "@/lib/server/models/Manual"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+export const POST = withAuth(
+  async (request: NextRequest, _user, { params }: { params: { id: string } }) => {
+    try {
+      const { id } = params
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return NextResponse.json({ error: "Manual not found" }, { status: 404 })
+      }
 
-async function getHeaders(request: NextRequest): Promise<HeadersInit> {
-  const token =
-    request.cookies.get("token")?.value ||
-    request.headers.get("authorization")?.replace("Bearer ", "")
+      const formData = await request.formData()
+      const file = formData.get("file") as File | null
+      if (!file) {
+        return NextResponse.json({ error: "No file provided" }, { status: 400 })
+      }
 
-  const headers: HeadersInit = {
-    // Note: Don't set Content-Type for FormData - browser will set it with boundary
-  }
+      await connectToDatabase()
+      const updated = await Manual.findByIdAndUpdate(
+        id,
+        {
+          $set: {
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+            uploadedAt: new Date(),
+          },
+        },
+        { new: true }
+      ).lean()
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
-  }
+      if (!updated) {
+        return NextResponse.json({ error: "Manual not found" }, { status: 404 })
+      }
 
-  return headers
-}
-
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const { id } = params
-    const headers = await getHeaders(request)
-
-    const formData = await request.formData()
-    const file = formData.get("file") as File
-
-    if (!file) {
+      return NextResponse.json({
+        success: true,
+        manualId: id,
+        fileName: file.name,
+        fileSize: file.size,
+      })
+    } catch (error) {
       return NextResponse.json(
-        { error: "No file provided" },
-        { status: 400 }
+        { error: `Upload error: ${error instanceof Error ? error.message : "Unknown error"}` },
+        { status: 500 }
       )
     }
-
-    // Create FormData for forwarding to backend
-    const backendFormData = new FormData()
-    backendFormData.append("file", file)
-
-    const response = await fetch(`${API_URL}/manuals/${id}/upload`, {
-      method: "POST",
-      headers,
-      body: backendFormData,
-    })
-
-    if (!response.ok) {
-      const error = await response.text()
-      return NextResponse.json(
-        { error: `Upload failed: ${error}` },
-        { status: response.status }
-      )
-    }
-
-    const result = await response.json()
-
-    return NextResponse.json(result)
-  } catch (error) {
-    console.error("Error handling upload:", error)
-    return NextResponse.json(
-      { error: `Upload error: ${error instanceof Error ? error.message : "Unknown error"}` },
-      { status: 500 }
-    )
+  },
+  {
+    requiredPermissions: [Permission.UPLOAD_MANUAL],
   }
-}
+)

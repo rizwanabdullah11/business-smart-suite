@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getUserFromToken } from "../auth"
+import { getUserFromRequest as getAuthenticatedUser } from "../server/auth"
+import type { AuthUser } from "../server/auth"
 import { Permission, Role } from "../types/permissions"
 import { hasPermission, hasAnyRole } from "../auth"
 
@@ -16,29 +17,15 @@ export interface AuthMiddlewareOptions {
  * export const GET = withAuth(handler, { requiredPermissions: [Permission.VIEW_MANUALS] })
  */
 export function withAuth(
-  handler: (request: NextRequest, user: any) => Promise<NextResponse>,
+  handler: (request: NextRequest, user: AuthUser, context?: unknown) => Promise<NextResponse>,
   options: AuthMiddlewareOptions = {}
 ) {
-  return async (request: NextRequest, context?: any) => {
+  return async (request: NextRequest, context?: unknown) => {
     try {
-      // Extract token from cookie or Authorization header
-      const token =
-        request.cookies.get("token")?.value ||
-        request.headers.get("authorization")?.replace("Bearer ", "")
-
-      if (!token) {
-        return NextResponse.json(
-          { error: "Unauthorized - No token provided" },
-          { status: 401 }
-        )
-      }
-
-      // Get user from token
-      const user = await getUserFromToken(token)
-
+      const user = await getAuthenticatedUser(request)
       if (!user) {
         return NextResponse.json(
-          { error: "Unauthorized - Invalid token" },
+          { error: "Unauthorized - Invalid or missing token" },
           { status: 401 }
         )
       }
@@ -67,8 +54,23 @@ export function withAuth(
         }
       }
 
+      // Next.js 16 can provide dynamic route params as a Promise in route handlers.
+      // Resolve it here once so individual handlers can safely read params synchronously.
+      let resolvedContext = context
+      if (context && typeof context === "object" && "params" in context) {
+        const contextWithParams = context as { params?: unknown }
+        const maybePromise = contextWithParams.params as Promise<unknown> | undefined
+
+        if (maybePromise && typeof maybePromise === "object" && "then" in maybePromise) {
+          resolvedContext = {
+            ...contextWithParams,
+            params: await maybePromise,
+          }
+        }
+      }
+
       // User is authorized, call the handler
-      return handler(request, user)
+      return handler(request, user, resolvedContext)
     } catch (error) {
       console.error("Auth middleware error:", error)
       return NextResponse.json(
@@ -104,15 +106,7 @@ export async function getAuthHeaders(request: NextRequest): Promise<HeadersInit>
  */
 export async function getUserFromRequest(request: NextRequest) {
   try {
-    const token =
-      request.cookies.get("token")?.value ||
-      request.headers.get("authorization")?.replace("Bearer ", "")
-
-    if (!token) {
-      return null
-    }
-
-    return await getUserFromToken(token)
+    return await getAuthenticatedUser(request)
   } catch (error) {
     console.error("Error getting user from request:", error)
     return null

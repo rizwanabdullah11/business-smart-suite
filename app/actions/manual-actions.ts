@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+const API_URL = process.env.INTERNAL_API_URL || "http://localhost:3000/api"
 
 async function getHeaders() {
   // In a real app, get token from cookies or session

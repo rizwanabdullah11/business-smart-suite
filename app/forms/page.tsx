@@ -54,7 +54,7 @@ export default function FormsPage() {
       const token = localStorage.getItem("token")
 
       // 1) Get categories
-      const catRes = await fetch("http://localhost:5000/api/categories", {
+      const catRes = await fetch("/api/categories?type=form", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -62,7 +62,7 @@ export default function FormsPage() {
       const categoriesData = await catRes.json()
 
       // 2) Get active forms
-      const formsRes = await fetch("http://localhost:5000/api/forms", {
+      const formsRes = await fetch("/api/forms", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -70,7 +70,7 @@ export default function FormsPage() {
       const formsData = await formsRes.json()
 
       // 3) Get archived forms
-      const archivedRes = await fetch("http://localhost:5000/api/forms/archived/all", {
+      const archivedRes = await fetch("/api/forms/archived/all", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -137,7 +137,7 @@ export default function FormsPage() {
       setLoadingAction(`archive-category-${categoryId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/archive`, {
+      const response = await fetch(`/api/categories/${categoryId}/archive?type=form`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -163,7 +163,7 @@ export default function FormsPage() {
       setLoadingAction(`unarchive-category-${categoryId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/unarchive`, {
+      const response = await fetch(`/api/categories/${categoryId}/unarchive?type=form`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -192,7 +192,7 @@ export default function FormsPage() {
 
       if (!form) return
 
-      const response = await fetch(`http://localhost:5000/api/forms/${formId}`, {
+      const response = await fetch(`/api/forms/${formId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -235,7 +235,7 @@ export default function FormsPage() {
 
       if (!form) return
 
-      const response = await fetch(`http://localhost:5000/api/forms/${formId}`, {
+      const response = await fetch(`/api/forms/${formId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -278,7 +278,7 @@ export default function FormsPage() {
 
       if (!form) return
 
-      const response = await fetch(`http://localhost:5000/api/forms/${formId}`, {
+      const response = await fetch(`/api/forms/${formId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -317,7 +317,7 @@ export default function FormsPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/forms/${formId}`, {
+      const response = await fetch(`/api/forms/${formId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
@@ -341,7 +341,7 @@ export default function FormsPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+      const response = await fetch(`/api/categories/${categoryId}?type=form`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
@@ -370,7 +370,7 @@ export default function FormsPage() {
     try {
       const token = localStorage.getItem("token")
 
-      await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+      await fetch(`/api/categories/${categoryId}?type=form`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -401,13 +401,13 @@ export default function FormsPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch("http://localhost:5000/api/categories", {
+      const response = await fetch("/api/categories", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ name: newCategoryTitle })
+        body: JSON.stringify({ name: newCategoryTitle, type: "form" })
       })
 
       if (!response.ok) {
@@ -432,7 +432,7 @@ export default function FormsPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch("http://localhost:5000/api/forms", {
+      const response = await fetch("/api/forms", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

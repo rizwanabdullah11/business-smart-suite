@@ -78,7 +78,7 @@ export default function ManualPage() {
       const token = localStorage.getItem("token")
 
       // 1) Get categories
-      const catRes = await fetch("http://localhost:5000/api/categories", {
+      const catRes = await fetch("/api/categories?type=manual", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -86,7 +86,7 @@ export default function ManualPage() {
       const categoriesData = await catRes.json()
 
       // 2) Get active manuals
-      const manRes = await fetch("http://localhost:5000/api/manuals", {
+      const manRes = await fetch("/api/manuals", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -94,7 +94,7 @@ export default function ManualPage() {
       const manualsData = await manRes.json()
 
       // 3) Get archived manuals
-      const archivedRes = await fetch("http://localhost:5000/api/manuals/archived/all", {
+      const archivedRes = await fetch("/api/manuals/archived/all", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -166,7 +166,7 @@ export default function ManualPage() {
 
       if (!manual) return
 
-      const response = await fetch(`http://localhost:5000/api/manuals/${manualId}`, {
+      const response = await fetch(`/api/manuals/${manualId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -209,7 +209,7 @@ export default function ManualPage() {
 
       if (!manual) return
 
-      const response = await fetch(`http://localhost:5000/api/manuals/${manualId}`, {
+      const response = await fetch(`/api/manuals/${manualId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -252,7 +252,7 @@ export default function ManualPage() {
 
       if (!manual) return
 
-      const response = await fetch(`http://localhost:5000/api/manuals/${manualId}`, {
+      const response = await fetch(`/api/manuals/${manualId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -290,7 +290,7 @@ export default function ManualPage() {
       setLoadingAction(`archive-${manualId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/manuals/${manualId}/archive`, {
+      const response = await fetch(`/api/manuals/${manualId}/archive`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -314,7 +314,7 @@ export default function ManualPage() {
       setLoadingAction(`unarchive-${manualId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/manuals/${manualId}/unarchive`, {
+      const response = await fetch(`/api/manuals/${manualId}/unarchive`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -340,7 +340,7 @@ export default function ManualPage() {
       setLoadingAction(`archive-category-${categoryId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/archive`, {
+      const response = await fetch(`/api/categories/${categoryId}/archive?type=manual`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -366,7 +366,7 @@ export default function ManualPage() {
       setLoadingAction(`unarchive-category-${categoryId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/unarchive`, {
+      const response = await fetch(`/api/categories/${categoryId}/unarchive?type=manual`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -390,7 +390,7 @@ export default function ManualPage() {
       setLoadingAction(`copy-${manualId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/manuals/${manualId}/copy`, {
+      const response = await fetch(`/api/manuals/${manualId}/copy`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -415,7 +415,7 @@ export default function ManualPage() {
       const token = localStorage.getItem("token")
 
       // Fetch the manual document
-      const response = await fetch(`http://localhost:5000/api/manuals/${manualId}/download`, {
+      const response = await fetch(`/api/manuals/${manualId}/download`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -451,7 +451,7 @@ export default function ManualPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/manuals/${manualId}`, {
+      const response = await fetch(`/api/manuals/${manualId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
@@ -475,7 +475,7 @@ export default function ManualPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+      const response = await fetch(`/api/categories/${categoryId}?type=manual`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
@@ -504,7 +504,7 @@ export default function ManualPage() {
     try {
       const token = localStorage.getItem("token")
 
-      await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+      await fetch(`/api/categories/${categoryId}?type=manual`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -535,7 +535,7 @@ export default function ManualPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch("http://localhost:5000/api/categories", {
+      const response = await fetch("/api/categories", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -569,7 +569,7 @@ export default function ManualPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch("http://localhost:5000/api/manuals", {
+      const response = await fetch("/api/manuals", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -54,7 +54,7 @@ export default function ProceduresPage() {
       const token = localStorage.getItem("token")
 
       // 1) Get categories
-      const catRes = await fetch("http://localhost:5000/api/categories", {
+      const catRes = await fetch("/api/categories?type=procedure", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -62,7 +62,7 @@ export default function ProceduresPage() {
       const categoriesData = await catRes.json()
 
       // 2) Get active procedures
-      const procRes = await fetch("http://localhost:5000/api/procedures", {
+      const procRes = await fetch("/api/procedures", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -70,7 +70,7 @@ export default function ProceduresPage() {
       const proceduresData = await procRes.json()
 
       // 3) Get archived procedures
-      const archivedRes = await fetch("http://localhost:5000/api/procedures/archived/all", {
+      const archivedRes = await fetch("/api/procedures/archived/all", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -137,7 +137,7 @@ export default function ProceduresPage() {
       setLoadingAction(`archive-category-${categoryId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/archive`, {
+      const response = await fetch(`/api/categories/${categoryId}/archive?type=procedure`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -163,7 +163,7 @@ export default function ProceduresPage() {
       setLoadingAction(`unarchive-category-${categoryId}`)
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}/unarchive`, {
+      const response = await fetch(`/api/categories/${categoryId}/unarchive?type=procedure`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -192,7 +192,7 @@ export default function ProceduresPage() {
 
       if (!procedure) return
 
-      const response = await fetch(`http://localhost:5000/api/procedures/${procId}`, {
+      const response = await fetch(`/api/procedures/${procId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -235,7 +235,7 @@ export default function ProceduresPage() {
 
       if (!procedure) return
 
-      const response = await fetch(`http://localhost:5000/api/procedures/${procId}`, {
+      const response = await fetch(`/api/procedures/${procId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -278,7 +278,7 @@ export default function ProceduresPage() {
 
       if (!procedure) return
 
-      const response = await fetch(`http://localhost:5000/api/procedures/${procId}`, {
+      const response = await fetch(`/api/procedures/${procId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -317,7 +317,7 @@ export default function ProceduresPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/procedures/${procId}`, {
+      const response = await fetch(`/api/procedures/${procId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
@@ -341,7 +341,7 @@ export default function ProceduresPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+      const response = await fetch(`/api/categories/${categoryId}?type=procedure`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
@@ -370,7 +370,7 @@ export default function ProceduresPage() {
     try {
       const token = localStorage.getItem("token")
 
-      await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+      await fetch(`/api/categories/${categoryId}?type=procedure`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -401,13 +401,13 @@ export default function ProceduresPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch("http://localhost:5000/api/categories", {
+      const response = await fetch("/api/categories", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ name: newCategoryTitle })
+        body: JSON.stringify({ name: newCategoryTitle, type: "procedure" })
       })
 
       if (!response.ok) {
@@ -432,7 +432,7 @@ export default function ProceduresPage() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch("http://localhost:5000/api/procedures", {
+      const response = await fetch("/api/procedures", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
