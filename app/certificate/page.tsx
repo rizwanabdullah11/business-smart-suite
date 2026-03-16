@@ -968,8 +968,8 @@ export default function CertificatePage() {
                               value={newCertData.title}
                               onChange={(e) => setNewCertData(prev => ({ ...prev, title: e.target.value }))}
                               placeholder="Enter certificate title..."
-                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              style={{ borderColor: COLORS.border }}
+                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                              style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                             />
                           </div>
                           <div>
@@ -981,8 +981,8 @@ export default function CertificatePage() {
                               value={newCertData.version}
                               onChange={(e) => setNewCertData(prev => ({ ...prev, version: e.target.value }))}
                               placeholder="e.g., v1.0"
-                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              style={{ borderColor: COLORS.border }}
+                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                              style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                             />
                           </div>
                           <div>
@@ -994,8 +994,8 @@ export default function CertificatePage() {
                               value={newCertData.location}
                               onChange={(e) => setNewCertData(prev => ({ ...prev, location: e.target.value }))}
                               placeholder="e.g., QMS"
-                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              style={{ borderColor: COLORS.border }}
+                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                              style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                             />
                           </div>
                           <div>
@@ -1007,7 +1007,7 @@ export default function CertificatePage() {
                               value={newCertData.expiryDate}
                               onChange={(e) => setNewCertData(prev => ({ ...prev, expiryDate: e.target.value }))}
                               className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              style={{ borderColor: COLORS.border }}
+                              style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                             />
                           </div>
                         </div>

@@ -952,8 +952,8 @@ export default function ProceduresPage() {
                               value={newProcedureData.title}
                               onChange={(e) => setNewProcedureData(prev => ({ ...prev, title: e.target.value }))}
                               placeholder="Enter procedure title..."
-                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              style={{ borderColor: COLORS.border }}
+                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                              style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                             />
                           </div>
                           <div>
@@ -965,8 +965,8 @@ export default function ProceduresPage() {
                               value={newProcedureData.version}
                               onChange={(e) => setNewProcedureData(prev => ({ ...prev, version: e.target.value }))}
                               placeholder="e.g., v1.0"
-                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              style={{ borderColor: COLORS.border }}
+                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                              style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                             />
                           </div>
                           <div>
@@ -978,8 +978,8 @@ export default function ProceduresPage() {
                               value={newProcedureData.location}
                               onChange={(e) => setNewProcedureData(prev => ({ ...prev, location: e.target.value }))}
                               placeholder="e.g., PROD"
-                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              style={{ borderColor: COLORS.border }}
+                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                              style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                             />
                           </div>
                         </div>

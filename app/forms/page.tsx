@@ -952,8 +952,8 @@ export default function FormsPage() {
                               value={newFormData.title}
                               onChange={(e) => setNewFormData(prev => ({ ...prev, title: e.target.value }))}
                               placeholder="Enter form title..."
-                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              style={{ borderColor: COLORS.border }}
+                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                              style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                             />
                           </div>
                           <div>
@@ -965,8 +965,8 @@ export default function FormsPage() {
                               value={newFormData.version}
                               onChange={(e) => setNewFormData(prev => ({ ...prev, version: e.target.value }))}
                               placeholder="e.g., v1.0"
-                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              style={{ borderColor: COLORS.border }}
+                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                              style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                             />
                           </div>
                           <div>
@@ -978,8 +978,8 @@ export default function FormsPage() {
                               value={newFormData.location}
                               onChange={(e) => setNewFormData(prev => ({ ...prev, location: e.target.value }))}
                               placeholder="e.g., HR"
-                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              style={{ borderColor: COLORS.border }}
+                              className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+                              style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                             />
                           </div>
                         </div>
