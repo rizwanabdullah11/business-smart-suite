@@ -80,6 +80,7 @@ export function DashboardContent() {
     { title: "Completed Tasks", value: "-", change: "0%", trend: "up", icon: CheckCircle, color: COLORS.green500, subtitle: "live data" },
   ])
   const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([])
+  const [showAllActivities, setShowAllActivities] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -172,7 +173,6 @@ export function DashboardContent() {
             }
           })
           .sort((a: any, b: any) => b.sortTime - a.sortTime)
-          .slice(0, 8)
           .map(({ sortTime, ...rest }: any) => rest)
 
         setRecentActivities(activities)
@@ -194,6 +194,7 @@ export function DashboardContent() {
     () => [COLORS.shadowBlue, COLORS.shadowGreen, COLORS.shadowOrange, COLORS.shadowPurple],
     []
   )
+  const visibleActivities = showAllActivities ? recentActivities : recentActivities.slice(0, 6)
 
   return (
     <div className="space-y-8">
@@ -253,21 +254,22 @@ export function DashboardContent() {
                         Recent Activity
                     </h2>
                     <button
+                        onClick={() => setShowAllActivities((prev) => !prev)}
                         className="text-base font-bold"
                         style={{ color: COLORS.primary }}
                     >
-                        View All
+                        {showAllActivities ? "View Less" : "View All"}
                     </button>
                 </div>
                 <div className="space-y-4">
-                    {recentActivities.length === 0 ? (
+                    {visibleActivities.length === 0 ? (
                       <div className="p-5 rounded-lg" style={{ background: COLORS.bgGray }}>
                         <p className="text-sm" style={{ color: COLORS.textSecondary }}>
                           {loading ? "Loading recent activity..." : "No recent activity found."}
                         </p>
                       </div>
                     ) : (
-                      recentActivities.map((activity, index) => (
+                      visibleActivities.map((activity, index) => (
                           <div
                               key={index}
                               className="flex items-center justify-between p-5 rounded-lg transition-all duration-200 hover:bg-opacity-50"
