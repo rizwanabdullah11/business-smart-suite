@@ -28,6 +28,9 @@ type SortType = "name" | "date"
 export default function FormsPage() {
   const [categories, setCategories] = useState<any[]>([])
   const [archivedCategories, setArchivedCategories] = useState<any[]>([])
+  const [categoryItemView, setCategoryItemView] = useState<
+    Record<string, "active" | "archived" | "completed" | "highlighted">
+  >({})
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1"])
   const [editingCategory, setEditingCategory] = useState<string | null>(null)
@@ -48,6 +51,18 @@ export default function FormsPage() {
   useEffect(() => {
     loadData()
   }, [])
+
+  const toIdString = (value: any) => {
+    if (!value) return null
+    if (typeof value === "string") return value
+    if (typeof value === "object" && "_id" in value) return String((value as any)._id)
+    return String(value)
+  }
+
+  const getItemCategoryId = (item: any) => {
+    const raw = item?.category?._id || item?.categoryId || item?.category || null
+    return toIdString(raw)
+  }
 
   const loadData = async () => {
     try {
@@ -77,48 +92,71 @@ export default function FormsPage() {
       })
       const archivedData = archivedRes.ok ? await archivedRes.json() : []
 
-      // 4) Merge active forms inside categories
-      const merged = categoriesData
-        .filter((cat: any) => !cat.isArchived && !cat.archived)
-        .map((cat: any) => ({
-          id: cat._id,
-          title: cat.name,
-          forms: formsData
-            .filter((f: any) => f.category?._id === cat._id && !f.archived)
-            .map((f: any) => ({
-              id: f._id,
-              title: f.title,
-              version: f.version,
-              issueDate: f.issueDate,
-              location: f.location,
-              highlighted: f.highlighted || false,
-              approved: f.approved || false,
-              paused: f.paused || false
-            }))
-        }))
+      const archivedById = new Map<string, any>()
+      archivedData.forEach((item: any) => {
+        if (item?._id) archivedById.set(String(item._id), item)
+      })
+      formsData
+        .filter((item: any) => item?.archived || item?.isArchived)
+        .forEach((item: any) => {
+          if (item?._id) archivedById.set(String(item._id), item)
+        })
+      const archivedForms = Array.from(archivedById.values())
 
-      // 5) Merge archived forms inside archived categories
-      const mergedArchived = categoriesData
-        .filter((cat: any) => cat.isArchived || cat.archived)
-        .map((cat: any) => ({
-          id: cat._id,
+      const allCategories = categoriesData.map((cat: any) => {
+        const categoryId = toIdString(cat._id)
+        const activeForms = formsData
+          .filter((f: any) => getItemCategoryId(f) === categoryId && !f.archived && !f.isArchived)
+          .map((f: any) => ({
+            id: f._id,
+            title: f.title,
+            version: f.version,
+            issueDate: f.issueDate,
+            location: f.location,
+            highlighted: f.highlighted || false,
+            approved: f.approved || false,
+            paused: f.paused || false,
+          }))
+
+        const categoryArchivedForms = archivedForms
+          .filter((f: any) => getItemCategoryId(f) === categoryId)
+          .map((f: any) => ({
+            id: f._id,
+            title: f.title,
+            version: f.version,
+            issueDate: f.issueDate,
+            location: f.location,
+            highlighted: f.highlighted || false,
+            approved: f.approved || false,
+            paused: f.paused || false,
+          }))
+
+        return {
+          id: categoryId,
           title: cat.name,
-          forms: archivedData
-            .filter((f: any) => f.category?._id === cat._id)
-            .map((f: any) => ({
-              id: f._id,
-              title: f.title,
-              version: f.version,
-              issueDate: f.issueDate,
-              location: f.location,
-              highlighted: f.highlighted || false,
-              approved: f.approved || false,
-              paused: f.paused || false
-            }))
-        }))
+          isArchived: Boolean(cat.isArchived),
+          archived: Boolean(cat.archived),
+          forms: activeForms,
+          archivedForms: categoryArchivedForms,
+          completedForms: activeForms.filter((f: any) => Boolean(f.approved)),
+          highlightedForms: activeForms.filter((f: any) => Boolean(f.highlighted)),
+        }
+      })
+
+      const merged = allCategories.filter((cat: any) => !cat.isArchived && !cat.archived)
+      const mergedArchived = allCategories.filter(
+        (cat: any) => cat.archivedForms.length > 0 || cat.isArchived || cat.archived
+      )
 
       setCategories(merged)
       setArchivedCategories(mergedArchived)
+      setCategoryItemView((prev) => {
+        const next = { ...prev }
+        allCategories.forEach((cat: any) => {
+          if (!next[cat.id]) next[cat.id] = "active"
+        })
+        return next
+      })
     } catch (err) {
       console.log(err)
     }
@@ -306,6 +344,50 @@ export default function FormsPage() {
     } catch (err) {
       console.error("Error toggling pause:", err)
       alert("Failed to update pause status")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const archiveForm = async (formId: string) => {
+    try {
+      setLoadingAction(`archive-${formId}`)
+      const token = localStorage.getItem("token")
+      const response = await fetch(`/api/forms/${formId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ archived: true, isArchived: true })
+      })
+      if (!response.ok) throw new Error("Failed to archive form")
+      await loadData()
+    } catch (err) {
+      console.error("Error archiving form:", err)
+      alert("Failed to archive form")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const unarchiveForm = async (formId: string) => {
+    try {
+      setLoadingAction(`unarchive-${formId}`)
+      const token = localStorage.getItem("token")
+      const response = await fetch(`/api/forms/${formId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ archived: false, isArchived: false })
+      })
+      if (!response.ok) throw new Error("Failed to unarchive form")
+      await loadData()
+    } catch (err) {
+      console.error("Error unarchiving form:", err)
+      alert("Failed to unarchive form")
     } finally {
       setLoadingAction(null)
     }
@@ -632,7 +714,17 @@ export default function FormsPage() {
         {/* Categories */}
         <div className="space-y-4">
           {(showArchived ? archivedCategories : categories).map((category) => {
-            const sortedForms = sortForms(category.forms)
+            const currentItemView = categoryItemView[category.id] ?? (showArchived ? "archived" : "active")
+            const currentForms =
+              currentItemView === "archived"
+                ? (category.archivedForms || [])
+                : currentItemView === "completed"
+                  ? (category.completedForms || [])
+                  : currentItemView === "highlighted"
+                    ? (category.highlightedForms || [])
+                    : (category.forms || [])
+            const sortedForms = sortForms(currentForms)
+            const isViewingArchivedItems = currentItemView === "archived"
             const isExpanded = expandedCategories.includes(category.id)
 
             return (
@@ -661,7 +753,7 @@ export default function FormsPage() {
                     )}
                     <h2 className="text-2xl font-bold">{category.title}</h2>
                     <span className="px-3 py-1 rounded-full text-base font-medium bg-white bg-opacity-20">
-                      {category.forms.length} forms
+                      {currentForms.length} forms
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -679,6 +771,9 @@ export default function FormsPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
+                        if (isViewingArchivedItems) {
+                          setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))
+                        }
                         setAddingFormToCategory(category.id)
                         if (!expandedCategories.includes(category.id)) {
                           setExpandedCategories(prev => [...prev, category.id])
@@ -789,8 +884,54 @@ export default function FormsPage() {
                 {/* Forms List */}
                 {isExpanded && (
                   <div className="p-5">
+                    <div className="mb-4 flex gap-2">
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "active" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "active" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "active" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Active ({(category.forms || []).length})
+                      </button>
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "archived" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "archived" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "archived" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "archived" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Archived ({(category.archivedForms || []).length})
+                      </button>
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "completed" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "completed" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "completed" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "completed" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Completed ({(category.completedForms || []).length})
+                      </button>
+                      <button
+                        onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "highlighted" }))}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "highlighted" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "highlighted" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "highlighted" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Highlighted ({(category.highlightedForms || []).length})
+                      </button>
+                    </div>
                     {/* Add Form Form */}
-                    {addingFormToCategory === category.id && (
+                    {addingFormToCategory === category.id && currentItemView === "active" && (
                       <div
                         className="mb-5 p-5 rounded-xl shadow-sm"
                         style={{
@@ -864,7 +1005,15 @@ export default function FormsPage() {
                     {sortedForms.length === 0 ? (
                       <div className="text-center py-12">
                         <FileBox className="w-12 h-12 mx-auto mb-3" style={{ color: COLORS.textLight }} />
-                        <p className="font-medium" style={{ color: COLORS.textSecondary }}>No forms in this category</p>
+                        <p className="font-medium" style={{ color: COLORS.textSecondary }}>
+                          {isViewingArchivedItems
+                            ? "No archived forms in this category"
+                            : currentItemView === "completed"
+                              ? "No completed forms in this category"
+                              : currentItemView === "highlighted"
+                                ? "No highlighted forms in this category"
+                                : "No forms in this category"}
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -905,7 +1054,7 @@ export default function FormsPage() {
                               {/* Actions */}
                               <div className="flex items-center gap-1 mr-2">
                                 <button onClick={() => toggleHighlight(category.id, form.id)} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: form.highlighted ? "#EAB308" : "#D1D5DB" }}><Star className="w-5 h-5" /></button>
-                                <button onClick={() => toggleApprove(category.id, form.id)} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: form.approved ? "#22C55E" : "#D1D5DB" }}><Check className="w-5 h-5" /></button>
+                                <button onClick={() => toggleApprove(category.id, form.id)} title={form.approved ? "Mark as Incomplete" : "Mark as Completed"} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: form.approved ? "#22C55E" : "#D1D5DB" }}><Check className="w-5 h-5" /></button>
                                 <button onClick={() => togglePause(category.id, form.id)} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: form.paused ? "#F59E0B" : "#D1D5DB" }}><Pause className="w-5 h-5" /></button>
                               </div>
                               <div className="w-px h-6 bg-gray-300 mx-1"></div>
@@ -913,6 +1062,11 @@ export default function FormsPage() {
                                 <Link href={`/forms/${form.id}/edit`}><button className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#3B82F6" }}><Edit className="w-5 h-5" /></button></Link>
                                 <button className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#6B7280" }}><Copy className="w-5 h-5" /></button>
                                 <button className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#3B82F6" }}><Download className="w-5 h-5" /></button>
+                                {!isViewingArchivedItems ? (
+                                  <button onClick={() => archiveForm(form.id)} disabled={loadingAction === `archive-${form.id}`} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#F97316", opacity: loadingAction === `archive-${form.id}` ? 0.6 : 1 }}><Archive className="w-5 h-5" /></button>
+                                ) : (
+                                  <button onClick={() => unarchiveForm(form.id)} disabled={loadingAction === `unarchive-${form.id}`} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#22C55E", opacity: loadingAction === `unarchive-${form.id}` ? 0.6 : 1 }}><Archive className="w-5 h-5" /></button>
+                                )}
                                 <button onClick={() => deleteForm(category.id, form.id)} className="h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:bg-gray-50 bg-white border border-gray-200" style={{ color: "#F97316" }}><Trash2 className="w-5 h-5" /></button>
                               </div>
                             </div>

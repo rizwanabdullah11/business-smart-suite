@@ -52,6 +52,9 @@ type SortType = "name" | "date"
 export default function ManualPage() {
   const [categories, setCategories] = useState<any[]>([])
   const [archivedCategories, setArchivedCategories] = useState<any[]>([])
+  const [categoryItemView, setCategoryItemView] = useState<
+    Record<string, "active" | "archived" | "completed" | "highlighted">
+  >({})
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1"])
   const [editingCategory, setEditingCategory] = useState<string | null>(null)
@@ -72,6 +75,18 @@ export default function ManualPage() {
   useEffect(() => {
     loadData()
   }, [])
+
+  const toIdString = (value: any) => {
+    if (!value) return null
+    if (typeof value === "string") return value
+    if (typeof value === "object" && "_id" in value) return String((value as any)._id)
+    return String(value)
+  }
+
+  const getItemCategoryId = (item: any) => {
+    const raw = item?.category?._id || item?.categoryId || item?.category || null
+    return toIdString(raw)
+  }
 
   const loadData = async () => {
     try {
@@ -100,49 +115,71 @@ export default function ManualPage() {
         }
       })
       const archivedData = archivedRes.ok ? await archivedRes.json() : []
+      const archivedById = new Map<string, any>()
+      archivedData.forEach((item: any) => {
+        if (item?._id) archivedById.set(String(item._id), item)
+      })
+      manualsData
+        .filter((item: any) => item?.archived || item?.isArchived)
+        .forEach((item: any) => {
+          if (item?._id) archivedById.set(String(item._id), item)
+        })
+      const archivedManuals = Array.from(archivedById.values())
 
-      // 4) Merge active manuals inside categories
-      const merged = categoriesData
-        .filter((cat: any) => !cat.isArchived && !cat.archived)
-        .map((cat: any) => ({
-          id: cat._id,
-          title: cat.name,
-          manuals: manualsData
-            .filter((m: any) => m.category?._id === cat._id && !m.archived)
-            .map((m: any) => ({
-              id: m._id,
-              title: m.title,
-              version: m.version,
-              issueDate: m.issueDate,
-              location: m.location,
-              highlighted: m.highlighted || false,
-              approved: m.approved || false,
-              paused: m.paused || false
-            }))
-        }))
+      const allCategories = categoriesData.map((cat: any) => {
+        const categoryId = toIdString(cat._id)
+        const activeManuals = manualsData
+          .filter((m: any) => getItemCategoryId(m) === categoryId && !m.archived && !m.isArchived)
+          .map((m: any) => ({
+            id: m._id,
+            title: m.title,
+            version: m.version,
+            issueDate: m.issueDate,
+            location: m.location,
+            highlighted: m.highlighted || false,
+            approved: m.approved || false,
+            paused: m.paused || false,
+          }))
 
-      // 5) Merge archived manuals inside archived categories
-      const mergedArchived = categoriesData
-        .filter((cat: any) => cat.isArchived || cat.archived)
-        .map((cat: any) => ({
-          id: cat._id,
+        const categoryArchivedManuals = archivedManuals
+          .filter((m: any) => getItemCategoryId(m) === categoryId)
+          .map((m: any) => ({
+            id: m._id,
+            title: m.title,
+            version: m.version,
+            issueDate: m.issueDate,
+            location: m.location,
+            highlighted: m.highlighted || false,
+            approved: m.approved || false,
+            paused: m.paused || false,
+          }))
+
+        return {
+          id: categoryId,
           title: cat.name,
-          manuals: archivedData
-            .filter((m: any) => m.category?._id === cat._id)
-            .map((m: any) => ({
-              id: m._id,
-              title: m.title,
-              version: m.version,
-              issueDate: m.issueDate,
-              location: m.location,
-              highlighted: m.highlighted || false,
-              approved: m.approved || false,
-              paused: m.paused || false
-            }))
-        }))
+          isArchived: Boolean(cat.isArchived),
+          archived: Boolean(cat.archived),
+          manuals: activeManuals,
+          archivedManuals: categoryArchivedManuals,
+            completedManuals: activeManuals.filter((m: any) => Boolean(m.approved)),
+            highlightedManuals: activeManuals.filter((m: any) => Boolean(m.highlighted)),
+        }
+      })
+
+      const merged = allCategories.filter((cat: any) => !cat.isArchived && !cat.archived)
+      const mergedArchived = allCategories.filter(
+        (cat: any) => cat.archivedManuals.length > 0 || cat.isArchived || cat.archived
+      )
 
       setCategories(merged)
       setArchivedCategories(mergedArchived)
+      setCategoryItemView((prev) => {
+        const next = { ...prev }
+        allCategories.forEach((cat: any) => {
+          if (!next[cat.id]) next[cat.id] = "active"
+        })
+        return next
+      })
     } catch (err) {
       console.log(err)
     }
@@ -218,7 +255,7 @@ export default function ManualPage() {
         body: JSON.stringify({ approved: !manual.approved })
       })
 
-      if (!response.ok) throw new Error("Failed to update approval")
+      if (!response.ok) throw new Error("Failed to update completed status")
 
       setCategories(prev =>
         prev.map(cat =>
@@ -236,7 +273,7 @@ export default function ManualPage() {
       )
     } catch (err) {
       console.error("Error toggling approve:", err)
-      alert("Failed to update approval status")
+      alert("Failed to update completed status")
     } finally {
       setLoadingAction(null)
     }
@@ -815,7 +852,17 @@ export default function ManualPage() {
         {/* Categories */}
         <div className="space-y-4">
           {(showArchived ? archivedCategories : categories).map((category) => {
-            const sortedManuals = sortManuals(category.manuals)
+            const currentItemView = categoryItemView[category.id] ?? (showArchived ? "archived" : "active")
+            const currentManuals =
+              currentItemView === "archived"
+                ? (category.archivedManuals || [])
+                : currentItemView === "completed"
+                  ? (category.completedManuals || [])
+                  : currentItemView === "highlighted"
+                    ? (category.highlightedManuals || [])
+                    : (category.manuals || [])
+            const sortedManuals = sortManuals(currentManuals)
+            const isViewingArchivedItems = currentItemView === "archived"
             const isExpanded = expandedCategories.includes(category.id)
 
             return (
@@ -844,7 +891,7 @@ export default function ManualPage() {
                     )}
                     <h2 className="text-2xl font-bold">{category.title}</h2>
                     <span className="px-3 py-1 rounded-full text-base font-medium bg-white bg-opacity-20">
-                      {category.manuals.length} manuals
+                      {currentManuals.length} manuals
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -862,6 +909,9 @@ export default function ManualPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
+                        if (isViewingArchivedItems) {
+                          setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))
+                        }
                         setAddingManualToCategory(category.id)
                         if (!expandedCategories.includes(category.id)) {
                           setExpandedCategories(prev => [...prev, category.id])
@@ -976,8 +1026,63 @@ export default function ManualPage() {
                 {/* Manuals List */}
                 {isExpanded && (
                   <div className="p-5">
+                    <div className="mb-4 flex gap-2">
+                      <button
+                        onClick={() =>
+                          setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))
+                        }
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "active" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "active" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "active" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Active ({(category.manuals || []).length})
+                      </button>
+                      <button
+                        onClick={() =>
+                          setCategoryItemView((prev) => ({ ...prev, [category.id]: "archived" }))
+                        }
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "archived" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "archived" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "archived" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Archived ({(category.archivedManuals || []).length})
+                      </button>
+                      <button
+                        onClick={() =>
+                          setCategoryItemView((prev) => ({ ...prev, [category.id]: "completed" }))
+                        }
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "completed" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "completed" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "completed" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Completed ({(category.completedManuals || []).length})
+                      </button>
+                      <button
+                        onClick={() =>
+                          setCategoryItemView((prev) => ({ ...prev, [category.id]: "highlighted" }))
+                        }
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={{
+                          background: currentItemView === "highlighted" ? COLORS.primaryGradient : COLORS.bgWhite,
+                          color: currentItemView === "highlighted" ? COLORS.textWhite : COLORS.textPrimary,
+                          borderColor: currentItemView === "highlighted" ? COLORS.primary : COLORS.border,
+                        }}
+                      >
+                        Highlighted ({(category.highlightedManuals || []).length})
+                      </button>
+                    </div>
+
                     {/* Add Manual Form */}
-                    {addingManualToCategory === category.id && (
+                    {addingManualToCategory === category.id && currentItemView === "active" && (
                       <div
                         className="mb-8 p-8 rounded-2xl shadow-sm"
                         style={{
@@ -1099,10 +1204,22 @@ export default function ManualPage() {
                       <div className="text-center py-12">
                         <FileText className="w-12 h-12 mx-auto mb-3" style={{ color: COLORS.textLight }} />
                         <p className="font-medium" style={{ color: COLORS.textSecondary }}>
-                          No manuals in this category
+                          {isViewingArchivedItems
+                            ? "No archived manuals in this category"
+                            : currentItemView === "completed"
+                              ? "No completed manuals in this category"
+                              : currentItemView === "highlighted"
+                                ? "No highlighted manuals in this category"
+                                : "No manuals in this category"}
                         </p>
                         <p className="text-sm mt-1" style={{ color: COLORS.textLight }}>
-                          Click the + button above to add your first manual
+                          {isViewingArchivedItems
+                            ? "Archive a manual to see it here"
+                            : currentItemView === "completed"
+                              ? "Mark a manual as completed to see it here"
+                              : currentItemView === "highlighted"
+                                ? "Star a manual to see it here"
+                                : "Click the + button above to add your first manual"}
                         </p>
                       </div>
                     ) : (
@@ -1165,7 +1282,7 @@ export default function ManualPage() {
                                     color: manual.approved ? COLORS.emerald600 : "#94a3b8",
                                     borderColor: manual.approved ? COLORS.emerald200 : "#e2e8f0",
                                   }}
-                                  title={manual.approved ? "Unapprove" : "Approve"}
+                                  title={manual.approved ? "Mark as Incomplete" : "Mark as Completed"}
                                 >
                                   <Check className="w-5 h-5" />
                                 </button>
@@ -1228,7 +1345,7 @@ export default function ManualPage() {
                                 >
                                   <Download className="w-5 h-5" />
                                 </button>
-                                {!showArchived ? (
+                                {!isViewingArchivedItems ? (
                                   <button
                                     onClick={() => archiveManual(category.id, manual.id)}
                                     disabled={loadingAction === `archive-${manual.id}`}
@@ -1282,7 +1399,7 @@ export default function ManualPage() {
           })}
         </div>
 
-        {showArchived && (
+        {showArchived && archivedCategories.length === 0 && (
           <div className="mt-12 text-center py-16">
             <Archive className="w-16 h-16 mx-auto mb-4" style={{ color: COLORS.textLight }} />
             <h3 className="text-xl font-semibold mb-2" style={{ color: COLORS.textPrimary }}>
