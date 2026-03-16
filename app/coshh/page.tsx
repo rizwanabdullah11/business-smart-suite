@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
+import DynamicModulePage from "@/components/dynamic-module-page"
 
 // Sample data for COSHH
 const initialCategories = [
@@ -45,9 +46,12 @@ const initialCategories = [
 
 type SortType = "name" | "date"
 
-export default function COSHHPage() {
+function LegacyCOSHHPage() {
   const [categories, setCategories] = useState(initialCategories)
   const [showArchived, setShowArchived] = useState(false)
+  const [categoryItemView, setCategoryItemView] = useState<
+    Record<string, "active" | "archived" | "completed" | "highlighted">
+  >({})
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1"])
   const [editingCategory, setEditingCategory] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState("")
@@ -108,6 +112,36 @@ export default function COSHHPage() {
             ...cat,
             assessments: cat.assessments.map(a =>
               a.id === assessmentId ? { ...a, paused: !a.paused } : a
+            )
+          }
+          : cat
+      )
+    )
+  }
+
+  const archiveAssessment = (categoryId: string, assessmentId: string) => {
+    setCategories(prev =>
+      prev.map(cat =>
+        cat.id === categoryId
+          ? {
+            ...cat,
+            assessments: cat.assessments.map(a =>
+              a.id === assessmentId ? { ...a, archived: true, isArchived: true } : a
+            )
+          }
+          : cat
+      )
+    )
+  }
+
+  const unarchiveAssessment = (categoryId: string, assessmentId: string) => {
+    setCategories(prev =>
+      prev.map(cat =>
+        cat.id === categoryId
+          ? {
+            ...cat,
+            assessments: cat.assessments.map(a =>
+              a.id === assessmentId ? { ...a, archived: false, isArchived: false } : a
             )
           }
           : cat
@@ -336,7 +370,7 @@ export default function COSHHPage() {
               }}
               onClick={() => setShowArchived(false)}
             >
-              Active ({categories.reduce((acc, cat) => acc + cat.assessments.length, 0)})
+              Active ({categories.reduce((acc, cat) => acc + cat.assessments.filter((a: any) => !a.archived && !a.isArchived).length, 0)})
             </button>
             <button
               className="px-6 py-3 font-semibold border-b-2 transition-all"
@@ -346,7 +380,7 @@ export default function COSHHPage() {
               }}
               onClick={() => setShowArchived(true)}
             >
-              Archived (0)
+              Archived ({categories.reduce((acc, cat) => acc + cat.assessments.filter((a: any) => a.archived || a.isArchived).length, 0)})
             </button>
           </div>
         </div>
@@ -354,7 +388,22 @@ export default function COSHHPage() {
         {/* Categories */}
         <div className="space-y-4">
           {categories.map((category) => {
-            const sortedAssessments = sortAssessments(category.assessments)
+            const currentItemView = categoryItemView[category.id] ?? (showArchived ? "archived" : "active")
+            const categoryAssessments = category.assessments || []
+            const activeAssessments = categoryAssessments.filter((a: any) => !a.archived && !a.isArchived)
+            const archivedAssessments = categoryAssessments.filter((a: any) => a.archived || a.isArchived)
+            const completedAssessments = activeAssessments.filter((a: any) => a.approved)
+            const highlightedAssessments = activeAssessments.filter((a: any) => a.highlighted)
+            const currentAssessments =
+              currentItemView === "archived"
+                ? archivedAssessments
+                : currentItemView === "completed"
+                  ? completedAssessments
+                  : currentItemView === "highlighted"
+                    ? highlightedAssessments
+                    : activeAssessments
+            const sortedAssessments = sortAssessments(currentAssessments)
+            const isViewingArchivedItems = currentItemView === "archived"
             const isExpanded = expandedCategories.includes(category.id)
 
             return (
@@ -383,7 +432,7 @@ export default function COSHHPage() {
                     )}
                     <h2 className="text-xl font-bold">{category.title}</h2>
                     <span className="px-3 py-1 rounded-full text-sm font-medium bg-white bg-opacity-20">
-                      {category.assessments.length} assessments
+                      {currentAssessments.length} assessments
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
@@ -400,6 +449,9 @@ export default function COSHHPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
+                        if (isViewingArchivedItems) {
+                          setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))
+                        }
                         setAddingAssessmentToCategory(category.id)
                         if (!expandedCategories.includes(category.id)) {
                           setExpandedCategories(prev => [...prev, category.id])
@@ -484,7 +536,13 @@ export default function COSHHPage() {
                 {isExpanded && (
                   <div className="p-5">
                     {/* Add Assessment Form */}
-                    {addingAssessmentToCategory === category.id && (
+                    <div className="mb-4 flex gap-2">
+                      <button onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all" style={{ background: currentItemView === "active" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "active" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "active" ? COLORS.primary : COLORS.border }}>Active ({activeAssessments.length})</button>
+                      <button onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "archived" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all" style={{ background: currentItemView === "archived" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "archived" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "archived" ? COLORS.primary : COLORS.border }}>Archived ({archivedAssessments.length})</button>
+                      <button onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "completed" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all" style={{ background: currentItemView === "completed" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "completed" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "completed" ? COLORS.primary : COLORS.border }}>Completed ({completedAssessments.length})</button>
+                      <button onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "highlighted" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all" style={{ background: currentItemView === "highlighted" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "highlighted" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "highlighted" ? COLORS.primary : COLORS.border }}>Highlighted ({highlightedAssessments.length})</button>
+                    </div>
+                    {addingAssessmentToCategory === category.id && currentItemView === "active" && (
                       <div
                         className="mb-5 p-5 rounded-xl shadow-sm"
                         style={{
@@ -571,7 +629,9 @@ export default function COSHHPage() {
                     {sortedAssessments.length === 0 ? (
                       <div className="text-center py-12">
                         <FlaskConical className="w-12 h-12 mx-auto mb-3" style={{ color: COLORS.textLight }} />
-                        <p className="font-medium" style={{ color: COLORS.textSecondary }}>No assessments in this category</p>
+                        <p className="font-medium" style={{ color: COLORS.textSecondary }}>
+                          {isViewingArchivedItems ? "No archived assessments in this category" : currentItemView === "completed" ? "No completed assessments in this category" : currentItemView === "highlighted" ? "No highlighted assessments in this category" : "No assessments in this category"}
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -611,7 +671,7 @@ export default function COSHHPage() {
                             <div className="flex items-center gap-1.5">
                               <div className="flex items-center gap-1 mr-2">
                                 <button onClick={() => toggleHighlight(category.id, assessment.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: assessment.highlighted ? COLORS.warning : "#FEF3C7", color: assessment.highlighted ? COLORS.textWhite : "#92400E" }}><Star className="w-4 h-4" /></button>
-                                <button onClick={() => toggleApprove(category.id, assessment.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: assessment.approved ? COLORS.green500 : "#D1FAE5", color: assessment.approved ? COLORS.textWhite : "#065F46" }}><Check className="w-4 h-4" /></button>
+                                <button onClick={() => toggleApprove(category.id, assessment.id)} title={assessment.approved ? "Mark as Incomplete" : "Mark as Completed"} className="p-2 rounded-lg hover:scale-105" style={{ background: assessment.approved ? COLORS.green500 : "#D1FAE5", color: assessment.approved ? COLORS.textWhite : "#065F46" }}><Check className="w-4 h-4" /></button>
                                 <button onClick={() => togglePause(category.id, assessment.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: assessment.paused ? COLORS.warning : "#FEF3C7", color: assessment.paused ? COLORS.textWhite : "#92400E" }}><Pause className="w-4 h-4" /></button>
                               </div>
                               <div className="w-px h-6 bg-gray-300 mx-1"></div>
@@ -619,6 +679,11 @@ export default function COSHHPage() {
                                 <Link href={`/coshh/${assessment.id}/edit`}><button className="p-2 rounded-lg hover:scale-105" style={{ background: "#DBEAFE", color: "#1E40AF" }}><Edit className="w-4 h-4" /></button></Link>
                                 <button className="p-2 rounded-lg hover:scale-105" style={{ background: "#E5E7EB", color: "#374151" }}><Copy className="w-4 h-4" /></button>
                                 <button className="p-2 rounded-lg hover:scale-105" style={{ background: "#E0E7FF", color: "#4338CA" }}><Download className="w-4 h-4" /></button>
+                                {!isViewingArchivedItems ? (
+                                  <button onClick={() => archiveAssessment(category.id, assessment.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: "#FFEDD5", color: "#9A3412" }}><Archive className="w-4 h-4" /></button>
+                                ) : (
+                                  <button onClick={() => unarchiveAssessment(category.id, assessment.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: "#DCFCE7", color: "#166534" }}><Archive className="w-4 h-4" /></button>
+                                )}
                                 <button onClick={() => deleteAssessment(category.id, assessment.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: "#FEE2E2", color: "#991B1B" }}><Trash2 className="w-4 h-4" /></button>
                               </div>
                             </div>
@@ -634,5 +699,19 @@ export default function COSHHPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function COSHHPage() {
+  return (
+    <DynamicModulePage
+      moduleSlug="coshh"
+      title="COSHH"
+      description="Manage COSHH assessments and records"
+      itemLabel="Assessment"
+      icon={FlaskConical}
+      newItemHref="/coshh/new"
+      itemHrefPrefix="/coshh"
+    />
   )
 }

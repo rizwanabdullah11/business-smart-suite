@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
+import DynamicModulePage from "@/components/dynamic-module-page"
 
 // Sample data for Organisational Context
 const initialCategories = [
@@ -43,7 +44,7 @@ const initialCategories = [
 
 type SortType = "name" | "impact"
 
-export default function OrganisationalContextPage() {
+function LegacyOrganisationalContextPage() {
   const [categories, setCategories] = useState(initialCategories)
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1", "2"])
@@ -649,5 +650,26 @@ export default function OrganisationalContextPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function OrganisationalContextPage() {
+  return (
+    <DynamicModulePage
+      moduleSlug="organisational-context"
+      title="Organisational Context"
+      description="Track internal and external issues affecting your system"
+      itemLabel="Issue"
+      icon={Building2}
+      newItemHref="/organisational-context/new"
+      itemHrefPrefix="/organisational-context"
+      formFields={[
+        { key: "title", label: "Title", required: true, placeholder: "Issue title..." },
+        { key: "description", label: "Description", type: "textarea", placeholder: "Issue details..." },
+        { key: "type", label: "Type", type: "select", options: ["Strength", "Weakness", "Opportunity", "Threat"], defaultValue: "Strength" },
+        { key: "impact", label: "Impact", type: "select", options: ["Low", "Medium", "High"], defaultValue: "Low" },
+      ]}
+      listFieldKeys={["type", "impact", "description"]}
+    />
   )
 }

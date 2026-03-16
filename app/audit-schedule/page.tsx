@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
+import DynamicModulePage from "@/components/dynamic-module-page"
 
 // Sample data for Audit Schedule
 const initialCategories = [
@@ -42,7 +43,7 @@ const initialCategories = [
 
 type SortType = "name" | "date"
 
-export default function AuditSchedulePage() {
+function LegacyAuditSchedulePage() {
   const [categories, setCategories] = useState(initialCategories)
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1", "2"])
@@ -649,5 +650,28 @@ export default function AuditSchedulePage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function AuditSchedulePage() {
+  return (
+    <DynamicModulePage
+      moduleSlug="audit-schedule"
+      title="Audit Schedule"
+      description="Manage planned internal and external audits"
+      itemLabel="Audit"
+      icon={CalendarCheck}
+      newItemHref="/audit-schedule/new"
+      itemHrefPrefix="/audit-schedule"
+      dateFieldKey="scheduledDate"
+      formFields={[
+        { key: "title", label: "Title", required: true, placeholder: "Enter audit title..." },
+        { key: "department", label: "Department", placeholder: "Department..." },
+        { key: "auditor", label: "Auditor", placeholder: "Auditor name..." },
+        { key: "scheduledDate", label: "Scheduled Date", type: "date" },
+        { key: "status", label: "Status", type: "select", options: ["Scheduled", "In Progress", "Completed"], defaultValue: "Scheduled" },
+      ]}
+      listFieldKeys={["department", "auditor", "scheduledDate", "status"]}
+    />
   )
 }

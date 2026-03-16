@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
+import DynamicModulePage from "@/components/dynamic-module-page"
 
 // Sample data for Suppliers
 const initialCategories = [
@@ -44,7 +45,7 @@ const initialCategories = [
 
 type SortType = "name" | "status"
 
-export default function SuppliersPage() {
+function LegacySuppliersPage() {
   const [categories, setCategories] = useState(initialCategories)
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1", "2"])
@@ -684,5 +685,30 @@ export default function SuppliersPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SuppliersPage() {
+  return (
+    <DynamicModulePage
+      moduleSlug="suppliers"
+      title="Suppliers"
+      description="Manage approved suppliers and service providers"
+      itemLabel="Supplier"
+      icon={Truck}
+      newItemHref="/suppliers/new"
+      itemHrefPrefix="/suppliers"
+      dateFieldKey="lastAudit"
+      formFields={[
+        { key: "title", label: "Supplier Name", required: true, placeholder: "Supplier..." },
+        { key: "contact", label: "Contact", placeholder: "Contact person..." },
+        { key: "email", label: "Email", placeholder: "Email..." },
+        { key: "phone", label: "Phone", placeholder: "Phone..." },
+        { key: "status", label: "Status", type: "select", options: ["Pending", "Approved", "Probation", "Rejected"], defaultValue: "Pending" },
+        { key: "criticality", label: "Criticality", type: "select", options: ["Low", "Medium", "High"], defaultValue: "Low" },
+        { key: "lastAudit", label: "Last Audit", type: "date" },
+      ]}
+      listFieldKeys={["contact", "email", "status", "criticality", "lastAudit"]}
+    />
   )
 }

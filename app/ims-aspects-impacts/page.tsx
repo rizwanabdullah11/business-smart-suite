@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
+import DynamicModulePage from "@/components/dynamic-module-page"
 
 // Sample data for IMS Aspects & Impacts
 const initialCategories = [
@@ -44,9 +45,12 @@ const initialCategories = [
 
 type SortType = "name" | "risk"
 
-export default function IMSAspectsImpactsPage() {
+function LegacyIMSAspectsImpactsPage() {
   const [categories, setCategories] = useState(initialCategories)
   const [showArchived, setShowArchived] = useState(false)
+  const [categoryItemView, setCategoryItemView] = useState<
+    Record<string, "active" | "archived" | "completed" | "highlighted">
+  >({})
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1", "2"])
   const [editingCategory, setEditingCategory] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState("")
@@ -106,6 +110,36 @@ export default function IMSAspectsImpactsPage() {
             ...cat,
             items: cat.items.map(i =>
               i.id === itemId ? { ...i, paused: !i.paused } : i
+            )
+          }
+          : cat
+      )
+    )
+  }
+
+  const archiveItem = (categoryId: string, itemId: string) => {
+    setCategories(prev =>
+      prev.map(cat =>
+        cat.id === categoryId
+          ? {
+            ...cat,
+            items: cat.items.map(i =>
+              i.id === itemId ? { ...i, archived: true, isArchived: true } : i
+            )
+          }
+          : cat
+      )
+    )
+  }
+
+  const unarchiveItem = (categoryId: string, itemId: string) => {
+    setCategories(prev =>
+      prev.map(cat =>
+        cat.id === categoryId
+          ? {
+            ...cat,
+            items: cat.items.map(i =>
+              i.id === itemId ? { ...i, archived: false, isArchived: false } : i
             )
           }
           : cat
@@ -343,7 +377,7 @@ export default function IMSAspectsImpactsPage() {
               }}
               onClick={() => setShowArchived(false)}
             >
-              Active ({categories.reduce((acc, cat) => acc + cat.items.length, 0)})
+              Active ({categories.reduce((acc, cat) => acc + cat.items.filter((i: any) => !i.archived && !i.isArchived).length, 0)})
             </button>
             <button
               className="px-6 py-3 font-semibold border-b-2 transition-all"
@@ -353,7 +387,7 @@ export default function IMSAspectsImpactsPage() {
               }}
               onClick={() => setShowArchived(true)}
             >
-              Archived (0)
+              Archived ({categories.reduce((acc, cat) => acc + cat.items.filter((i: any) => i.archived || i.isArchived).length, 0)})
             </button>
           </div>
         </div>
@@ -361,7 +395,22 @@ export default function IMSAspectsImpactsPage() {
         {/* Categories */}
         <div className="space-y-4">
           {categories.map((category) => {
-            const sortedItems = sortItems(category.items)
+            const currentItemView = categoryItemView[category.id] ?? (showArchived ? "archived" : "active")
+            const categoryItems = category.items || []
+            const activeItems = categoryItems.filter((i: any) => !i.archived && !i.isArchived)
+            const archivedItems = categoryItems.filter((i: any) => i.archived || i.isArchived)
+            const completedItems = activeItems.filter((i: any) => i.approved)
+            const highlightedItems = activeItems.filter((i: any) => i.highlighted)
+            const currentItems =
+              currentItemView === "archived"
+                ? archivedItems
+                : currentItemView === "completed"
+                  ? completedItems
+                  : currentItemView === "highlighted"
+                    ? highlightedItems
+                    : activeItems
+            const sortedItems = sortItems(currentItems)
+            const isViewingArchivedItems = currentItemView === "archived"
             const isExpanded = expandedCategories.includes(category.id)
 
             return (
@@ -390,7 +439,7 @@ export default function IMSAspectsImpactsPage() {
                     )}
                     <h2 className="text-xl font-bold">{category.title}</h2>
                     <span className="px-3 py-1 rounded-full text-sm font-medium bg-white bg-opacity-20">
-                      {category.items.length} records
+                      {currentItems.length} records
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
@@ -407,6 +456,9 @@ export default function IMSAspectsImpactsPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
+                        if (isViewingArchivedItems) {
+                          setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))
+                        }
                         setAddingItemToCategory(category.id)
                         if (!expandedCategories.includes(category.id)) {
                           setExpandedCategories(prev => [...prev, category.id])
@@ -491,7 +543,13 @@ export default function IMSAspectsImpactsPage() {
                 {isExpanded && (
                   <div className="p-5">
                     {/* Add Item Form */}
-                    {addingItemToCategory === category.id && (
+                    <div className="mb-4 flex gap-2">
+                      <button onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all" style={{ background: currentItemView === "active" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "active" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "active" ? COLORS.primary : COLORS.border }}>Active ({activeItems.length})</button>
+                      <button onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "archived" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all" style={{ background: currentItemView === "archived" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "archived" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "archived" ? COLORS.primary : COLORS.border }}>Archived ({archivedItems.length})</button>
+                      <button onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "completed" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all" style={{ background: currentItemView === "completed" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "completed" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "completed" ? COLORS.primary : COLORS.border }}>Completed ({completedItems.length})</button>
+                      <button onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "highlighted" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all" style={{ background: currentItemView === "highlighted" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "highlighted" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "highlighted" ? COLORS.primary : COLORS.border }}>Highlighted ({highlightedItems.length})</button>
+                    </div>
+                    {addingItemToCategory === category.id && currentItemView === "active" && (
                       <div
                         className="mb-5 p-5 rounded-xl shadow-sm"
                         style={{
@@ -582,7 +640,9 @@ export default function IMSAspectsImpactsPage() {
                     {sortedItems.length === 0 ? (
                       <div className="text-center py-12">
                         <Globe className="w-12 h-12 mx-auto mb-3" style={{ color: COLORS.textLight }} />
-                        <p className="font-medium" style={{ color: COLORS.textSecondary }}>No records in this category</p>
+                        <p className="font-medium" style={{ color: COLORS.textSecondary }}>
+                          {isViewingArchivedItems ? "No archived records in this category" : currentItemView === "completed" ? "No completed records in this category" : currentItemView === "highlighted" ? "No highlighted records in this category" : "No records in this category"}
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -626,7 +686,7 @@ export default function IMSAspectsImpactsPage() {
                             <div className="flex items-center gap-1.5 ml-4">
                               <div className="flex items-center gap-1 mr-2">
                                 <button onClick={() => toggleHighlight(category.id, item.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: item.highlighted ? COLORS.warning : "#FEF3C7", color: item.highlighted ? COLORS.textWhite : "#92400E" }}><Star className="w-4 h-4" /></button>
-                                <button onClick={() => toggleApprove(category.id, item.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: item.approved ? COLORS.green500 : "#D1FAE5", color: item.approved ? COLORS.textWhite : "#065F46" }}><Check className="w-4 h-4" /></button>
+                                <button onClick={() => toggleApprove(category.id, item.id)} title={item.approved ? "Mark as Incomplete" : "Mark as Completed"} className="p-2 rounded-lg hover:scale-105" style={{ background: item.approved ? COLORS.green500 : "#D1FAE5", color: item.approved ? COLORS.textWhite : "#065F46" }}><Check className="w-4 h-4" /></button>
                                 <button onClick={() => togglePause(category.id, item.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: item.paused ? COLORS.warning : "#FEF3C7", color: item.paused ? COLORS.textWhite : "#92400E" }}><Pause className="w-4 h-4" /></button>
                               </div>
                               <div className="w-px h-6 bg-gray-300 mx-1"></div>
@@ -634,6 +694,11 @@ export default function IMSAspectsImpactsPage() {
                                 <Link href={`/ims-aspects-impacts/${item.id}/edit`}><button className="p-2 rounded-lg hover:scale-105" style={{ background: "#DBEAFE", color: "#1E40AF" }}><Edit className="w-4 h-4" /></button></Link>
                                 <button className="p-2 rounded-lg hover:scale-105" style={{ background: "#E5E7EB", color: "#374151" }}><Copy className="w-4 h-4" /></button>
                                 <button className="p-2 rounded-lg hover:scale-105" style={{ background: "#E0E7FF", color: "#4338CA" }}><Download className="w-4 h-4" /></button>
+                                {!isViewingArchivedItems ? (
+                                  <button onClick={() => archiveItem(category.id, item.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: "#FFEDD5", color: "#9A3412" }}><Archive className="w-4 h-4" /></button>
+                                ) : (
+                                  <button onClick={() => unarchiveItem(category.id, item.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: "#DCFCE7", color: "#166534" }}><Archive className="w-4 h-4" /></button>
+                                )}
                                 <button onClick={() => deleteItem(category.id, item.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: "#FEE2E2", color: "#991B1B" }}><Trash2 className="w-4 h-4" /></button>
                               </div>
                             </div>
@@ -649,5 +714,19 @@ export default function IMSAspectsImpactsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function IMSAspectsImpactsPage() {
+  return (
+    <DynamicModulePage
+      moduleSlug="ims-aspects-impacts"
+      title="IMS Aspects & Impacts"
+      description="Manage aspects and impacts records"
+      itemLabel="Record"
+      icon={Leaf}
+      newItemHref="/ims-aspects-impacts/new"
+      itemHrefPrefix="/ims-aspects-impacts"
+    />
   )
 }

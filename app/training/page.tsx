@@ -23,6 +23,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
+import DynamicModulePage from "@/components/dynamic-module-page"
 
 // Sample data for Training
 const initialCategories = [
@@ -51,7 +52,7 @@ const initialCategories = [
 
 type SortType = "name" | "status"
 
-export default function TrainingPage() {
+function LegacyTrainingPage() {
   const [categories, setCategories] = useState(initialCategories)
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1", "2"])
@@ -700,5 +701,30 @@ export default function TrainingPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function TrainingPage() {
+  return (
+    <DynamicModulePage
+      moduleSlug="training"
+      title="Training"
+      description="Track employee training records and validity"
+      itemLabel="Record"
+      icon={GraduationCap}
+      newItemHref="/training/new"
+      itemHrefPrefix="/training"
+      dateFieldKey="date"
+      formFields={[
+        { key: "title", label: "Training", required: true, placeholder: "Training title..." },
+        { key: "employee", label: "Employee", placeholder: "Employee name..." },
+        { key: "department", label: "Department", placeholder: "Department..." },
+        { key: "date", label: "Training Date", type: "date" },
+        { key: "expiry", label: "Expiry Date", type: "date" },
+        { key: "status", label: "Status", type: "select", options: ["Valid", "Expired", "Pending"], defaultValue: "Valid" },
+        { key: "certificate", label: "Certificate Issued", type: "checkbox", defaultValue: true },
+      ]}
+      listFieldKeys={["employee", "department", "date", "expiry", "status"]}
+    />
   )
 }

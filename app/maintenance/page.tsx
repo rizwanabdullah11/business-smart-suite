@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
+import DynamicModulePage from "@/components/dynamic-module-page"
 
 // Sample data for Maintenance
 const initialCategories = [
@@ -43,7 +44,7 @@ const initialCategories = [
 
 type SortType = "name" | "date"
 
-export default function MaintenancePage() {
+function LegacyMaintenancePage() {
   const [categories, setCategories] = useState(initialCategories)
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1", "2"])
@@ -657,5 +658,28 @@ export default function MaintenancePage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function MaintenancePage() {
+  return (
+    <DynamicModulePage
+      moduleSlug="maintenance"
+      title="Maintenance"
+      description="Track preventive and corrective maintenance"
+      itemLabel="Record"
+      icon={Wrench}
+      newItemHref="/maintenance/new"
+      itemHrefPrefix="/maintenance"
+      dateFieldKey="date"
+      formFields={[
+        { key: "title", label: "Title", required: true, placeholder: "Maintenance item..." },
+        { key: "type", label: "Type", type: "select", options: ["Preventive", "Corrective", "Predictive"], defaultValue: "Preventive" },
+        { key: "date", label: "Date", type: "date" },
+        { key: "technician", label: "Technician", placeholder: "Technician..." },
+        { key: "status", label: "Status", type: "select", options: ["Scheduled", "In Progress", "Completed"], defaultValue: "Scheduled" },
+      ]}
+      listFieldKeys={["type", "date", "status", "technician"]}
+    />
   )
 }

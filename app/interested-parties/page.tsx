@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
+import DynamicModulePage from "@/components/dynamic-module-page"
 
 // Sample data for Interested Parties
 const initialCategories = [
@@ -50,7 +51,7 @@ const initialCategories = [
 
 type SortType = "name" | "impact"
 
-export default function InterestedPartiesPage() {
+function LegacyInterestedPartiesPage() {
   const [categories, setCategories] = useState(initialCategories)
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1", "2", "3"])
@@ -645,5 +646,27 @@ export default function InterestedPartiesPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function InterestedPartiesPage() {
+  return (
+    <DynamicModulePage
+      moduleSlug="interested-parties"
+      title="Interested Parties"
+      description="Manage stakeholder needs and expectations"
+      itemLabel="Party"
+      icon={UserCheck}
+      newItemHref="/interested-parties/new"
+      itemHrefPrefix="/interested-parties"
+      titleFieldKey="name"
+      formFields={[
+        { key: "name", label: "Name", required: true, placeholder: "Party name..." },
+        { key: "needs", label: "Needs", type: "textarea", placeholder: "Needs/expectations..." },
+        { key: "influence", label: "Influence", type: "select", options: ["Low", "Medium", "High"], defaultValue: "Medium" },
+        { key: "interest", label: "Interest", type: "select", options: ["Low", "Medium", "High"], defaultValue: "Medium" },
+      ]}
+      listFieldKeys={["needs", "influence", "interest"]}
+    />
   )
 }

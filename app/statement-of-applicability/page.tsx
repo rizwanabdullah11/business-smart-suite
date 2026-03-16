@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
+import DynamicModulePage from "@/components/dynamic-module-page"
 
 // Sample data for SoA (ISO 27001 Annex A Controls)
 const initialCategories = [
@@ -43,7 +44,7 @@ const initialCategories = [
 
 type SortType = "name" | "status"
 
-export default function StatementOfApplicabilityPage() {
+function LegacyStatementOfApplicabilityPage() {
   const [categories, setCategories] = useState(initialCategories)
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1", "2"])
@@ -706,5 +707,28 @@ export default function StatementOfApplicabilityPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function StatementOfApplicabilityPage() {
+  return (
+    <DynamicModulePage
+      moduleSlug="statement-of-applicability"
+      title="Statement of Applicability"
+      description="Maintain ISO 27001 Annex controls and applicability"
+      itemLabel="Control"
+      icon={ShieldCheck}
+      newItemHref="/statement-of-applicability/new"
+      itemHrefPrefix="/statement-of-applicability"
+      formFields={[
+        { key: "title", label: "Control", required: true, placeholder: "Control ID and title..." },
+        { key: "description", label: "Description", type: "textarea", placeholder: "Control description..." },
+        { key: "status", label: "Status", type: "select", options: ["Implemented", "Planned", "Not Applicable"], defaultValue: "Implemented" },
+        { key: "applicable", label: "Applicable", type: "checkbox", defaultValue: true },
+        { key: "justification", label: "Justification", type: "textarea", placeholder: "Justification..." },
+        { key: "owner", label: "Owner", placeholder: "Owner..." },
+      ]}
+      listFieldKeys={["status", "applicable", "owner", "justification"]}
+    />
   )
 }

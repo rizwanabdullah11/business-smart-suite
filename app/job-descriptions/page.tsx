@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
+import DynamicModulePage from "@/components/dynamic-module-page"
 
 // Sample data for Job Descriptions
 const initialCategories = [
@@ -44,9 +45,12 @@ const initialCategories = [
 
 type SortType = "name" | "date"
 
-export default function JobDescriptionsPage() {
+function LegacyJobDescriptionsPage() {
   const [categories, setCategories] = useState(initialCategories)
   const [showArchived, setShowArchived] = useState(false)
+  const [categoryItemView, setCategoryItemView] = useState<
+    Record<string, "active" | "archived" | "completed" | "highlighted">
+  >({})
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1"])
   const [editingCategory, setEditingCategory] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState("")
@@ -106,6 +110,36 @@ export default function JobDescriptionsPage() {
             ...cat,
             jobDescriptions: cat.jobDescriptions.map(j =>
               j.id === jobId ? { ...j, paused: !j.paused } : j
+            )
+          }
+          : cat
+      )
+    )
+  }
+
+  const archiveJob = (categoryId: string, jobId: string) => {
+    setCategories(prev =>
+      prev.map(cat =>
+        cat.id === categoryId
+          ? {
+            ...cat,
+            jobDescriptions: cat.jobDescriptions.map(j =>
+              j.id === jobId ? { ...j, archived: true, isArchived: true } : j
+            )
+          }
+          : cat
+      )
+    )
+  }
+
+  const unarchiveJob = (categoryId: string, jobId: string) => {
+    setCategories(prev =>
+      prev.map(cat =>
+        cat.id === categoryId
+          ? {
+            ...cat,
+            jobDescriptions: cat.jobDescriptions.map(j =>
+              j.id === jobId ? { ...j, archived: false, isArchived: false } : j
             )
           }
           : cat
@@ -332,7 +366,7 @@ export default function JobDescriptionsPage() {
               }}
               onClick={() => setShowArchived(false)}
             >
-              Active ({categories.reduce((acc, cat) => acc + cat.jobDescriptions.length, 0)})
+              Active ({categories.reduce((acc, cat) => acc + cat.jobDescriptions.filter((j: any) => !j.archived && !j.isArchived).length, 0)})
             </button>
             <button
               className="px-6 py-3 font-semibold border-b-2 transition-all"
@@ -342,7 +376,7 @@ export default function JobDescriptionsPage() {
               }}
               onClick={() => setShowArchived(true)}
             >
-              Archived (0)
+              Archived ({categories.reduce((acc, cat) => acc + cat.jobDescriptions.filter((j: any) => j.archived || j.isArchived).length, 0)})
             </button>
           </div>
         </div>
@@ -350,7 +384,22 @@ export default function JobDescriptionsPage() {
         {/* Categories */}
         <div className="space-y-4">
           {categories.map((category) => {
-            const sortedJobs = sortJobs(category.jobDescriptions)
+            const currentItemView = categoryItemView[category.id] ?? (showArchived ? "archived" : "active")
+            const categoryJobs = category.jobDescriptions || []
+            const activeJobs = categoryJobs.filter((j: any) => !j.archived && !j.isArchived)
+            const archivedJobs = categoryJobs.filter((j: any) => j.archived || j.isArchived)
+            const completedJobs = activeJobs.filter((j: any) => j.approved)
+            const highlightedJobs = activeJobs.filter((j: any) => j.highlighted)
+            const currentJobs =
+              currentItemView === "archived"
+                ? archivedJobs
+                : currentItemView === "completed"
+                  ? completedJobs
+                  : currentItemView === "highlighted"
+                    ? highlightedJobs
+                    : activeJobs
+            const sortedJobs = sortJobs(currentJobs)
+            const isViewingArchivedItems = currentItemView === "archived"
             const isExpanded = expandedCategories.includes(category.id)
 
             return (
@@ -379,7 +428,7 @@ export default function JobDescriptionsPage() {
                     )}
                     <h2 className="text-xl font-bold">{category.title}</h2>
                     <span className="px-3 py-1 rounded-full text-sm font-medium bg-white bg-opacity-20">
-                      {category.jobDescriptions.length} job descriptions
+                      {currentJobs.length} job descriptions
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
@@ -396,6 +445,9 @@ export default function JobDescriptionsPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
+                        if (isViewingArchivedItems) {
+                          setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))
+                        }
                         setAddingJobToCategory(category.id)
                         if (!expandedCategories.includes(category.id)) {
                           setExpandedCategories(prev => [...prev, category.id])
@@ -479,8 +531,14 @@ export default function JobDescriptionsPage() {
                 {/* Job Descriptions List */}
                 {isExpanded && (
                   <div className="p-5">
+                    <div className="mb-4 flex gap-2">
+                      <button onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all" style={{ background: currentItemView === "active" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "active" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "active" ? COLORS.primary : COLORS.border }}>Active ({activeJobs.length})</button>
+                      <button onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "archived" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all" style={{ background: currentItemView === "archived" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "archived" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "archived" ? COLORS.primary : COLORS.border }}>Archived ({archivedJobs.length})</button>
+                      <button onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "completed" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all" style={{ background: currentItemView === "completed" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "completed" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "completed" ? COLORS.primary : COLORS.border }}>Completed ({completedJobs.length})</button>
+                      <button onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "highlighted" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all" style={{ background: currentItemView === "highlighted" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "highlighted" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "highlighted" ? COLORS.primary : COLORS.border }}>Highlighted ({highlightedJobs.length})</button>
+                    </div>
                     {/* Add Job Form */}
-                    {addingJobToCategory === category.id && (
+                    {addingJobToCategory === category.id && currentItemView === "active" && (
                       <div
                         className="mb-5 p-5 rounded-xl shadow-sm"
                         style={{
@@ -554,7 +612,9 @@ export default function JobDescriptionsPage() {
                     {sortedJobs.length === 0 ? (
                       <div className="text-center py-12">
                         <Briefcase className="w-12 h-12 mx-auto mb-3" style={{ color: COLORS.textLight }} />
-                        <p className="font-medium" style={{ color: COLORS.textSecondary }}>No job descriptions in this category</p>
+                        <p className="font-medium" style={{ color: COLORS.textSecondary }}>
+                          {isViewingArchivedItems ? "No archived job descriptions in this category" : currentItemView === "completed" ? "No completed job descriptions in this category" : currentItemView === "highlighted" ? "No highlighted job descriptions in this category" : "No job descriptions in this category"}
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -595,7 +655,7 @@ export default function JobDescriptionsPage() {
                               {/* Actions */}
                               <div className="flex items-center gap-1 mr-2">
                                 <button onClick={() => toggleHighlight(category.id, job.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: job.highlighted ? COLORS.warning : "#FEF3C7", color: job.highlighted ? COLORS.textWhite : "#92400E" }}><Star className="w-4 h-4" /></button>
-                                <button onClick={() => toggleApprove(category.id, job.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: job.approved ? COLORS.green500 : "#D1FAE5", color: job.approved ? COLORS.textWhite : "#065F46" }}><Check className="w-4 h-4" /></button>
+                                <button onClick={() => toggleApprove(category.id, job.id)} title={job.approved ? "Mark as Incomplete" : "Mark as Completed"} className="p-2 rounded-lg hover:scale-105" style={{ background: job.approved ? COLORS.green500 : "#D1FAE5", color: job.approved ? COLORS.textWhite : "#065F46" }}><Check className="w-4 h-4" /></button>
                                 <button onClick={() => togglePause(category.id, job.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: job.paused ? COLORS.warning : "#FEF3C7", color: job.paused ? COLORS.textWhite : "#92400E" }}><Pause className="w-4 h-4" /></button>
                               </div>
                               <div className="w-px h-6 bg-gray-300 mx-1"></div>
@@ -603,6 +663,11 @@ export default function JobDescriptionsPage() {
                                 <Link href={`/job-descriptions/${job.id}/edit`}><button className="p-2 rounded-lg hover:scale-105" style={{ background: "#DBEAFE", color: "#1E40AF" }}><Edit className="w-4 h-4" /></button></Link>
                                 <button className="p-2 rounded-lg hover:scale-105" style={{ background: "#E5E7EB", color: "#374151" }}><Copy className="w-4 h-4" /></button>
                                 <button className="p-2 rounded-lg hover:scale-105" style={{ background: "#E0E7FF", color: "#4338CA" }}><Download className="w-4 h-4" /></button>
+                                {!isViewingArchivedItems ? (
+                                  <button onClick={() => archiveJob(category.id, job.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: "#FFEDD5", color: "#9A3412" }}><Archive className="w-4 h-4" /></button>
+                                ) : (
+                                  <button onClick={() => unarchiveJob(category.id, job.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: "#DCFCE7", color: "#166534" }}><Archive className="w-4 h-4" /></button>
+                                )}
                                 <button onClick={() => deleteJob(category.id, job.id)} className="p-2 rounded-lg hover:scale-105" style={{ background: "#FEE2E2", color: "#991B1B" }}><Trash2 className="w-4 h-4" /></button>
                               </div>
                             </div>
@@ -618,5 +683,19 @@ export default function JobDescriptionsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function JobDescriptionsPage() {
+  return (
+    <DynamicModulePage
+      moduleSlug="job-descriptions"
+      title="Job Descriptions"
+      description="Manage role and responsibility documents"
+      itemLabel="Job"
+      icon={Briefcase}
+      newItemHref="/job-descriptions/new"
+      itemHrefPrefix="/job-descriptions"
+    />
   )
 }

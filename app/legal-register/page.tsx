@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
+import DynamicModulePage from "@/components/dynamic-module-page"
 
 // Sample data for Legal Register
 const initialCategories = [
@@ -50,7 +51,7 @@ const initialCategories = [
 
 type SortType = "name" | "compliance"
 
-export default function LegalRegisterPage() {
+function LegacyLegalRegisterPage() {
   const [categories, setCategories] = useState(initialCategories)
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1", "2"])
@@ -688,5 +689,29 @@ export default function LegalRegisterPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LegalRegisterPage() {
+  return (
+    <DynamicModulePage
+      moduleSlug="legal-register"
+      title="Legal Register"
+      description="Track legal and regulatory obligations"
+      itemLabel="Regulation"
+      icon={Scale}
+      newItemHref="/legal-register/new"
+      itemHrefPrefix="/legal-register"
+      dateFieldKey="lastReview"
+      formFields={[
+        { key: "title", label: "Title", required: true, placeholder: "Regulation title..." },
+        { key: "authority", label: "Authority", placeholder: "Authority..." },
+        { key: "description", label: "Description", type: "textarea", placeholder: "Description..." },
+        { key: "compliance", label: "Compliance", type: "select", options: ["Compliant", "Partial", "Non-Compliant"], defaultValue: "Compliant" },
+        { key: "lastReview", label: "Last Review", type: "date" },
+        { key: "nextReview", label: "Next Review", type: "date" },
+      ]}
+      listFieldKeys={["authority", "compliance", "lastReview", "nextReview"]}
+    />
   )
 }
