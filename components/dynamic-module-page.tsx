@@ -20,6 +20,7 @@ import {
   Copy,
   Download,
   ArrowLeft,
+  Bot,
   type LucideIcon,
 } from "lucide-react"
 import { COLORS } from "@/constant/colors"
@@ -45,6 +46,7 @@ type DynamicModulePageProps = {
   icon: LucideIcon
   newItemHref: string
   itemHrefPrefix: string
+  categoryType?: string
   titleFieldKey?: string
   dateFieldKey?: string
   formFields?: ModuleField[]
@@ -80,6 +82,7 @@ export default function DynamicModulePage({
   icon: Icon,
   newItemHref,
   itemHrefPrefix,
+  categoryType,
   titleFieldKey = "title",
   dateFieldKey = "issueDate",
   formFields = defaultFields,
@@ -99,6 +102,13 @@ export default function DynamicModulePage({
   const [addingItemToCategory, setAddingItemToCategory] = useState<string | null>(null)
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [newItemData, setNewItemData] = useState<Record<string, any>>({})
+  const [showAskMe, setShowAskMe] = useState(false)
+  const [selectedCategoryId, setSelectedCategoryId] = useState("")
+  const [selectedItemId, setSelectedItemId] = useState("")
+  const [aiQuestion, setAiQuestion] = useState("")
+  const [aiReply, setAiReply] = useState("")
+  const [aiLoading, setAiLoading] = useState(false)
+  const effectiveCategoryType = categoryType || moduleSlug
 
   const defaultNewItemData = useMemo(() => {
     const base: Record<string, any> = {}
@@ -134,7 +144,7 @@ export default function DynamicModulePage({
     try {
       const token = localStorage.getItem("token")
 
-      const catRes = await fetch(`/api/categories?type=${moduleSlug}`, { headers: { Authorization: `Bearer ${token}` } })
+      const catRes = await fetch(`/api/categories?type=${effectiveCategoryType}`, { headers: { Authorization: `Bearer ${token}` } })
       const categoriesData = await catRes.json()
       const itemsRes = await fetch(`/api/${moduleSlug}`, { headers: { Authorization: `Bearer ${token}` } })
       const itemsData = await itemsRes.json()
@@ -151,9 +161,10 @@ export default function DynamicModulePage({
 
       const allCategories = categoriesData.map((cat: any) => {
         const categoryId = toIdString(cat._id)
-        const activeItems = itemsData
+        const nonArchivedItems = itemsData
           .filter((i: any) => getItemCategoryId(i) === categoryId && !i.archived && !i.isArchived)
           .map(normalizeItem)
+        const activeItems = nonArchivedItems.filter((i: any) => !Boolean(i.approved))
         const categoryArchivedItems = archivedItems
           .filter((i: any) => getItemCategoryId(i) === categoryId)
           .map(normalizeItem)
@@ -165,8 +176,8 @@ export default function DynamicModulePage({
           archived: Boolean(cat.archived),
           items: activeItems,
           archivedItems: categoryArchivedItems,
-          completedItems: activeItems.filter((i: any) => Boolean(i.approved)),
-          highlightedItems: activeItems.filter((i: any) => Boolean(i.highlighted)),
+          completedItems: nonArchivedItems.filter((i: any) => Boolean(i.approved)),
+          highlightedItems: nonArchivedItems.filter((i: any) => Boolean(i.highlighted)),
         }
       })
 
@@ -215,7 +226,7 @@ export default function DynamicModulePage({
     if (!confirm("Archive this category?")) return
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`/api/categories/${categoryId}/archive?type=${moduleSlug}`, {
+      const response = await fetch(`/api/categories/${categoryId}/archive?type=${effectiveCategoryType}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       })
@@ -230,7 +241,7 @@ export default function DynamicModulePage({
     if (!confirm("Unarchive this category?")) return
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`/api/categories/${categoryId}/unarchive?type=${moduleSlug}`, {
+      const response = await fetch(`/api/categories/${categoryId}/unarchive?type=${effectiveCategoryType}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       })
@@ -286,11 +297,57 @@ export default function DynamicModulePage({
     }
   }
 
+  const downloadItem = async (item: any) => {
+    try {
+      setLoadingAction(`download-${item.id}`)
+
+      let fileData = item?.fileData
+      let fileName = item?.fileName
+      let fileType = item?.fileType
+
+      // Re-fetch latest row to ensure we get document fields.
+      if (!fileData) {
+        const token = localStorage.getItem("token")
+        const response = await fetch(`/api/${moduleSlug}/${item.id}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        if (response.ok) {
+          const latest = await response.json()
+          fileData = latest?.fileData
+          fileName = latest?.fileName
+          fileType = latest?.fileType
+        }
+      }
+
+      if (!fileData) {
+        alert("No uploaded document found for this task.")
+        return
+      }
+
+      const href =
+        typeof fileData === "string" && fileData.startsWith("data:")
+          ? fileData
+          : `data:${fileType || "application/octet-stream"};base64,${String(fileData)}`
+
+      const link = document.createElement("a")
+      link.href = href
+      link.download = fileName || `${getItemTitle(item)}.file`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (err) {
+      console.error("Download failed:", err)
+      alert("Failed to download file")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
   const deleteCategory = async (categoryId: string) => {
     if (!confirm("Are you sure you want to delete this category?")) return
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`/api/categories/${categoryId}?type=${moduleSlug}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
+      const response = await fetch(`/api/categories/${categoryId}?type=${effectiveCategoryType}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
       if (!response.ok) throw new Error("Failed to delete category")
       await loadData()
     } catch {
@@ -302,7 +359,7 @@ export default function DynamicModulePage({
     if (!editTitle.trim()) return
     try {
       const token = localStorage.getItem("token")
-      await fetch(`/api/categories/${categoryId}?type=${moduleSlug}`, {
+      await fetch(`/api/categories/${categoryId}?type=${effectiveCategoryType}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name: editTitle.trim() }),
@@ -322,7 +379,7 @@ export default function DynamicModulePage({
       const response = await fetch("/api/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name: newCategoryTitle, type: moduleSlug }),
+        body: JSON.stringify({ name: newCategoryTitle, type: effectiveCategoryType }),
       })
       if (!response.ok) throw new Error("Failed to add category")
       setNewCategoryTitle("")
@@ -425,6 +482,103 @@ export default function DynamicModulePage({
 
   const displayKeys = listFieldKeys?.length ? listFieldKeys : formFields.map((f) => f.key).filter((k) => k !== titleFieldKey).slice(0, 4)
 
+  const allItemsForAi = useMemo(() => {
+    const active = categories.flatMap((cat: any) =>
+      (cat.items || []).map((item: any) => ({ ...item, categoryTitle: cat.title, categoryId: cat.id }))
+    )
+    const archived = archivedCategories.flatMap((cat: any) =>
+      (cat.archivedItems || []).map((item: any) => ({
+        ...item,
+        categoryTitle: `${cat.title} (Archived)`,
+        categoryId: cat.id,
+      }))
+    )
+    return [...active, ...archived]
+  }, [categories, archivedCategories])
+
+  const allCategoryOptions = useMemo(() => {
+    const active = categories.map((cat: any) => ({ id: cat.id, title: cat.title }))
+    const archived = archivedCategories
+      .filter((cat: any) => !active.some((a: any) => a.id === cat.id))
+      .map((cat: any) => ({ id: cat.id, title: `${cat.title} (Archived)` }))
+    return [...active, ...archived]
+  }, [categories, archivedCategories])
+
+  const filteredItemsForAi = useMemo(() => {
+    if (!selectedCategoryId) return allItemsForAi
+    return allItemsForAi.filter((item: any) => item.categoryId === selectedCategoryId)
+  }, [allItemsForAi, selectedCategoryId])
+
+  useEffect(() => {
+    if (!showAskMe) return
+    if (!filteredItemsForAi.some((item: any) => item.id === selectedItemId)) {
+      setSelectedItemId(filteredItemsForAi[0]?.id || "")
+    }
+  }, [selectedCategoryId, showAskMe, selectedItemId, filteredItemsForAi])
+
+  const callModuleAi = async (payload: Record<string, unknown>) => {
+    setAiLoading(true)
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(`/api/${moduleSlug}/ai`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result?.error || "AI request failed")
+      setAiReply(result?.answer || "No response")
+    } catch (err) {
+      console.error("Module AI failed:", err)
+      alert("Failed to generate AI response")
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const handleSummarizeAllTasks = async () => {
+    await callModuleAi({
+      action: selectedCategoryId ? "summarize-category" : "summarize-all",
+      categoryId: selectedCategoryId || undefined,
+    })
+  }
+
+  const handleAskSelectedTask = async () => {
+    const itemId = selectedItemId
+    const question = aiQuestion.trim()
+
+    if (itemId) {
+      await callModuleAi({
+        action: "ask-one",
+        itemId,
+        question,
+      })
+      return
+    }
+
+    if (selectedCategoryId) {
+      await callModuleAi({
+        action: "ask-category",
+        categoryId: selectedCategoryId,
+        question,
+      })
+      return
+    }
+
+    if (!question) {
+      alert(`Please select a category or ${itemLabel.toLowerCase()}, or enter a question.`)
+      return
+    }
+
+    await callModuleAi({
+      action: "summarize-all",
+      question,
+    })
+  }
+
   return (
     <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
       <div className="p-6">
@@ -444,6 +598,23 @@ export default function DynamicModulePage({
             </div>
           </div>
           <div className="flex gap-3">
+            <button
+              onClick={() => {
+                const firstCategoryId = allCategoryOptions[0]?.id || ""
+                setSelectedCategoryId(firstCategoryId)
+                const firstItem =
+                  allItemsForAi.find((item: any) => item.categoryId === firstCategoryId) ||
+                  allItemsForAi[0]
+                setSelectedItemId(firstItem?.id || "")
+                setAiQuestion("")
+                setAiReply("")
+                setShowAskMe(true)
+              }}
+              className="px-4 py-2.5 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2"
+              style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}
+            >
+              <Bot className="w-4 h-4" /> Ask Me
+            </button>
             <button onClick={() => setShowAddCategory(!showAddCategory)} className="px-4 py-2.5 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>
               <Plus className="w-4 h-4" /> Add Category
             </button>
@@ -560,7 +731,7 @@ export default function DynamicModulePage({
                           <div key={item.id} className="flex items-center gap-3 p-4 rounded-lg hover:shadow-md transition-all" style={{ background: item.paused ? `${COLORS.warning}05` : item.highlighted ? `${COLORS.primary}05` : COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
                             <button className="cursor-move hover:bg-gray-50 h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200"><GripVertical className="w-5 h-5" style={{ color: "#9CA3AF" }} /></button>
                             <div className="flex-1">
-                              <Link href={`${itemHrefPrefix}/${item.id}`} className="font-semibold hover:underline text-lg" style={{ color: COLORS.textPrimary }}>{getItemTitle(item)}</Link>
+                              <Link href={`/task/${moduleSlug}/${item.id}?back=${encodeURIComponent(itemHrefPrefix)}`} className="font-semibold hover:underline text-lg" style={{ color: COLORS.textPrimary }}>{getItemTitle(item)}</Link>
                               <div className="flex gap-4 text-sm mt-1.5 flex-wrap" style={{ color: COLORS.textSecondary }}>
                                 {displayKeys.map((key) => (
                                   <span key={key}>
@@ -579,7 +750,7 @@ export default function DynamicModulePage({
                               <div className="flex items-center gap-1">
                                 <Link href={`${itemHrefPrefix}/${item.id}/edit`}><button className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#3B82F6" }}><Edit className="w-5 h-5" /></button></Link>
                                 <button onClick={() => copyItem(category.id, item)} disabled={loadingAction === `copy-${item.id}`} className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#6B7280", opacity: loadingAction === `copy-${item.id}` ? 0.6 : 1 }}><Copy className="w-5 h-5" /></button>
-                                <button className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#3B82F6" }}><Download className="w-5 h-5" /></button>
+                                <button onClick={() => downloadItem(item)} disabled={loadingAction === `download-${item.id}`} className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#3B82F6", opacity: loadingAction === `download-${item.id}` ? 0.6 : 1 }}><Download className="w-5 h-5" /></button>
                                 {!isViewingArchivedItems ? (
                                   <button onClick={() => updateItem(item.id, { archived: true, isArchived: true }, "archive")} disabled={loadingAction === `archive-${item.id}`} className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#F97316" }}><Archive className="w-5 h-5" /></button>
                                 ) : (
@@ -598,6 +769,99 @@ export default function DynamicModulePage({
             )
           })}
         </div>
+
+        {showAskMe && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.35)" }}>
+            <div className="w-full max-w-2xl rounded-2xl shadow-xl" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
+              <div className="p-5 border-b flex items-center justify-between" style={{ borderColor: COLORS.border }}>
+                <div className="flex items-center gap-2">
+                  <Bot className="w-5 h-5" style={{ color: COLORS.primary }} />
+                  <h3 className="text-lg font-bold" style={{ color: COLORS.textPrimary }}>
+                    {title} AI Assistant
+                  </h3>
+                </div>
+                <button onClick={() => setShowAskMe(false)} className="px-3 py-1.5 rounded-lg text-sm" style={{ background: COLORS.bgGray, color: COLORS.textPrimary }}>
+                  Close
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                    Select Category
+                  </label>
+                  <select
+                    value={selectedCategoryId}
+                    onChange={(e) => setSelectedCategoryId(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
+                  >
+                    <option value="">All Categories</option>
+                    {allCategoryOptions.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                    Select {itemLabel}
+                  </label>
+                  <select
+                    value={selectedItemId}
+                    onChange={(e) => setSelectedItemId(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
+                  >
+                    <option value="">Select {itemLabel.toLowerCase()}...</option>
+                    {filteredItemsForAi.map((item: any) => (
+                      <option key={item.id} value={item.id}>
+                        {getItemTitle(item)} - {item.categoryTitle}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                    Ask Question (optional)
+                  </label>
+                  <textarea
+                    value={aiQuestion}
+                    onChange={(e) => setAiQuestion(e.target.value)}
+                    placeholder={`Example: summarize this ${itemLabel.toLowerCase()} and key actions`}
+                    rows={4}
+                    className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-400"
+                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <button onClick={handleSummarizeAllTasks} disabled={aiLoading} className="px-5 py-2.5 rounded-lg font-medium" style={{ background: COLORS.primaryGradient, color: COLORS.textWhite, opacity: aiLoading ? 0.7 : 1 }}>
+                    {aiLoading
+                      ? "Generating..."
+                      : selectedCategoryId
+                        ? "Generate Summary (Selected Category)"
+                        : "Generate Summary (All Tasks)"}
+                  </button>
+                  <button onClick={handleAskSelectedTask} disabled={aiLoading} className="px-5 py-2.5 rounded-lg font-medium" style={{ background: COLORS.bgWhite, color: COLORS.primary, border: `1px solid ${COLORS.primary}`, opacity: aiLoading ? 0.7 : 1 }}>
+                    Ask Selected {itemLabel}
+                  </button>
+                  <button onClick={() => { setAiQuestion(""); setAiReply("") }} className="px-5 py-2.5 rounded-lg font-medium" style={{ background: COLORS.bgGray, color: COLORS.textPrimary }}>
+                    Clear
+                  </button>
+                </div>
+
+                {aiReply && (
+                  <pre className="mt-2 p-4 rounded-xl text-sm whitespace-pre-wrap" style={{ background: COLORS.bgGray, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>
+                    {aiReply}
+                  </pre>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
