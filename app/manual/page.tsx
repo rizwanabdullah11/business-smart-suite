@@ -21,7 +21,8 @@ import {
   MoreVertical,
   Copy,
   Download,
-  ArrowLeft
+  ArrowLeft,
+  Bot,
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
@@ -71,6 +72,12 @@ export default function ManualPage() {
     location: "",
     issueDate: new Date().toISOString().split('T')[0]
   })
+  const [showAskMe, setShowAskMe] = useState(false)
+  const [selectedCategoryId, setSelectedCategoryId] = useState("")
+  const [aiQuestion, setAiQuestion] = useState("")
+  const [aiReply, setAiReply] = useState("")
+  const [aiLoading, setAiLoading] = useState(false)
+  const [selectedManualId, setSelectedManualId] = useState("")
 
   useEffect(() => {
     loadData()
@@ -658,6 +665,110 @@ export default function ManualPage() {
     }
   }
 
+  const allManualOptions = () => {
+    const active = categories.flatMap((cat: any) =>
+      (cat.manuals || []).map((m: any) => ({
+        id: m.id,
+        title: m.title,
+        categoryId: cat.id,
+        category: cat.title,
+      }))
+    )
+    const archived = archivedCategories.flatMap((cat: any) =>
+      (cat.archivedManuals || []).map((m: any) => ({
+        id: m.id,
+        title: m.title,
+        categoryId: cat.id,
+        category: `${cat.title} (Archived)`,
+      }))
+    )
+    return [...active, ...archived]
+  }
+
+  const allCategoryOptions = () => {
+    const active = categories.map((cat: any) => ({ id: cat.id, title: cat.title }))
+    const archived = archivedCategories
+      .filter((cat: any) => !active.some((a: any) => a.id === cat.id))
+      .map((cat: any) => ({ id: cat.id, title: `${cat.title} (Archived)` }))
+    return [...active, ...archived]
+  }
+
+  const filteredManualOptions = () => {
+    const all = allManualOptions()
+    if (!selectedCategoryId) return all
+    return all.filter((manual: any) => manual.categoryId === selectedCategoryId)
+  }
+
+  const callManualAi = async (payload: Record<string, unknown>) => {
+    setAiLoading(true)
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch("/api/manuals/ai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result?.error || "AI request failed")
+      setAiReply(result?.answer || "No response")
+    } catch (err) {
+      console.error("Manual AI error:", err)
+      alert("Failed to generate AI response")
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const handleGenerateSummary = async () => {
+    await callManualAi({
+      action: selectedCategoryId ? "summarize-category" : "summarize-all",
+      categoryId: selectedCategoryId || undefined,
+    })
+  }
+
+  const handleAskSelectedManual = async () => {
+    const manualId = selectedManualId
+    const question = aiQuestion.trim()
+
+    if (manualId) {
+      await callManualAi({
+        action: "ask-one",
+        manualId,
+        question,
+      })
+      return
+    }
+
+    if (selectedCategoryId) {
+      await callManualAi({
+        action: "ask-category",
+        categoryId: selectedCategoryId,
+        question,
+      })
+      return
+    }
+
+    if (!question) {
+      alert("Please select a category or manual, or enter a question.")
+      return
+    }
+
+    await callManualAi({
+      action: "summarize-all",
+      question,
+    })
+  }
+
+  useEffect(() => {
+    if (!showAskMe) return
+    const options = filteredManualOptions()
+    if (!options.some((m: any) => m.id === selectedManualId)) {
+      setSelectedManualId(options[0]?.id || "")
+    }
+  }, [selectedCategoryId, showAskMe, selectedManualId, categories, archivedCategories])
   return (
     <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
       <div className="p-6">
@@ -695,6 +806,29 @@ export default function ManualPage() {
             </div>
           </div>
           <div className="flex gap-3">
+            <button
+              onClick={() => {
+                const categoryOptions = allCategoryOptions()
+                const firstCategoryId = categoryOptions[0]?.id || ""
+                setSelectedCategoryId(firstCategoryId)
+                const options = allManualOptions()
+                const firstManual =
+                  options.find((m: any) => m.categoryId === firstCategoryId) || options[0]
+                setSelectedManualId(firstManual?.id || "")
+                setAiQuestion("")
+                setAiReply("")
+                setShowAskMe(true)
+              }}
+              className="px-4 py-2.5 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2"
+              style={{
+                background: COLORS.bgWhite,
+                color: COLORS.textPrimary,
+                border: `1px solid ${COLORS.border}`,
+              }}
+            >
+              <Bot className="w-4 h-4" />
+              Ask Me
+            </button>
             <button
               onClick={() => setShowAddCategory(!showAddCategory)}
               className="px-4 py-2.5 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2"
@@ -1408,6 +1542,118 @@ export default function ManualPage() {
             <p style={{ color: COLORS.textSecondary }}>
               Archived manuals and categories will appear here
             </p>
+          </div>
+        )}
+
+        {showAskMe && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.35)" }}>
+            <div className="w-full max-w-2xl rounded-2xl shadow-xl" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
+              <div className="p-5 border-b flex items-center justify-between" style={{ borderColor: COLORS.border }}>
+                <div className="flex items-center gap-2">
+                  <Bot className="w-5 h-5" style={{ color: COLORS.primary }} />
+                  <h3 className="text-lg font-bold" style={{ color: COLORS.textPrimary }}>Manual AI Assistant</h3>
+                </div>
+                <button
+                  onClick={() => setShowAskMe(false)}
+                  className="px-3 py-1.5 rounded-lg text-sm"
+                  style={{ background: COLORS.bgGray, color: COLORS.textPrimary }}
+                >
+                  Close
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                    Select Category
+                  </label>
+                  <select
+                    value={selectedCategoryId}
+                    onChange={(e) => setSelectedCategoryId(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
+                  >
+                    <option value="">All Categories</option>
+                    {allCategoryOptions().map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                    Select Manual
+                  </label>
+                  <select
+                    value={selectedManualId}
+                    onChange={(e) => setSelectedManualId(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
+                  >
+                    <option value="">Select manual...</option>
+                    {filteredManualOptions().map((manual) => (
+                      <option key={manual.id} value={manual.id}>
+                        {manual.title} - {manual.category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                    Ask Question (optional)
+                  </label>
+                  <textarea
+                    value={aiQuestion}
+                    onChange={(e) => setAiQuestion(e.target.value)}
+                    placeholder="Example: summarize this manual and key actions"
+                    rows={4}
+                    className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-400"
+                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={handleGenerateSummary}
+                    disabled={aiLoading}
+                    className="px-5 py-2.5 rounded-lg font-medium"
+                    style={{ background: COLORS.primaryGradient, color: COLORS.textWhite, opacity: aiLoading ? 0.7 : 1 }}
+                  >
+                    {aiLoading
+                      ? "Generating..."
+                      : selectedCategoryId
+                        ? "Generate Summary (Selected Category)"
+                        : "Generate Summary (All Tasks)"}
+                  </button>
+                  <button
+                    onClick={handleAskSelectedManual}
+                    disabled={aiLoading}
+                    className="px-5 py-2.5 rounded-lg font-medium"
+                    style={{ background: COLORS.bgWhite, color: COLORS.primary, border: `1px solid ${COLORS.primary}`, opacity: aiLoading ? 0.7 : 1 }}
+                  >
+                    Ask Selected Manual
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAiQuestion("")
+                      setAiReply("")
+                    }}
+                    className="px-5 py-2.5 rounded-lg font-medium"
+                    style={{ background: COLORS.bgGray, color: COLORS.textPrimary }}
+                  >
+                    Clear
+                  </button>
+                </div>
+
+                {aiReply && (
+                  <pre className="mt-2 p-4 rounded-xl text-sm whitespace-pre-wrap" style={{ background: COLORS.bgGray, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>
+                    {aiReply}
+                  </pre>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
