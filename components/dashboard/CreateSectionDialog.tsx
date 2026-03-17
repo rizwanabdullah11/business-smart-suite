@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
     Dialog,
     DialogContent,
@@ -11,7 +11,6 @@ import {
     DialogClose
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/Input"
-import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/Button"
 import {
     Select,
@@ -21,54 +20,154 @@ import {
     SelectValue
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import {
-    FileText,
-    Folder,
-    Star,
-    Shield,
-    Briefcase,
-    Users,
-    Settings,
-    Layout
-} from "lucide-react"
 import { COLORS } from "@/constant/colors"
 import { useToast } from "@/components/ui/use-toast"
+import { DASHBOARD_ICON_OPTIONS } from "@/lib/dashboard-icon-map"
 
 interface CreateSectionDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
 }
 
-const ICONS = [
-    { value: "FileText", label: "File Text", icon: FileText },
-    { value: "Folder", label: "Folder", icon: Folder },
-    { value: "Star", label: "Star", icon: Star },
-    { value: "Shield", label: "Shield", icon: Shield },
-    { value: "Briefcase", label: "Briefcase", icon: Briefcase },
-    { value: "Users", label: "Users", icon: Users },
-    { value: "Settings", label: "Settings", icon: Settings },
-    { value: "Layout", label: "Layout", icon: Layout },
-]
+function toSlug(value: string) {
+    return value
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+}
 
 export function CreateSectionDialog({ open, onOpenChange }: CreateSectionDialogProps) {
     const { toast } = useToast()
     const [title, setTitle] = useState("")
-    const [description, setDescription] = useState("")
     const [icon, setIcon] = useState("FileText")
+    const [selectedModules, setSelectedModules] = useState<string[]>([])
+    const [customModules, setCustomModules] = useState<Array<{ label: string; href: string; moduleSlug: string }>>([])
+    const [newModuleName, setNewModuleName] = useState("")
+    const [newModuleIcon, setNewModuleIcon] = useState("FileText")
+
+    useEffect(() => {
+        const loadCustomModules = () => {
+            try {
+                const raw = localStorage.getItem("customDashboardModules")
+                const parsed = raw ? JSON.parse(raw) : []
+                setCustomModules(Array.isArray(parsed) ? parsed : [])
+            } catch {
+                setCustomModules([])
+            }
+        }
+        loadCustomModules()
+        window.addEventListener("custom-modules-updated", loadCustomModules)
+        return () => window.removeEventListener("custom-modules-updated", loadCustomModules)
+    }, [])
+
+    const selectedModuleLabels = useMemo(() => {
+        return customModules
+            .filter((module) => selectedModules.includes(module.href))
+            .map((module) => module.label)
+    }, [customModules, selectedModules])
+
+    const handleCreateModule = () => {
+        const name = newModuleName.trim()
+        if (!name) {
+            toast({
+                title: "Module name required",
+                description: "Please enter a module name.",
+                variant: "destructive",
+            })
+            return
+        }
+
+        const slug = toSlug(name)
+        if (!slug) {
+            toast({
+                title: "Invalid module name",
+                description: "Use letters and numbers for module name.",
+                variant: "destructive",
+            })
+            return
+        }
+
+        const module = {
+            label: name,
+            slug,
+            href: `/custom-modules/${slug}`,
+            moduleSlug: `custom-${slug}`,
+            icon: newModuleIcon,
+            createdAt: new Date().toISOString(),
+        }
+
+        const storageKey = "customDashboardModules"
+        const existingRaw = localStorage.getItem(storageKey)
+        const existing = existingRaw ? JSON.parse(existingRaw) : []
+        const list = Array.isArray(existing) ? existing : []
+
+        if (list.some((m: any) => String(m?.slug || "") === slug || String(m?.href || "") === module.href)) {
+            toast({
+                title: "Module already exists",
+                description: "A custom module with this name already exists.",
+                variant: "destructive",
+            })
+            return
+        }
+
+        const next = [...list, module]
+        localStorage.setItem(storageKey, JSON.stringify(next))
+        window.dispatchEvent(new CustomEvent("custom-modules-updated"))
+        setSelectedModules((prev) => (prev.includes(module.href) ? prev : [...prev, module.href]))
+        setNewModuleName("")
+        setNewModuleIcon("FileText")
+        toast({
+            title: "Module Created",
+            description: `${name} module has been added.`,
+        })
+    }
 
     const handleCreate = () => {
-        // Here you would typically call an API or update state
-        console.log("Creating section:", { title, description, icon })
+        if (!title.trim()) {
+            toast({
+                title: "Title required",
+                description: "Please enter a section title.",
+                variant: "destructive",
+            })
+            return
+        }
+
+        if (selectedModules.length === 0) {
+            toast({
+                title: "Select at least one module",
+                description: "Choose modules to include inside this section.",
+                variant: "destructive",
+            })
+            return
+        }
+
+        const section = {
+            id: `custom-${Date.now()}`,
+            title: title.trim(),
+            icon,
+            moduleHrefs: selectedModules,
+            createdAt: new Date().toISOString(),
+        }
+
+        const storageKey = "customDashboardSections"
+        const existingRaw = localStorage.getItem(storageKey)
+        const existing = existingRaw ? JSON.parse(existingRaw) : []
+        const next = Array.isArray(existing) ? [...existing, section] : [section]
+        localStorage.setItem(storageKey, JSON.stringify(next))
+        window.dispatchEvent(new CustomEvent("custom-sections-updated"))
 
         toast({
             title: "Section Created",
-            description: `Successfully created custom section: ${title}`,
+            description: `Successfully created custom section: ${section.title}`,
         })
 
         // Reset and close
         setTitle("")
-        setDescription("")
         setIcon("FileText")
+        setSelectedModules([])
+        setNewModuleName("")
+        setNewModuleIcon("FileText")
         onOpenChange(false)
     }
 
@@ -77,10 +176,7 @@ export function CreateSectionDialog({ open, onOpenChange }: CreateSectionDialogP
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle className="text-xl font-bold text-black">Create Custom Section</DialogTitle>
-                    <DialogDescription className="text-gray-500">
-                        Add a new custom section to organize your content.
-                        This will appear as a new box on the homepage.
-                    </DialogDescription>
+                    <DialogDescription className="text-gray-500">Create a custom section and add new modules.</DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-6 py-4">
@@ -96,24 +192,13 @@ export function CreateSectionDialog({ open, onOpenChange }: CreateSectionDialogP
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="description" className="font-semibold text-gray-700">Description</Label>
-                        <Textarea
-                            id="description"
-                            placeholder="Enter section description"
-                            className="min-h-[100px] resize-none rounded-lg border-gray-300 focus:ring-2 focus:ring-indigo-500 text-black placeholder:text-gray-500"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                        />
-                    </div>
-
-                    <div className="space-y-2">
                         <Label htmlFor="icon" className="font-semibold text-gray-700">Icon</Label>
                         <Select value={icon} onValueChange={setIcon}>
                             <SelectTrigger className="h-11 rounded-lg border-gray-300 text-black">
                                 <SelectValue placeholder="Select an icon" />
                             </SelectTrigger>
                             <SelectContent className="bg-white border-gray-200">
-                                {ICONS.map((item) => {
+                                {DASHBOARD_ICON_OPTIONS.map((item) => {
                                     const IconComponent = item.icon
                                     return (
                                         <SelectItem key={item.value} value={item.value} className="text-black hover:bg-gray-100 cursor-pointer">
@@ -126,6 +211,47 @@ export function CreateSectionDialog({ open, onOpenChange }: CreateSectionDialogP
                                 })}
                             </SelectContent>
                         </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label className="font-semibold text-gray-700">Create New Module</Label>
+                        <div className="flex gap-2">
+                            <Input
+                                value={newModuleName}
+                                onChange={(e) => setNewModuleName(e.target.value)}
+                                placeholder="Enter module name (e.g. Incident Register)"
+                                className="h-11 rounded-lg border-gray-300 focus:ring-2 focus:ring-indigo-500 text-black placeholder:text-gray-500"
+                            />
+                            <Select value={newModuleIcon} onValueChange={setNewModuleIcon}>
+                                <SelectTrigger className="h-11 w-[190px] rounded-lg border-gray-300 text-black">
+                                    <SelectValue placeholder="Select module icon" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white border-gray-200 max-h-72">
+                                    {DASHBOARD_ICON_OPTIONS.map((item) => {
+                                        const IconComponent = item.icon
+                                        return (
+                                            <SelectItem key={`module-${item.value}`} value={item.value} className="text-black hover:bg-gray-100 cursor-pointer">
+                                                <div className="flex items-center gap-2">
+                                                    <IconComponent className="w-4 h-4 text-gray-500" />
+                                                    <span>{item.label}</span>
+                                                </div>
+                                            </SelectItem>
+                                        )
+                                    })}
+                                </SelectContent>
+                            </Select>
+                            <Button
+                                type="button"
+                                onClick={handleCreateModule}
+                                className="h-11 px-4 rounded-lg font-semibold text-white"
+                                style={{ background: COLORS.primary }}
+                            >
+                                Add Module
+                            </Button>
+                        </div>
+                        <p className="text-xs" style={{ color: COLORS.textSecondary }}>
+                            Added modules: {selectedModuleLabels.length ? selectedModuleLabels.join(", ") : "None"}
+                        </p>
                     </div>
                 </div>
 

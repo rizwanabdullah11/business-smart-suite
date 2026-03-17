@@ -28,7 +28,7 @@ const ALLOWED_MODULES = new Set([
 ])
 
 export function isSupportedModule(module: string) {
-  return ALLOWED_MODULES.has(module)
+  return ALLOWED_MODULES.has(module) || module.startsWith("custom-")
 }
 
 function toModelName(module: string) {
