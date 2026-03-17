@@ -685,7 +685,7 @@ export default function DynamicModulePage({
                           <div key={item.id} className="flex items-center gap-3 p-4 rounded-lg hover:shadow-md transition-all" style={{ background: item.paused ? `${COLORS.warning}05` : item.highlighted ? `${COLORS.primary}05` : COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
                             <button className="cursor-move hover:bg-gray-50 h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200"><GripVertical className="w-5 h-5" style={{ color: "#9CA3AF" }} /></button>
                             <div className="flex-1">
-                              <Link href={`${itemHrefPrefix}/${item.id}`} className="font-semibold hover:underline text-lg" style={{ color: COLORS.textPrimary }}>{getItemTitle(item)}</Link>
+                              <Link href={`/task/${moduleSlug}/${item.id}?back=${encodeURIComponent(itemHrefPrefix)}`} className="font-semibold hover:underline text-lg" style={{ color: COLORS.textPrimary }}>{getItemTitle(item)}</Link>
                               <div className="flex gap-4 text-sm mt-1.5 flex-wrap" style={{ color: COLORS.textSecondary }}>
                                 {displayKeys.map((key) => (
                                   <span key={key}>

@@ -1316,7 +1316,7 @@ export default function ManualPage() {
                             </button>
                             <div className="flex-1">
                               <Link
-                                href={`/manual/${manual.id}`}
+                                href={`/task/manuals/${manual.id}?back=${encodeURIComponent("/manual")}`}
                                 className="font-bold hover:underline text-xl"
                                 style={{ color: COLORS.textPrimary }}
                               >
