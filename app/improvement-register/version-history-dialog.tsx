@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/Button"
+import { Input } from "@/components/ui/Input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { 
@@ -83,11 +83,11 @@ export default function VersionHistoryDialog({ open, onOpenChange }: VersionHist
       ])
       
       if (versionsResult.success) {
-        setVersions(versionsResult.data)
+        setVersions(versionsResult.data ?? [])
       }
       
       if (reviewsResult.success) {
-        setReviews(reviewsResult.data)
+        setReviews(reviewsResult.data ?? [])
       }
     } catch (error) {
       console.error("Error loading data:", error)

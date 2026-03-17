@@ -9,7 +9,9 @@ export async function ProcedureAuditsTable({ procedureId }: { procedureId: strin
     include: { audit: true },
     orderBy: { createdAt: "desc" },
   })
-  const audits = auditDocs.map(ad => ad.audit).filter(Boolean)
+  const audits = (auditDocs as Array<{ audit: any | null }>)
+    .map((auditDoc: { audit: any | null }) => auditDoc.audit)
+    .filter(Boolean)
 
   if (!audits.length) {
     return <div className="p-4 text-center text-gray-500">No audits found for this procedure.</div>

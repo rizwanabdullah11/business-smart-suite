@@ -1,10 +1,11 @@
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/Button"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import prisma from "@/lib/prisma"
-import { hasPermission } from "@/lib/auth"
+import { getUser, hasPermission } from "@/lib/auth"
+import { Permission } from "@/lib/types/permissions"
 import { redirect, notFound } from "next/navigation"
-import AuditDocumentList from "@/app/components/audit-document-list"
+import AuditDocumentList from "@/components/audit-document-list"
 
 interface AuditDocumentsPageProps {
   params: {
@@ -13,7 +14,8 @@ interface AuditDocumentsPageProps {
 }
 
 export default async function AuditDocumentsPage({ params }: AuditDocumentsPageProps) {
-  const canEdit = await hasPermission("write", "audit-schedule")
+  const user = await getUser()
+  const canEdit = hasPermission(user, Permission.EDIT_AUDIT_SCHEDULE)
 
 
   // await params first

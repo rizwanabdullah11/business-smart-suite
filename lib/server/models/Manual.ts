@@ -15,6 +15,7 @@ export interface IManual extends mongoose.Document {
   fileName?: string
   fileType?: string
   fileSize?: number
+  createdBy?: mongoose.Types.ObjectId
   createdAt: Date
   updatedAt: Date
 }
@@ -69,6 +70,10 @@ const manualSchema = new Schema<IManual>(
     fileName: String,
     fileType: String,
     fileSize: Number,
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
   },
   {
     timestamps: true,

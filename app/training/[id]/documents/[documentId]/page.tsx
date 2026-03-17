@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, FileText, Download } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/Button'
 
 export default async function EmployeeDocumentPreviewPage({ params }: { params: Promise<{ id: string, documentId: string }> }) {
   const { id, documentId } = await params

@@ -3,6 +3,7 @@ import jwt, { type JwtPayload } from "jsonwebtoken"
 import { connectToDatabase } from "./db"
 import User from "./models/User"
 import { normalizeRole } from "./utils/roles"
+import { Role } from "../types/permissions"
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
 
@@ -10,7 +11,7 @@ export type AuthUser = {
   id: string
   name: string
   email: string
-  role: "admin" | "organization" | "employee"
+  role: Role
   organizationId?: string
 }
 
@@ -23,9 +24,9 @@ type TokenPayload = JwtPayload & {
 
 function roleForClient(input?: string): AuthUser["role"] {
   const normalized = normalizeRole(input)
-  if (normalized === "Admin") return "admin"
-  if (normalized === "Organization") return "organization"
-  return "employee"
+  if (normalized === "Admin") return Role.ADMIN
+  if (normalized === "Organization") return Role.ORGANIZATION
+  return Role.EMPLOYEE
 }
 
 export function extractTokenFromRequest(request: NextRequest): string | null {

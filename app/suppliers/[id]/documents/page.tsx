@@ -2,7 +2,7 @@
 
 import { getSupplier } from "../../../actions/supplier-actions"
 import { redirect } from "next/navigation"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/Button"
 import Link from "next/link"
 import { ArrowLeft } from 'lucide-react'
 import DocumentUpload from "../../document-upload"
@@ -25,7 +25,7 @@ export default async function SupplierDocumentsPage({
   const id = params.id;
   
   const user = await getUser()
-  const canEdit = user?.role === "admin" || user?.role === "manager"
+  const canEdit = user?.role === "admin" || user?.role === "organization"
   const canDelete = user?.role === "admin"
   
   const result = await getSupplier(id)

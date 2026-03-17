@@ -119,3 +119,15 @@ export async function isAuthenticated(): Promise<boolean> {
   const user = await getUser()
   return user !== null
 }
+
+export async function canWrite(_module: string): Promise<boolean> {
+  const user = await getUser()
+  if (!user) return false
+  return user.role === Role.ADMIN || user.role === Role.ORGANIZATION
+}
+
+export async function canDelete(_module: string): Promise<boolean> {
+  const user = await getUser()
+  if (!user) return false
+  return user.role === Role.ADMIN
+}

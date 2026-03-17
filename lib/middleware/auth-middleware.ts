@@ -16,11 +16,11 @@ export interface AuthMiddlewareOptions {
  * Usage:
  * export const GET = withAuth(handler, { requiredPermissions: [Permission.VIEW_MANUALS] })
  */
-export function withAuth(
-  handler: (request: NextRequest, user: AuthUser, context?: unknown) => Promise<NextResponse>,
+export function withAuth<C = unknown>(
+  handler: (request: NextRequest, user: AuthUser, context: C) => Promise<NextResponse>,
   options: AuthMiddlewareOptions = {}
 ) {
-  return async (request: NextRequest, context?: unknown) => {
+  return async (request: NextRequest, context: any) => {
     try {
       const user = await getAuthenticatedUser(request)
       if (!user) {
@@ -56,7 +56,7 @@ export function withAuth(
 
       // Next.js 16 can provide dynamic route params as a Promise in route handlers.
       // Resolve it here once so individual handlers can safely read params synchronously.
-      let resolvedContext = context
+      let resolvedContext: C = context as C
       if (context && typeof context === "object" && "params" in context) {
         const contextWithParams = context as { params?: unknown }
         const maybePromise = contextWithParams.params as Promise<unknown> | undefined
@@ -65,7 +65,7 @@ export function withAuth(
           resolvedContext = {
             ...contextWithParams,
             params: await maybePromise,
-          }
+          } as C
         }
       }
 

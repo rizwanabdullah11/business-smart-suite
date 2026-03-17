@@ -93,6 +93,11 @@ export const COLORS = {
     green100: "#dcfce7",
     green50: "#f0fdf4",
 
+    // Common semantic aliases used across pages
+    success: "#16a34a",
+    warning: "#f97316",
+    danger: "#dc2626",
+
     // Purple/Violet Colors (for premium accents)
     purple900: "#581c87",
     purple800: "#6b21a8",

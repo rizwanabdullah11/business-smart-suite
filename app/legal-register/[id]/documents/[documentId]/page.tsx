@@ -2,7 +2,7 @@ import { notFound } from "next/navigation"
 import prisma from "@/lib/prisma"
 import { getUser } from "@/lib/auth"
 import { format } from "date-fns"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/Button"
 import { ArrowLeft, Download, History, Eye } from "lucide-react"
 import Link from "next/link"
 import DocumentPreview from "@/components/document-preview"
@@ -73,7 +73,7 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
             </TableHeader>
             <TableBody>
               {reviews && reviews.length > 0 ? (
-                reviews.map((review) => (
+                reviews.map((review: any) => (
                   <TableRow key={review.id}>
                     <TableCell>{review.reviewedBy?.name || "Unknown"}</TableCell>
                     <TableCell>{review.details}</TableCell>

@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/Button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Download, Trash2, FileText, Plus } from "lucide-react"
-import { DocumentUpload, AddDocumentVersion } from "./document-upload"
+import DocumentUpload, { AddDocumentVersion } from "./document-upload"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import {

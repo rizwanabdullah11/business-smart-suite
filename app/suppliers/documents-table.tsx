@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/Button"
 import { FileText, Trash } from "lucide-react"
 import { format } from "date-fns"
 
