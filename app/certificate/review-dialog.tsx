@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/Button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Calendar } from "@/components/ui/calendar"
@@ -12,7 +12,7 @@ import { CalendarIcon, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { addCertificateReview, deleteCertificateReview } from "@/app/actions/certificate-actions"
 import { useRouter } from "next/navigation"
-import { Input } from "@/components/ui/input"
+import { Input } from "@/components/ui/Input"
 
 interface ReviewDialogProps {
   certificateId: string
@@ -162,7 +162,7 @@ export function ReviewDialog({ certificateId, reviews, canEdit }: ReviewDialogPr
                     <Calendar
                       mode="single"
                       selected={formData.reviewDate}
-                      onSelect={(date) => date && setFormData({ ...formData, reviewDate: date })}
+                      onSelect={(date: Date | undefined) => date && setFormData({ ...formData, reviewDate: date })}
                       initialFocus
                     />
                   </PopoverContent>
@@ -182,7 +182,7 @@ export function ReviewDialog({ certificateId, reviews, canEdit }: ReviewDialogPr
                     <Calendar
                       mode="single"
                       selected={formData.nextReviewDate || undefined}
-                      onSelect={(date) => setFormData({ ...formData, nextReviewDate: date })}
+                      onSelect={(date: Date | undefined) => setFormData({ ...formData, nextReviewDate: date ?? null })}
                       initialFocus
                     />
                   </PopoverContent>

@@ -114,7 +114,7 @@ export default function PolicyDetailPage({ params }: { params: Promise<{ id: str
               </div>
             </div>
             <div className="flex gap-2">
-              <Link href={`/policies/${params.id}/edit`}>
+              <Link href={`/policies/${id}/edit`}>
                 <button
                   className="px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2"
                   style={{

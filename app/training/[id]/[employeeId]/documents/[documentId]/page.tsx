@@ -1,10 +1,10 @@
-import { getEmployee } from '../../../actions/training-actions'
+import { getEmployee } from "../../../../../actions/training-actions"
 import prisma from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, FileText, Download } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/Button'
 
 export default async function EmployeeDocumentPreviewPage({ params }: { params: { id: string, documentId: string } }) {
   const { id, documentId } = params

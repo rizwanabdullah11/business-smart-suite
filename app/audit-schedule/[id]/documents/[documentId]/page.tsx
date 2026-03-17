@@ -1,9 +1,10 @@
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/Button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, Download } from "lucide-react"
 import Link from "next/link"
 import prisma from "@/lib/prisma"
-import { hasPermission } from "@/lib/auth"
+import { getUser, hasPermission } from "@/lib/auth"
+import { Permission } from "@/lib/types/permissions"
 import { notFound } from "next/navigation"
 
 interface DocumentPageProps {
@@ -14,7 +15,8 @@ interface DocumentPageProps {
 }
 
 export default async function DocumentPage({ params }: DocumentPageProps) {
-  const canEdit = await hasPermission("write", "audit-schedule")
+  const user = await getUser()
+  const canEdit = hasPermission(user, Permission.EDIT_AUDIT_SCHEDULE)
   
   // Await params before accessing its properties
   const { id, documentId } = await params;
@@ -120,7 +122,7 @@ export default async function DocumentPage({ params }: DocumentPageProps) {
               </tr>
             </thead>
             <tbody>
-              {allDocuments.map((doc) => (
+              {allDocuments.map((doc: any) => (
                 <tr key={doc.id} className="border-b">
                   <td className="border p-2">{new Date(doc.uploadedAt).toLocaleDateString()}</td>
                   <td className="border p-2 text-blue-600">{doc.title}</td>

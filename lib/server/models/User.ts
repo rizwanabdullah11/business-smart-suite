@@ -42,16 +42,6 @@ const userSchema = new Schema<IUser>(
       type: Schema.Types.ObjectId,
       ref: "User",
       default: null,
-      validate: {
-        validator: function (this: IUser, value: mongoose.Types.ObjectId | null) {
-          const role = normalizeRole(this.role)
-          if (role === ROLE.EMPLOYEE) {
-            return Boolean(value)
-          }
-          return true
-        },
-        message: "organizationId is required for Employee/User role",
-      },
     },
     organizationName: {
       type: String,
@@ -74,6 +64,13 @@ const userSchema = new Schema<IUser>(
 userSchema.pre("save", function userPreSave() {
   this.email = this.email.toLowerCase().trim()
   this.role = normalizeRole(this.role)
+})
+
+userSchema.pre("validate", function userPreValidate() {
+  const role = normalizeRole(this.role)
+  if (role === ROLE.EMPLOYEE && !this.organizationId) {
+    this.invalidate("organizationId", "organizationId is required for Employee/User role")
+  }
 })
 
 userSchema.methods.toJSON = function userToJSON() {

@@ -226,7 +226,7 @@ export default function LoginPage() {
                                 <Checkbox
                                     id="remember"
                                     checked={rememberMe}
-                                    onChange={(e) => setRememberMe(e.target.checked)}
+                                    onCheckedChange={(checked) => setRememberMe(!!checked)}
                                 />
                                 <Label htmlFor="remember" className="text-sm font-medium text-gray-600 cursor-pointer">Remember me</Label>
                             </div>

@@ -7,6 +7,7 @@ if (!MONGO_URI) {
 }
 
 type MongooseCache = {
+  
   conn: typeof mongoose | null
   promise: Promise<typeof mongoose> | null
 }

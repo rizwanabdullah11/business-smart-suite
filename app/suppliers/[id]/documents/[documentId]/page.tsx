@@ -4,7 +4,7 @@ import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { getUser } from "@/lib/auth"
 import { format } from "date-fns"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/Button"
 import { ArrowLeft, Download, History, FileText } from "lucide-react"
 import Link from "next/link"
 
@@ -16,14 +16,12 @@ interface DocumentPageProps {
 }
 
 export default async function DocumentPage({ params }: DocumentPageProps) {
-  // Await params if it is a Promise (for edge compatibility)
-  const resolvedParams = typeof params.then === 'function' ? await params : params;
   const user = await getUser()
   if (!user) {
     return notFound()
   }
   const document = await prisma.supplierDocument.findUnique({
-    where: { id: resolvedParams.documentId },
+    where: { id: params.documentId },
     include: {
       uploadedBy: true,
       versions: {
@@ -42,7 +40,7 @@ export default async function DocumentPage({ params }: DocumentPageProps) {
   
   return (
     <div className="space-y-6">
-      <a href={`/suppliers/${resolvedParams.id}`} className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-700 hover:bg-gray-50 transition">
+      <a href={`/suppliers/${params.id}`} className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-700 hover:bg-gray-50 transition">
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back to supplier
       </a>

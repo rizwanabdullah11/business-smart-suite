@@ -2,12 +2,12 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/Button"
+import { Input } from "@/components/ui/Input"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
 import { GraduationCap, Plus, ArrowLeft } from 'lucide-react'
-import { Checkbox } from "@/components/ui/checkbox"
+import { Checkbox } from "@/components/ui/Checkbox"
 import { 
   Dialog, 
   DialogContent, 

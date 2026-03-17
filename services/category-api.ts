@@ -6,7 +6,7 @@ import { cookies } from "next/headers"
 const BASE_URL = process.env.INTERNAL_API_URL || "http://localhost:3000/api"
 
 async function getServerHeaders() {
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const token = cookieStore.get("token")?.value || ""
   
   return {
