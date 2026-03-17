@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -37,6 +37,7 @@ import {
 import { COLORS } from "@/constant/colors"
 import { usePermissions } from "@/hooks/use-permissions"
 import { Permission } from "@/lib/types/permissions"
+import { getDashboardIcon } from "@/lib/dashboard-icon-map"
 
 interface SidebarProps {
     // No props needed - sidebar is always expanded
@@ -47,6 +48,8 @@ export function Sidebar({}: SidebarProps = {}) {
     const [expandedSection, setExpandedSection] = useState<string | null>("Core Management")
     const isExpanded = true // Always expanded
     const { can, isAdmin, loading } = usePermissions()
+    const [customSections, setCustomSections] = useState<any[]>([])
+    const [customModules, setCustomModules] = useState<Array<{ label: string; href: string; icon?: string }>>([])
 
     interface NavItem {
         icon: any
@@ -118,8 +121,78 @@ export function Sidebar({}: SidebarProps = {}) {
         }
     ]
 
+    const navItemByHref = useMemo(() => {
+        const map = new Map<string, NavItem>()
+        navigationSections.forEach((section) => {
+            section.items.forEach((item) => map.set(item.href, item))
+        })
+        return map
+    }, [navigationSections])
+
+    useEffect(() => {
+        const loadCustomSections = () => {
+            try {
+                const raw = localStorage.getItem("customDashboardSections")
+                const parsed = raw ? JSON.parse(raw) : []
+                setCustomSections(Array.isArray(parsed) ? parsed : [])
+            } catch {
+                setCustomSections([])
+            }
+        }
+
+        loadCustomSections()
+        window.addEventListener("custom-sections-updated", loadCustomSections)
+        return () => {
+            window.removeEventListener("custom-sections-updated", loadCustomSections)
+        }
+    }, [])
+
+    useEffect(() => {
+        const loadCustomModules = () => {
+            try {
+                const raw = localStorage.getItem("customDashboardModules")
+                const parsed = raw ? JSON.parse(raw) : []
+                setCustomModules(Array.isArray(parsed) ? parsed : [])
+            } catch {
+                setCustomModules([])
+            }
+        }
+
+        loadCustomModules()
+        window.addEventListener("custom-modules-updated", loadCustomModules)
+        return () => {
+            window.removeEventListener("custom-modules-updated", loadCustomModules)
+        }
+    }, [])
+
+    const customNavSections: NavSection[] = customSections
+        .map((section) => {
+            const moduleHrefs = Array.isArray(section?.moduleHrefs) ? section.moduleHrefs : []
+            const items = moduleHrefs
+                .map((href: string) => {
+                    const existingItem = navItemByHref.get(href)
+                    if (existingItem) return existingItem
+                    const customModule = customModules.find((m) => m.href === href)
+                    if (!customModule) return null
+                    return {
+                        icon: getDashboardIcon(customModule.icon),
+                        label: customModule.label,
+                        href: customModule.href,
+                    } as NavItem
+                })
+                .filter(Boolean) as NavItem[]
+            return {
+                title: section?.title || "Custom Section",
+                icon: getDashboardIcon(section?.icon),
+                items,
+            }
+        })
+        .filter((section) => section.items.length > 0)
+
+    const combinedSections = [...navigationSections, ...customNavSections]
+
     // Filter sections and items based on permissions
-    const visibleSections = navigationSections.filter(section => {
+    const visibleSections = combinedSections.filter(section => {
         // If section has permission requirement, check it
         if (section.permission && !can(section.permission)) {
             return false
