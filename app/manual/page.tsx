@@ -143,6 +143,10 @@ export default function ManualPage() {
             version: m.version,
             issueDate: m.issueDate,
             location: m.location,
+            fileData: m.fileData,
+            fileName: m.fileName,
+            fileType: m.fileType,
+            fileSize: m.fileSize,
             highlighted: m.highlighted || false,
             approved: m.approved || false,
             paused: m.paused || false,
@@ -157,6 +161,10 @@ export default function ManualPage() {
             version: m.version,
             issueDate: m.issueDate,
             location: m.location,
+            fileData: m.fileData,
+            fileName: m.fileName,
+            fileType: m.fileType,
+            fileSize: m.fileSize,
             highlighted: m.highlighted || false,
             approved: m.approved || false,
             paused: m.paused || false,
@@ -398,35 +406,41 @@ export default function ManualPage() {
     }
   }
 
-  const downloadManual = async (manualId: string, manualTitle: string) => {
+  const downloadManual = async (manual: any) => {
     try {
-      const token = localStorage.getItem("token")
+      let fileData = manual?.fileData
+      let fileName = manual?.fileName
+      let fileType = manual?.fileType
 
-      // Fetch the manual document
-      const response = await fetch(`/api/manuals/${manualId}/download`, {
-        headers: {
-          Authorization: `Bearer ${token}`
+      // Re-fetch latest record if current list row doesn't include file payload.
+      if (!fileData) {
+        const token = localStorage.getItem("token")
+        const response = await fetch(`/api/manuals/${manual.id}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        if (response.ok) {
+          const latest = await response.json()
+          fileData = latest?.fileData
+          fileName = latest?.fileName
+          fileType = latest?.fileType
         }
-      })
+      }
 
-      if (!response.ok) {
-        // If no document endpoint, show message
+      if (!fileData) {
         alert("No document attached to this manual yet")
         return
       }
 
-      // Create blob from response
-      const blob = await response.blob()
-
-      // Create download link
-      const url = window.URL.createObjectURL(blob)
+      const url =
+        typeof fileData === "string" && fileData.startsWith("data:")
+          ? fileData
+          : `data:${fileType || "application/octet-stream"};base64,${String(fileData)}`
       const link = document.createElement("a")
       link.href = url
-      link.download = manualTitle.replace(/\s+/g, "_") + ".pdf"
+      link.download = fileName || `${String(manual?.title || "manual").replace(/\s+/g, "_")}.file`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
     } catch (err) {
       console.error("Error downloading manual:", err)
       alert("No document available for download")
@@ -1411,7 +1425,7 @@ export default function ManualPage() {
                                   <Copy className="w-5 h-5" />
                                 </button>
                                 <button
-                                  onClick={() => downloadManual(manual.id, manual.title)}
+                                  onClick={() => downloadManual(manual)}
                                   disabled={loadingAction === `download-${manual.id}`}
                                   className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `download-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                                   style={{

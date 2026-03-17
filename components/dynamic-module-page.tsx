@@ -297,6 +297,52 @@ export default function DynamicModulePage({
     }
   }
 
+  const downloadItem = async (item: any) => {
+    try {
+      setLoadingAction(`download-${item.id}`)
+
+      let fileData = item?.fileData
+      let fileName = item?.fileName
+      let fileType = item?.fileType
+
+      // Re-fetch latest row to ensure we get document fields.
+      if (!fileData) {
+        const token = localStorage.getItem("token")
+        const response = await fetch(`/api/${moduleSlug}/${item.id}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        if (response.ok) {
+          const latest = await response.json()
+          fileData = latest?.fileData
+          fileName = latest?.fileName
+          fileType = latest?.fileType
+        }
+      }
+
+      if (!fileData) {
+        alert("No uploaded document found for this task.")
+        return
+      }
+
+      const href =
+        typeof fileData === "string" && fileData.startsWith("data:")
+          ? fileData
+          : `data:${fileType || "application/octet-stream"};base64,${String(fileData)}`
+
+      const link = document.createElement("a")
+      link.href = href
+      link.download = fileName || `${getItemTitle(item)}.file`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (err) {
+      console.error("Download failed:", err)
+      alert("Failed to download file")
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
   const deleteCategory = async (categoryId: string) => {
     if (!confirm("Are you sure you want to delete this category?")) return
     try {
@@ -704,7 +750,7 @@ export default function DynamicModulePage({
                               <div className="flex items-center gap-1">
                                 <Link href={`${itemHrefPrefix}/${item.id}/edit`}><button className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#3B82F6" }}><Edit className="w-5 h-5" /></button></Link>
                                 <button onClick={() => copyItem(category.id, item)} disabled={loadingAction === `copy-${item.id}`} className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#6B7280", opacity: loadingAction === `copy-${item.id}` ? 0.6 : 1 }}><Copy className="w-5 h-5" /></button>
-                                <button className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#3B82F6" }}><Download className="w-5 h-5" /></button>
+                                <button onClick={() => downloadItem(item)} disabled={loadingAction === `download-${item.id}`} className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#3B82F6", opacity: loadingAction === `download-${item.id}` ? 0.6 : 1 }}><Download className="w-5 h-5" /></button>
                                 {!isViewingArchivedItems ? (
                                   <button onClick={() => updateItem(item.id, { archived: true, isArchived: true }, "archive")} disabled={loadingAction === `archive-${item.id}`} className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#F97316" }}><Archive className="w-5 h-5" /></button>
                                 ) : (
