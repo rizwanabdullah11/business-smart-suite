@@ -103,6 +103,7 @@ export default function DynamicModulePage({
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [newItemData, setNewItemData] = useState<Record<string, any>>({})
   const [showAskMe, setShowAskMe] = useState(false)
+  const [selectedCategoryId, setSelectedCategoryId] = useState("")
   const [selectedItemId, setSelectedItemId] = useState("")
   const [aiQuestion, setAiQuestion] = useState("")
   const [aiReply, setAiReply] = useState("")
@@ -160,9 +161,10 @@ export default function DynamicModulePage({
 
       const allCategories = categoriesData.map((cat: any) => {
         const categoryId = toIdString(cat._id)
-        const activeItems = itemsData
+        const nonArchivedItems = itemsData
           .filter((i: any) => getItemCategoryId(i) === categoryId && !i.archived && !i.isArchived)
           .map(normalizeItem)
+        const activeItems = nonArchivedItems.filter((i: any) => !Boolean(i.approved))
         const categoryArchivedItems = archivedItems
           .filter((i: any) => getItemCategoryId(i) === categoryId)
           .map(normalizeItem)
@@ -174,8 +176,8 @@ export default function DynamicModulePage({
           archived: Boolean(cat.archived),
           items: activeItems,
           archivedItems: categoryArchivedItems,
-          completedItems: activeItems.filter((i: any) => Boolean(i.approved)),
-          highlightedItems: activeItems.filter((i: any) => Boolean(i.highlighted)),
+          completedItems: nonArchivedItems.filter((i: any) => Boolean(i.approved)),
+          highlightedItems: nonArchivedItems.filter((i: any) => Boolean(i.highlighted)),
         }
       })
 
@@ -435,12 +437,38 @@ export default function DynamicModulePage({
   const displayKeys = listFieldKeys?.length ? listFieldKeys : formFields.map((f) => f.key).filter((k) => k !== titleFieldKey).slice(0, 4)
 
   const allItemsForAi = useMemo(() => {
-    const active = categories.flatMap((cat: any) => (cat.items || []).map((item: any) => ({ ...item, categoryTitle: cat.title })))
+    const active = categories.flatMap((cat: any) =>
+      (cat.items || []).map((item: any) => ({ ...item, categoryTitle: cat.title, categoryId: cat.id }))
+    )
     const archived = archivedCategories.flatMap((cat: any) =>
-      (cat.archivedItems || []).map((item: any) => ({ ...item, categoryTitle: `${cat.title} (Archived)` }))
+      (cat.archivedItems || []).map((item: any) => ({
+        ...item,
+        categoryTitle: `${cat.title} (Archived)`,
+        categoryId: cat.id,
+      }))
     )
     return [...active, ...archived]
   }, [categories, archivedCategories])
+
+  const allCategoryOptions = useMemo(() => {
+    const active = categories.map((cat: any) => ({ id: cat.id, title: cat.title }))
+    const archived = archivedCategories
+      .filter((cat: any) => !active.some((a: any) => a.id === cat.id))
+      .map((cat: any) => ({ id: cat.id, title: `${cat.title} (Archived)` }))
+    return [...active, ...archived]
+  }, [categories, archivedCategories])
+
+  const filteredItemsForAi = useMemo(() => {
+    if (!selectedCategoryId) return allItemsForAi
+    return allItemsForAi.filter((item: any) => item.categoryId === selectedCategoryId)
+  }, [allItemsForAi, selectedCategoryId])
+
+  useEffect(() => {
+    if (!showAskMe) return
+    if (!filteredItemsForAi.some((item: any) => item.id === selectedItemId)) {
+      setSelectedItemId(filteredItemsForAi[0]?.id || "")
+    }
+  }, [selectedCategoryId, showAskMe, selectedItemId, filteredItemsForAi])
 
   const callModuleAi = async (payload: Record<string, unknown>) => {
     setAiLoading(true)
@@ -466,18 +494,42 @@ export default function DynamicModulePage({
   }
 
   const handleSummarizeAllTasks = async () => {
-    await callModuleAi({ action: "summarize-all" })
+    await callModuleAi({
+      action: selectedCategoryId ? "summarize-category" : "summarize-all",
+      categoryId: selectedCategoryId || undefined,
+    })
   }
 
   const handleAskSelectedTask = async () => {
-    if (!selectedItemId) {
-      alert(`Please select a ${itemLabel.toLowerCase()}`)
+    const itemId = selectedItemId
+    const question = aiQuestion.trim()
+
+    if (itemId) {
+      await callModuleAi({
+        action: "ask-one",
+        itemId,
+        question,
+      })
       return
     }
+
+    if (selectedCategoryId) {
+      await callModuleAi({
+        action: "ask-category",
+        categoryId: selectedCategoryId,
+        question,
+      })
+      return
+    }
+
+    if (!question) {
+      alert(`Please select a category or ${itemLabel.toLowerCase()}, or enter a question.`)
+      return
+    }
+
     await callModuleAi({
-      action: "ask-one",
-      itemId: selectedItemId,
-      question: aiQuestion.trim(),
+      action: "summarize-all",
+      question,
     })
   }
 
@@ -502,7 +554,12 @@ export default function DynamicModulePage({
           <div className="flex gap-3">
             <button
               onClick={() => {
-                if (allItemsForAi.length && !selectedItemId) setSelectedItemId(allItemsForAi[0].id)
+                const firstCategoryId = allCategoryOptions[0]?.id || ""
+                setSelectedCategoryId(firstCategoryId)
+                const firstItem =
+                  allItemsForAi.find((item: any) => item.categoryId === firstCategoryId) ||
+                  allItemsForAi[0]
+                setSelectedItemId(firstItem?.id || "")
                 setAiQuestion("")
                 setAiReply("")
                 setShowAskMe(true)
@@ -684,6 +741,25 @@ export default function DynamicModulePage({
               <div className="p-5 space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                    Select Category
+                  </label>
+                  <select
+                    value={selectedCategoryId}
+                    onChange={(e) => setSelectedCategoryId(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
+                  >
+                    <option value="">All Categories</option>
+                    {allCategoryOptions.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
                     Select {itemLabel}
                   </label>
                   <select
@@ -693,7 +769,7 @@ export default function DynamicModulePage({
                     style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                   >
                     <option value="">Select {itemLabel.toLowerCase()}...</option>
-                    {allItemsForAi.map((item: any) => (
+                    {filteredItemsForAi.map((item: any) => (
                       <option key={item.id} value={item.id}>
                         {getItemTitle(item)} - {item.categoryTitle}
                       </option>
@@ -717,7 +793,11 @@ export default function DynamicModulePage({
 
                 <div className="flex flex-wrap gap-3">
                   <button onClick={handleSummarizeAllTasks} disabled={aiLoading} className="px-5 py-2.5 rounded-lg font-medium" style={{ background: COLORS.primaryGradient, color: COLORS.textWhite, opacity: aiLoading ? 0.7 : 1 }}>
-                    {aiLoading ? "Generating..." : "Generate Summary (All Tasks)"}
+                    {aiLoading
+                      ? "Generating..."
+                      : selectedCategoryId
+                        ? "Generate Summary (Selected Category)"
+                        : "Generate Summary (All Tasks)"}
                   </button>
                   <button onClick={handleAskSelectedTask} disabled={aiLoading} className="px-5 py-2.5 rounded-lg font-medium" style={{ background: COLORS.bgWhite, color: COLORS.primary, border: `1px solid ${COLORS.primary}`, opacity: aiLoading ? 0.7 : 1 }}>
                     Ask Selected {itemLabel}

@@ -135,7 +135,7 @@ export default function ManualPage() {
 
       const allCategories = categoriesData.map((cat: any) => {
         const categoryId = toIdString(cat._id)
-        const activeManuals = manualsData
+        const nonArchivedManuals = manualsData
           .filter((m: any) => getItemCategoryId(m) === categoryId && !m.archived && !m.isArchived)
           .map((m: any) => ({
             id: m._id,
@@ -147,6 +147,7 @@ export default function ManualPage() {
             approved: m.approved || false,
             paused: m.paused || false,
           }))
+        const activeManuals = nonArchivedManuals.filter((m: any) => !Boolean(m.approved))
 
         const categoryArchivedManuals = archivedManuals
           .filter((m: any) => getItemCategoryId(m) === categoryId)
@@ -168,8 +169,8 @@ export default function ManualPage() {
           archived: Boolean(cat.archived),
           manuals: activeManuals,
           archivedManuals: categoryArchivedManuals,
-            completedManuals: activeManuals.filter((m: any) => Boolean(m.approved)),
-            highlightedManuals: activeManuals.filter((m: any) => Boolean(m.highlighted)),
+            completedManuals: nonArchivedManuals.filter((m: any) => Boolean(m.approved)),
+            highlightedManuals: nonArchivedManuals.filter((m: any) => Boolean(m.highlighted)),
         }
       })
 
@@ -200,15 +201,10 @@ export default function ManualPage() {
     )
   }
 
-  const toggleHighlight = async (categoryId: string, manualId: string) => {
+  const toggleHighlight = async (_categoryId: string, manualId: string, currentHighlighted: boolean) => {
     try {
       setLoadingAction(`highlight-${manualId}`)
       const token = localStorage.getItem("token")
-      const manual = categories
-        .find(c => c.id === categoryId)
-        ?.manuals.find((m: any) => m.id === manualId)
-
-      if (!manual) return
 
       const response = await fetch(`/api/manuals/${manualId}`, {
         method: "PUT",
@@ -216,25 +212,11 @@ export default function ManualPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ highlighted: !manual.highlighted })
+        body: JSON.stringify({ highlighted: !currentHighlighted })
       })
 
       if (!response.ok) throw new Error("Failed to update highlight")
-
-      setCategories(prev =>
-        prev.map(cat =>
-          cat.id === categoryId
-            ? {
-              ...cat,
-              manuals: cat.manuals.map((m: any) =>
-                m.id === manualId
-                  ? { ...m, highlighted: !m.highlighted }
-                  : m
-              )
-            }
-            : cat
-        )
-      )
+      await loadData()
     } catch (err) {
       console.error("Error toggling highlight:", err)
       alert("Failed to update highlight status")
@@ -243,15 +225,10 @@ export default function ManualPage() {
     }
   }
 
-  const toggleApprove = async (categoryId: string, manualId: string) => {
+  const toggleApprove = async (_categoryId: string, manualId: string, currentApproved: boolean) => {
     try {
       setLoadingAction(`approve-${manualId}`)
       const token = localStorage.getItem("token")
-      const manual = categories
-        .find(c => c.id === categoryId)
-        ?.manuals.find((m: any) => m.id === manualId)
-
-      if (!manual) return
 
       const response = await fetch(`/api/manuals/${manualId}`, {
         method: "PUT",
@@ -259,25 +236,11 @@ export default function ManualPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ approved: !manual.approved })
+        body: JSON.stringify({ approved: !currentApproved })
       })
 
       if (!response.ok) throw new Error("Failed to update completed status")
-
-      setCategories(prev =>
-        prev.map(cat =>
-          cat.id === categoryId
-            ? {
-              ...cat,
-              manuals: cat.manuals.map((m: any) =>
-                m.id === manualId
-                  ? { ...m, approved: !m.approved }
-                  : m
-              )
-            }
-            : cat
-        )
-      )
+      await loadData()
     } catch (err) {
       console.error("Error toggling approve:", err)
       alert("Failed to update completed status")
@@ -286,15 +249,10 @@ export default function ManualPage() {
     }
   }
 
-  const togglePause = async (categoryId: string, manualId: string) => {
+  const togglePause = async (_categoryId: string, manualId: string, currentPaused: boolean) => {
     try {
       setLoadingAction(`pause-${manualId}`)
       const token = localStorage.getItem("token")
-      const manual = categories
-        .find(c => c.id === categoryId)
-        ?.manuals.find((m: any) => m.id === manualId)
-
-      if (!manual) return
 
       const response = await fetch(`/api/manuals/${manualId}`, {
         method: "PUT",
@@ -302,25 +260,11 @@ export default function ManualPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ paused: !manual.paused })
+        body: JSON.stringify({ paused: !currentPaused })
       })
 
       if (!response.ok) throw new Error("Failed to update pause status")
-
-      setCategories(prev =>
-        prev.map(cat =>
-          cat.id === categoryId
-            ? {
-              ...cat,
-              manuals: cat.manuals.map((m: any) =>
-                m.id === manualId
-                  ? { ...m, paused: !m.paused }
-                  : m
-              )
-            }
-            : cat
-        )
-      )
+      await loadData()
     } catch (err) {
       console.error("Error toggling pause:", err)
       alert("Failed to update pause status")
@@ -1395,7 +1339,7 @@ export default function ManualPage() {
                               {/* Primary Actions */}
                               <div className="flex items-center gap-1 mr-2">
                                 <button
-                                  onClick={() => toggleHighlight(category.id, manual.id)}
+                                  onClick={() => toggleHighlight(category.id, manual.id, manual.highlighted)}
                                   disabled={loadingAction === `highlight-${manual.id}`}
                                   className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `highlight-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                                   style={{
@@ -1408,7 +1352,7 @@ export default function ManualPage() {
                                   <Star className={`w-5 h-5 ${manual.highlighted ? "fill-current" : ""}`} />
                                 </button>
                                 <button
-                                  onClick={() => toggleApprove(category.id, manual.id)}
+                                  onClick={() => toggleApprove(category.id, manual.id, manual.approved)}
                                   disabled={loadingAction === `approve-${manual.id}`}
                                   className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `approve-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                                   style={{
@@ -1421,7 +1365,7 @@ export default function ManualPage() {
                                   <Check className="w-5 h-5" />
                                 </button>
                                 <button
-                                  onClick={() => togglePause(category.id, manual.id)}
+                                  onClick={() => togglePause(category.id, manual.id, manual.paused)}
                                   disabled={loadingAction === `pause-${manual.id}`}
                                   className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `pause-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                                   style={{

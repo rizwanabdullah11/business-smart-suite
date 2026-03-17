@@ -86,6 +86,7 @@ export const POST = withAuth(
       const body = await request.json()
       const action = String(body?.action || "summarize-all")
       const itemId = body?.itemId ? String(body.itemId) : null
+      const categoryId = body?.categoryId ? String(body.categoryId) : null
       const question = String(body?.question || "").trim()
 
       await connectToDatabase()
@@ -99,7 +100,21 @@ export const POST = withAuth(
         const doc = await Model.findById(itemId).populate("category", "name").lean()
         docs = doc ? [doc] : []
       } else {
-        docs = await Model.find({}).populate("category", "name").sort({ updatedAt: -1 }).limit(200).lean()
+        const query: Record<string, unknown> = {}
+        if (categoryId) {
+          if (mongoose.Types.ObjectId.isValid(categoryId)) {
+            const objectId = new mongoose.Types.ObjectId(categoryId)
+            query.$or = [
+              { category: objectId },
+              { categoryId: objectId },
+              { category: categoryId },
+              { categoryId: categoryId },
+            ]
+          } else {
+            query.$or = [{ category: categoryId }, { categoryId: categoryId }]
+          }
+        }
+        docs = await Model.find(query).populate("category", "name").sort({ updatedAt: -1 }).limit(200).lean()
       }
 
       const summaries = docs.map(toSummary)
@@ -110,7 +125,9 @@ export const POST = withAuth(
       const prompt =
         action === "ask-one"
           ? `You are an assistant for business compliance tasks.\nItem:\n${JSON.stringify(summaries[0], null, 2)}\nUser question: ${question || "Summarize this task in 2-4 bullets with title."}\nKeep the answer concise and practical.`
-          : `You are an assistant for business compliance tasks.\nGenerate a concise summary list for all tasks.\nEach line must include task title and a short summary.\nTasks JSON:\n${JSON.stringify(summaries, null, 2)}`
+          : action === "ask-category"
+            ? `You are an assistant for business compliance tasks.\nThese tasks are from one category.\nTasks JSON:\n${JSON.stringify(summaries, null, 2)}\nUser question: ${question || "Summarize this category tasks with title."}\nKeep the answer concise and practical.`
+            : `You are an assistant for business compliance tasks.\nGenerate a concise summary list for ${categoryId ? "the selected category tasks" : "all tasks"}.\nEach line must include task title and a short summary.\nTasks JSON:\n${JSON.stringify(summaries, null, 2)}`
 
       const geminiAnswer = await askGemini(prompt)
 
