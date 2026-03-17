@@ -75,31 +75,35 @@ export async function POST(request: NextRequest) {
         userData.organizationEmail = organizationEmail || email
       }
     } else {
-      // Public signup is restricted to employee/user role only with valid organizationId.
-      if (requestedRole !== ROLE.EMPLOYEE) {
+      // Public signup: allow admin and employee/user roles.
+      if (requestedRole === ROLE.ADMIN) {
+        userData.role = ROLE.ADMIN
+      } else if (requestedRole !== ROLE.EMPLOYEE) {
         return NextResponse.json(
           { error: "Forbidden", message: "Public signup only supports Employee/User role" },
           { status: 403 }
         )
       }
 
-      if (!body.organizationId || !mongoose.Types.ObjectId.isValid(body.organizationId)) {
-        return NextResponse.json(
-          { error: "Bad request", message: "organizationId is required for public signup" },
-          { status: 400 }
-        )
-      }
+      if (requestedRole === ROLE.EMPLOYEE) {
+        if (!body.organizationId || !mongoose.Types.ObjectId.isValid(body.organizationId)) {
+          return NextResponse.json(
+            { error: "Bad request", message: "organizationId is required for public signup" },
+            { status: 400 }
+          )
+        }
 
-      const org = await User.findOne({ _id: body.organizationId, role: ROLE.ORGANIZATION }).select("_id")
-      if (!org) {
-        return NextResponse.json(
-          { error: "Bad request", message: "Invalid organizationId" },
-          { status: 400 }
-        )
-      }
+        const org = await User.findOne({ _id: body.organizationId, role: ROLE.ORGANIZATION }).select("_id")
+        if (!org) {
+          return NextResponse.json(
+            { error: "Bad request", message: "Invalid organizationId" },
+            { status: 400 }
+          )
+        }
 
-      userData.organizationId = new mongoose.Types.ObjectId(body.organizationId)
-      userData.role = ROLE.EMPLOYEE
+        userData.organizationId = new mongoose.Types.ObjectId(body.organizationId)
+        userData.role = ROLE.EMPLOYEE
+      }
     }
 
     const createdUser = await User.create(userData)
