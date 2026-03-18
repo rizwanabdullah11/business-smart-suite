@@ -12,6 +12,7 @@ export default function NewSoAControlPage() {
     const [domain, setDomain] = useState("")
     const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
     const [categoriesLoading, setCategoriesLoading] = useState(true)
+    const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0])
     const [description, setDescription] = useState("")
     const [applicable, setApplicable] = useState(true)
     const [justification, setJustification] = useState("")
@@ -69,6 +70,7 @@ export default function NewSoAControlPage() {
                     domain,
                     category: domain,
                     categoryId: domain,
+                    issueDate,
                     description,
                     applicable,
                     justification,
@@ -187,6 +189,23 @@ export default function NewSoAControlPage() {
                                         ))
                                     )}
                                 </select>
+                            </div>
+
+                            {/* Status & Owner */}
+                            <div>
+                                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                                    Date
+                                </label>
+                                <input
+                                    type="date"
+                                    value={issueDate}
+                                    onChange={(e) => setIssueDate(e.target.value)}
+                                    className="w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    style={{
+                                        borderColor: COLORS.border,
+                                        color: COLORS.textPrimary,
+                                    }}
+                                />
                             </div>
 
                             {/* Status & Owner */}

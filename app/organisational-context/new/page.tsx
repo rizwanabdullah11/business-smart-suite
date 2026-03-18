@@ -12,6 +12,7 @@ export default function NewOrganisationalContextPage() {
   const [category, setCategory] = useState("")
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
   const [categoriesLoading, setCategoriesLoading] = useState(true)
+  const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0])
   const [description, setDescription] = useState("")
   const [type, setType] = useState("Strength")
   const [impact, setImpact] = useState("Low")
@@ -68,6 +69,7 @@ export default function NewOrganisationalContextPage() {
           title: title.trim(),
           category,
           categoryId: category,
+          issueDate,
           description,
           type,
           impact,
@@ -167,6 +169,23 @@ export default function NewOrganisationalContextPage() {
                     ))
                   )}
                 </select>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={issueDate}
+                  onChange={(e) => setIssueDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{
+                    borderColor: COLORS.border,
+                    color: COLORS.textPrimary,
+                  }}
+                />
               </div>
 
               {/* Description */}

@@ -12,6 +12,7 @@ export default function NewSupplierPage() {
   const [category, setCategory] = useState("")
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
   const [categoriesLoading, setCategoriesLoading] = useState(true)
+  const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0])
   const [contactPerson, setContactPerson] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
@@ -70,6 +71,7 @@ export default function NewSupplierPage() {
           name: name.trim(),
           category,
           categoryId: category,
+          issueDate,
           contactPerson,
           email,
           phone,
@@ -171,6 +173,23 @@ export default function NewSupplierPage() {
                     ))
                   )}
                 </select>
+              </div>
+
+              {/* Contact Info */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={issueDate}
+                  onChange={(e) => setIssueDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{
+                    borderColor: COLORS.border,
+                    color: COLORS.textPrimary,
+                  }}
+                />
               </div>
 
               {/* Contact Info */}

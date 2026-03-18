@@ -12,6 +12,7 @@ export default function NewObjectivePage() {
   const [category, setCategory] = useState("")
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
   const [categoriesLoading, setCategoriesLoading] = useState(true)
+  const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0])
   const [target, setTarget] = useState("")
   const [deadline, setDeadline] = useState(new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0])
   const [owner, setOwner] = useState("")
@@ -68,6 +69,7 @@ export default function NewObjectivePage() {
           title: title.trim(),
           category,
           categoryId: category,
+          issueDate,
           target,
           deadline,
           owner,
@@ -168,6 +170,23 @@ export default function NewObjectivePage() {
                     ))
                   )}
                 </select>
+              </div>
+
+              {/* Target & Deadline */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={issueDate}
+                  onChange={(e) => setIssueDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{
+                    borderColor: COLORS.border,
+                    color: COLORS.textPrimary,
+                  }}
+                />
               </div>
 
               {/* Target & Deadline */}
