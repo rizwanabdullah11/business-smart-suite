@@ -720,6 +720,26 @@ export default function ManualPage() {
     })
   }
 
+  const parsedAiRows = aiReply
+    .split("\n")
+    .map((line) => line.replace(/^\s*[-*]\s*/, "").trim())
+    .filter(Boolean)
+
+  const parseAiRow = (line: string) => {
+    const cleanLine = line.replace(/\.$/, "").trim()
+    const separatorIndex = cleanLine.indexOf(":")
+    if (separatorIndex === -1) {
+      return { title: cleanLine, details: [] as string[] }
+    }
+    const title = cleanLine.slice(0, separatorIndex).trim()
+    const detailsPart = cleanLine.slice(separatorIndex + 1).trim()
+    const details = detailsPart
+      .split(",")
+      .map((segment) => segment.trim())
+      .filter(Boolean)
+    return { title, details }
+  }
+
   useEffect(() => {
     if (!showAskMe) return
     const options = filteredManualOptions()
@@ -727,6 +747,19 @@ export default function ManualPage() {
       setSelectedManualId(options[0]?.id || "")
     }
   }, [selectedCategoryId, showAskMe, selectedManualId, categories, archivedCategories])
+
+  useEffect(() => {
+    if (!showAskMe) return
+    const previousOverflow = document.body.style.overflow
+    const previousTouchAction = document.body.style.touchAction
+    document.body.style.overflow = "hidden"
+    document.body.style.touchAction = "none"
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.body.style.touchAction = previousTouchAction
+    }
+  }, [showAskMe])
+
   return (
     <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
       <div className="p-6">
@@ -1505,8 +1538,8 @@ export default function ManualPage() {
 
         {showAskMe && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.35)" }}>
-            <div className="w-full max-w-2xl rounded-2xl shadow-xl" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
-              <div className="p-5 border-b flex items-center justify-between" style={{ borderColor: COLORS.border }}>
+            <div className="w-full max-w-3xl max-h-[88vh] rounded-2xl shadow-xl overflow-hidden" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
+              <div className="p-5 border-b flex items-center justify-between sticky top-0 z-10" style={{ borderColor: COLORS.border, background: COLORS.bgWhite }}>
                 <div className="flex items-center gap-2">
                   <Bot className="w-5 h-5" style={{ color: COLORS.primary }} />
                   <h3 className="text-lg font-bold" style={{ color: COLORS.textPrimary }}>Manual AI Assistant</h3>
@@ -1519,43 +1552,51 @@ export default function ManualPage() {
                   Close
                 </button>
               </div>
-              <div className="p-5 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                    Select Category
-                  </label>
-                  <select
-                    value={selectedCategoryId}
-                    onChange={(e) => setSelectedCategoryId(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
-                  >
-                    <option value="">All Categories</option>
-                    {allCategoryOptions().map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.title}
-                      </option>
-                    ))}
-                  </select>
+              <div className="p-5 space-y-4 overflow-y-auto max-h-[calc(88vh-72px)]">
+                <div className="rounded-xl p-3" style={{ background: COLORS.bgGray, border: `1px solid ${COLORS.border}` }}>
+                  <p className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>
+                    Tip: Keep "All Categories" selected to generate a complete summary, or choose one category for focused output.
+                  </p>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                    Select Manual
-                  </label>
-                  <select
-                    value={selectedManualId}
-                    onChange={(e) => setSelectedManualId(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
-                  >
-                    <option value="">Select manual...</option>
-                    {filteredManualOptions().map((manual) => (
-                      <option key={manual.id} value={manual.id}>
-                        {manual.title} - {manual.category}
-                      </option>
-                    ))}
-                  </select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                      Select Category
+                    </label>
+                    <select
+                      value={selectedCategoryId}
+                      onChange={(e) => setSelectedCategoryId(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
+                    >
+                      <option value="">All Categories</option>
+                      {allCategoryOptions().map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                      Select Manual
+                    </label>
+                    <select
+                      value={selectedManualId}
+                      onChange={(e) => setSelectedManualId(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
+                    >
+                      <option value="">Select manual...</option>
+                      {filteredManualOptions().map((manual) => (
+                        <option key={manual.id} value={manual.id}>
+                          {manual.title} - {manual.category}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <div>
@@ -1606,9 +1647,36 @@ export default function ManualPage() {
                 </div>
 
                 {aiReply && (
-                  <pre className="mt-2 p-4 rounded-xl text-sm whitespace-pre-wrap" style={{ background: COLORS.bgGray, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>
-                    {aiReply}
-                  </pre>
+                  <div className="mt-2 rounded-xl overflow-hidden" style={{ border: `1px solid ${COLORS.border}`, background: COLORS.bgGray }}>
+                    <div className="px-4 py-2.5 border-b text-sm font-medium" style={{ borderColor: COLORS.border, color: COLORS.textSecondary }}>
+                      {selectedCategoryId ? "Selected Category Summary" : "All Categories Summary"}
+                    </div>
+                    <div className="p-4 overflow-y-auto space-y-3" style={{ maxHeight: "320px" }}>
+                      {parsedAiRows.map((line, index) => {
+                        const row = parseAiRow(line)
+                        return (
+                          <div key={`${row.title}-${index}`} className="rounded-lg p-3" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
+                            <div className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+                              {index + 1}. {row.title || `Entry ${index + 1}`}
+                            </div>
+                            {row.details.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {row.details.map((detail, detailIndex) => (
+                                  <span
+                                    key={`${detail}-${detailIndex}`}
+                                    className="px-2.5 py-1 rounded-md text-xs"
+                                    style={{ background: COLORS.bgGray, color: COLORS.textSecondary, border: `1px solid ${COLORS.border}` }}
+                                  >
+                                    {detail}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
