@@ -15,7 +15,7 @@ export default function EditPolicyPage({ params }: { params: Promise<{ id: strin
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const backHref = "/policies"
+  const listHref = "/policies"
 
   useEffect(() => {
     const loadPolicy = async () => {
@@ -66,7 +66,7 @@ export default function EditPolicyPage({ params }: { params: Promise<{ id: strin
         }),
       })
       if (!response.ok) throw new Error("Failed to update policy")
-      router.push(`/task/policies/${id}?back=${encodeURIComponent("/policies")}`)
+      router.push(listHref)
     } catch (error) {
       console.error("Error updating policy:", error)
       alert("Failed to save policy changes")
@@ -82,7 +82,7 @@ export default function EditPolicyPage({ params }: { params: Promise<{ id: strin
           {/* Back Button */}
           <div className="mb-6">
             <Link
-              href={backHref}
+              href={listHref}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all"
               style={{
                 background: COLORS.bgWhite,
@@ -91,7 +91,7 @@ export default function EditPolicyPage({ params }: { params: Promise<{ id: strin
               }}
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Policy
+              Back to Policies
             </Link>
           </div>
 
@@ -189,7 +189,7 @@ export default function EditPolicyPage({ params }: { params: Promise<{ id: strin
                   {saving ? "Saving..." : "Save Changes"}
                 </button>
                 <Link
-                  href={backHref}
+                  href={listHref}
                   className="px-6 py-2 rounded-lg font-medium"
                   style={{
                     background: COLORS.bgGray,
