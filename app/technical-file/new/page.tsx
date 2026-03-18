@@ -4,8 +4,18 @@ import { useState } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import GenericModuleNewPage from "@/components/generic-module-new-page"
 
 export default function NewTechnicalFilePage() {
+  return (
+    <GenericModuleNewPage
+      moduleSlug="technical-file"
+      pageTitle="Create New Technical File"
+      createLabel="Create Technical File"
+      backLabel="Back to Technical File"
+    />
+  )
+
   const [title, setTitle] = useState("")
   const [version, setVersion] = useState("")
   const [documentId, setDocumentId] = useState("")

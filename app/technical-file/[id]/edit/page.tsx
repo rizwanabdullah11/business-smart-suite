@@ -4,8 +4,17 @@ import { useState, use } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import GenericModuleEditPage from "@/components/generic-module-edit-page"
 
 export default function EditTechnicalFilePage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <GenericModuleEditPage
+      moduleSlug="technical-file"
+      pageTitle="Edit Technical File"
+      backLabel="Back to Technical File"
+    />
+  )
+
   const { id } = use(params)
 
   return (

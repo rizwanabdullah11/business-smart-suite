@@ -4,8 +4,18 @@ import { useState } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import GenericModuleNewPage from "@/components/generic-module-new-page"
 
 export default function NewCOSHHPage() {
+  return (
+    <GenericModuleNewPage
+      moduleSlug="coshh"
+      pageTitle="Create New COSHH Record"
+      createLabel="Create COSHH"
+      backLabel="Back to COSHH"
+    />
+  )
+
   const [title, setTitle] = useState("")
   const [version, setVersion] = useState("")
   const [location, setLocation] = useState("")

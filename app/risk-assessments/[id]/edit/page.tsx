@@ -4,8 +4,17 @@ import { useState, use } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import GenericModuleEditPage from "@/components/generic-module-edit-page"
 
 export default function EditRiskAssessmentPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <GenericModuleEditPage
+      moduleSlug="risk-assessments"
+      pageTitle="Edit Risk Assessment"
+      backLabel="Back to Risk Assessments"
+    />
+  )
+
   const { id } = use(params)
 
   return (

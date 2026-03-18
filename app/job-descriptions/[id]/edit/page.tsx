@@ -4,8 +4,17 @@ import { useState, use } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import GenericModuleEditPage from "@/components/generic-module-edit-page"
 
 export default function EditJobDescriptionPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <GenericModuleEditPage
+      moduleSlug="job-descriptions"
+      pageTitle="Edit Job Description"
+      backLabel="Back to Job Descriptions"
+    />
+  )
+
   const { id } = use(params)
 
   return (

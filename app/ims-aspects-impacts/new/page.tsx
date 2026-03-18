@@ -4,8 +4,18 @@ import { useState } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import GenericModuleNewPage from "@/components/generic-module-new-page"
 
 export default function NewIMSAspectImpactPage() {
+    return (
+        <GenericModuleNewPage
+            moduleSlug="ims-aspects-impacts"
+            pageTitle="Create New IMS Aspect & Impact"
+            createLabel="Create IMS Aspect & Impact"
+            backLabel="Back to IMS Aspects & Impacts"
+        />
+    )
+
     const [activity, setActivity] = useState("")
     const [category, setCategory] = useState("1")
     const [aspect, setAspect] = useState("")
