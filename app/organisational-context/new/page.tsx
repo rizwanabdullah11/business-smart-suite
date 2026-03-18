@@ -1,33 +1,89 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 
 export default function NewOrganisationalContextPage() {
+  const router = useRouter()
   const [title, setTitle] = useState("")
-  const [category, setCategory] = useState("1")
+  const [category, setCategory] = useState("")
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
+  const [categoriesLoading, setCategoriesLoading] = useState(true)
   const [description, setDescription] = useState("")
   const [type, setType] = useState("Strength")
   const [impact, setImpact] = useState("Low")
   const [strategy, setStrategy] = useState("")
   const [highlighted, setHighlighted] = useState(false)
   const [approved, setApproved] = useState(false)
+  const [saving, setSaving] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const token = localStorage.getItem("token")
+        const response = await fetch("/api/categories?type=organisational-context", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        if (!response.ok) throw new Error("Failed to load categories")
+        const data = await response.json()
+        const normalized = (Array.isArray(data) ? data : [])
+          .filter((cat: any) => !cat?.archived && !cat?.isArchived)
+          .map((cat: any) => ({ id: String(cat._id || cat.id), name: String(cat.name || "") }))
+          .filter((cat: { id: string; name: string }) => cat.id && cat.name)
+        setCategories(normalized)
+        setCategory((prev) => prev || normalized[0]?.id || "")
+      } catch (error) {
+        console.error("Error loading organisational context categories:", error)
+      } finally {
+        setCategoriesLoading(false)
+      }
+    }
+    loadCategories()
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement API call to create context issue
-    console.log({
-      title,
-      category,
-      description,
-      type,
-      impact,
-      strategy,
-      highlighted,
-      approved
-    })
+    if (!title.trim()) {
+      alert("Title is required")
+      return
+    }
+    if (!category) {
+      alert("Please select a category")
+      return
+    }
+
+    try {
+      setSaving(true)
+      const token = localStorage.getItem("token")
+      const response = await fetch("/api/organisational-context", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          title: title.trim(),
+          category,
+          categoryId: category,
+          description,
+          type,
+          impact,
+          strategy,
+          highlighted,
+          approved,
+        }),
+      })
+      if (!response.ok) throw new Error("Failed to create context issue")
+      router.push("/organisational-context")
+    } catch (error) {
+      console.error("Error creating organisational context issue:", error)
+      alert("Failed to create context issue")
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -99,11 +155,17 @@ export default function NewOrganisationalContextPage() {
                     color: COLORS.textPrimary,
                   }}
                 >
-                  <option value="1">Internal Issues</option>
-                  <option value="2">External Issues</option>
-                  <option value="3">Political Factors</option>
-                  <option value="4">Economic Factors</option>
-                  <option value="5">Technological Factors</option>
+                  {categoriesLoading ? (
+                    <option value="">Loading categories...</option>
+                  ) : categories.length === 0 ? (
+                    <option value="">No categories found</option>
+                  ) : (
+                    categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 

@@ -1,13 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 
 export default function NewLegalRegisterPage() {
+  const router = useRouter()
   const [title, setTitle] = useState("")
-  const [category, setCategory] = useState("1")
+  const [category, setCategory] = useState("")
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
+  const [categoriesLoading, setCategoriesLoading] = useState(true)
   const [authority, setAuthority] = useState("")
   const [description, setDescription] = useState("")
   const [compliance, setCompliance] = useState("Compliant")
@@ -16,22 +20,73 @@ export default function NewLegalRegisterPage() {
   const [owner, setOwner] = useState("")
   const [highlighted, setHighlighted] = useState(false)
   const [approved, setApproved] = useState(false)
+  const [saving, setSaving] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const token = localStorage.getItem("token")
+        const response = await fetch("/api/categories?type=legal-register", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        if (!response.ok) throw new Error("Failed to load categories")
+        const data = await response.json()
+        const normalized = (Array.isArray(data) ? data : [])
+          .filter((cat: any) => !cat?.archived && !cat?.isArchived)
+          .map((cat: any) => ({ id: String(cat._id || cat.id), name: String(cat.name || "") }))
+          .filter((cat: { id: string; name: string }) => cat.id && cat.name)
+        setCategories(normalized)
+        setCategory((prev) => prev || normalized[0]?.id || "")
+      } catch (error) {
+        console.error("Error loading legal categories:", error)
+      } finally {
+        setCategoriesLoading(false)
+      }
+    }
+    loadCategories()
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement API call to create regulation
-    console.log({
-      title,
-      category,
-      authority,
-      description,
-      compliance,
-      lastReview,
-      nextReview,
-      owner,
-      highlighted,
-      approved
-    })
+    if (!title.trim()) {
+      alert("Title is required")
+      return
+    }
+    if (!category) {
+      alert("Please select a category")
+      return
+    }
+    try {
+      setSaving(true)
+      const token = localStorage.getItem("token")
+      const response = await fetch("/api/legal-register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          title: title.trim(),
+          category,
+          categoryId: category,
+          authority,
+          description,
+          compliance,
+          lastReview,
+          nextReview,
+          owner,
+          highlighted,
+          approved,
+        }),
+      })
+      if (!response.ok) throw new Error("Failed to create legal requirement")
+      router.push("/legal-register")
+    } catch (error) {
+      console.error("Error creating legal requirement:", error)
+      alert("Failed to create legal requirement")
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -104,11 +159,17 @@ export default function NewLegalRegisterPage() {
                       color: COLORS.textPrimary,
                     }}
                   >
-                    <option value="1">Health & Safety</option>
-                    <option value="2">Environmental</option>
-                    <option value="3">Data Protection (GDPR)</option>
-                    <option value="4">Employment</option>
-                    <option value="5">Product Safety</option>
+                    {categoriesLoading ? (
+                      <option value="">Loading categories...</option>
+                    ) : categories.length === 0 ? (
+                      <option value="">No categories found</option>
+                    ) : (
+                      categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
                 <div>
