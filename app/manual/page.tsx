@@ -183,8 +183,10 @@ export default function ManualPage() {
       })
 
       const merged = allCategories.filter((cat: any) => !cat.isArchived && !cat.archived)
+      // Category should move to archived list only when category itself is archived.
+      // Archived manuals remain available inside each category's inner "Archived" tab.
       const mergedArchived = allCategories.filter(
-        (cat: any) => cat.archivedManuals.length > 0 || cat.isArchived || cat.archived
+        (cat: any) => cat.isArchived || cat.archived
       )
 
       setCategories(merged)

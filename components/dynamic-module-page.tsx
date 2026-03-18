@@ -182,7 +182,9 @@ export default function DynamicModulePage({
       })
 
       const merged = allCategories.filter((cat: any) => !cat.isArchived && !cat.archived)
-      const mergedArchived = allCategories.filter((cat: any) => cat.archivedItems.length > 0 || cat.isArchived || cat.archived)
+      // Category should move to archived list only when category itself is archived.
+      // Archived tasks remain visible via the inner "Archived" tab per category.
+      const mergedArchived = allCategories.filter((cat: any) => cat.isArchived || cat.archived)
 
       setCategories(merged)
       setArchivedCategories(mergedArchived)
