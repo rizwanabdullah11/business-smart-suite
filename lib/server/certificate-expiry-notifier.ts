@@ -9,6 +9,13 @@ const FIVE_MINUTES = 5 * 60 * 1000
 
 let lastExpiryScanAt = 0
 
+type CertificateExpiryCandidate = {
+  _id: mongoose.Types.ObjectId | string
+  title?: string
+  expiryDate?: unknown
+  createdBy?: unknown
+}
+
 function parseDate(input: unknown): Date | null {
   if (!input) return null
   if (input instanceof Date) return Number.isNaN(input.getTime()) ? null : input
@@ -97,12 +104,12 @@ export async function notifyExpiredCertificates(force = false) {
     ],
   })
     .select("_id title expiryDate createdBy")
-    .lean()
+    .lean<CertificateExpiryCandidate[]>()
 
   let notified = 0
   let scanned = 0
 
-  for (const cert of candidates as Array<Record<string, unknown>>) {
+  for (const cert of candidates) {
     scanned += 1
     const expiry = parseDate(cert.expiryDate)
     if (!expiry || !isExpired(expiry)) continue
