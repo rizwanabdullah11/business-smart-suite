@@ -92,5 +92,5 @@ export const DELETE = withAuth(
       )
     }
   },
-  { requiredPermissions: [Permission.DELETE_CATEGORY] }
+  { requiredPermissions: [Permission.EDIT_CATEGORY] }
 )

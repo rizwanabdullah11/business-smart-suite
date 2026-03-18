@@ -21,6 +21,9 @@ export default function GenericModuleEditPage({ moduleSlug, pageTitle, backLabel
   const [version, setVersion] = useState("")
   const [location, setLocation] = useState("")
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0])
+  const [category, setCategory] = useState("")
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
+  const [categoriesLoading, setCategoriesLoading] = useState(true)
   const [fileName, setFileName] = useState("")
   const [fileType, setFileType] = useState("")
   const [fileSize, setFileSize] = useState<number | null>(null)
@@ -34,6 +37,27 @@ export default function GenericModuleEditPage({ moduleSlug, pageTitle, backLabel
   )
 
   useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setCategoriesLoading(true)
+        const token = localStorage.getItem("token")
+        const response = await fetch(`/api/categories?type=${moduleSlug}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        if (!response.ok) throw new Error("Failed to load categories")
+        const data = await response.json()
+        const normalized = (Array.isArray(data) ? data : [])
+          .filter((cat: any) => !cat?.archived && !cat?.isArchived)
+          .map((cat: any) => ({ id: String(cat._id || cat.id), name: String(cat.name || "") }))
+          .filter((cat: { id: string; name: string }) => cat.id && cat.name)
+        setCategories(normalized)
+      } catch (error) {
+        console.error(`Error loading ${moduleSlug} categories:`, error)
+      } finally {
+        setCategoriesLoading(false)
+      }
+    }
+
     const loadItem = async () => {
       if (!id) return
       try {
@@ -48,6 +72,11 @@ export default function GenericModuleEditPage({ moduleSlug, pageTitle, backLabel
         setVersion(String(data?.version || ""))
         setLocation(String(data?.location || ""))
         setIssueDate(String(data?.issueDate || new Date().toISOString().split("T")[0]))
+        const categoryValue =
+          data?.category?._id ||
+          data?.categoryId ||
+          (typeof data?.category === "string" ? data.category : "")
+        setCategory(String(categoryValue || ""))
         setFileName(String(data?.fileName || ""))
         setFileType(String(data?.fileType || ""))
         setFileSize(typeof data?.fileSize === "number" ? data.fileSize : null)
@@ -60,6 +89,7 @@ export default function GenericModuleEditPage({ moduleSlug, pageTitle, backLabel
       }
     }
 
+    loadCategories()
     loadItem()
   }, [moduleSlug, id])
 
@@ -83,6 +113,7 @@ export default function GenericModuleEditPage({ moduleSlug, pageTitle, backLabel
           version: version || "v1.0",
           location: location || "QMS",
           issueDate,
+          ...(category ? { category, categoryId: category } : {}),
         }),
       })
       if (!response.ok) throw new Error("Failed to update item")
@@ -141,6 +172,30 @@ export default function GenericModuleEditPage({ moduleSlug, pageTitle, backLabel
                     className="w-full px-3 py-2 rounded border"
                     style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                    Category
+                  </label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full px-3 py-2 rounded border"
+                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}
+                  >
+                    {categoriesLoading ? (
+                      <option value="">Loading categories...</option>
+                    ) : categories.length === 0 ? (
+                      <option value="">No categories found</option>
+                    ) : (
+                      categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))
+                    )}
+                  </select>
                 </div>
 
                 <div>
