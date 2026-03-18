@@ -4,6 +4,7 @@ import { withAuth } from "@/lib/middleware/auth-middleware"
 import { Permission } from "@/lib/types/permissions"
 import { connectToDatabase } from "@/lib/server/db"
 import { getModuleModel, isSupportedModule } from "@/lib/server/models/module-item"
+import { notifyExpiredCertificates } from "@/lib/server/certificate-expiry-notifier"
 
 function unsupportedModule(module: string) {
   return NextResponse.json({ error: `Unsupported module: ${module}` }, { status: 404 })
@@ -14,6 +15,10 @@ export const GET = withAuth(
     try {
       const module = params.module
       if (!isSupportedModule(module)) return unsupportedModule(module)
+
+      if (module === "certificates") {
+        await notifyExpiredCertificates()
+      }
 
       await connectToDatabase()
       const Model = getModuleModel(module)
@@ -96,6 +101,10 @@ export const POST = withAuth(
         isArchived: false,
         createdBy: user.id,
       })
+
+      if (module === "certificates") {
+        await notifyExpiredCertificates(true)
+      }
 
       return NextResponse.json(created, { status: 201 })
     } catch (error) {
