@@ -13,6 +13,10 @@ export default function EditPolicyPage({ params }: { params: Promise<{ id: strin
   const [version, setVersion] = useState("")
   const [location, setLocation] = useState("")
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0])
+  const [fileName, setFileName] = useState("")
+  const [fileType, setFileType] = useState("")
+  const [fileSize, setFileSize] = useState<number | null>(null)
+  const [uploadedAt, setUploadedAt] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const listHref = "/policies"
@@ -32,6 +36,10 @@ export default function EditPolicyPage({ params }: { params: Promise<{ id: strin
         setVersion(String(data?.version || ""))
         setLocation(String(data?.location || ""))
         setIssueDate(String(data?.issueDate || new Date().toISOString().split("T")[0]))
+        setFileName(String(data?.fileName || ""))
+        setFileType(String(data?.fileType || ""))
+        setFileSize(typeof data?.fileSize === "number" ? data.fileSize : null)
+        setUploadedAt(String(data?.uploadedAt || ""))
       } catch (error) {
         console.error("Error loading policy:", error)
         alert("Failed to load policy")
@@ -174,6 +182,80 @@ export default function EditPolicyPage({ params }: { params: Promise<{ id: strin
                   }}
                 />
               </div>
+
+              {(fileName || fileType || fileSize !== null || uploadedAt) && (
+                <div className="pt-2">
+                  <h2 className="text-base font-semibold mb-3" style={{ color: COLORS.textPrimary }}>
+                    Uploaded File Details
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                        File Name
+                      </label>
+                      <input
+                        type="text"
+                        value={fileName || "-"}
+                        readOnly
+                        className="w-full px-3 py-2 rounded border"
+                        style={{
+                          borderColor: COLORS.border,
+                          color: COLORS.textPrimary,
+                          background: COLORS.bgGray,
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                        File Size
+                      </label>
+                      <input
+                        type="text"
+                        value={fileSize !== null ? String(fileSize) : "-"}
+                        readOnly
+                        className="w-full px-3 py-2 rounded border"
+                        style={{
+                          borderColor: COLORS.border,
+                          color: COLORS.textPrimary,
+                          background: COLORS.bgGray,
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                        File Type
+                      </label>
+                      <input
+                        type="text"
+                        value={fileType || "-"}
+                        readOnly
+                        className="w-full px-3 py-2 rounded border"
+                        style={{
+                          borderColor: COLORS.border,
+                          color: COLORS.textPrimary,
+                          background: COLORS.bgGray,
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                        Uploaded At
+                      </label>
+                      <input
+                        type="text"
+                        value={uploadedAt ? new Date(uploadedAt).toLocaleString() : "-"}
+                        readOnly
+                        className="w-full px-3 py-2 rounded border"
+                        style={{
+                          borderColor: COLORS.border,
+                          color: COLORS.textPrimary,
+                          background: COLORS.bgGray,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-2 pt-4">
                 <button
