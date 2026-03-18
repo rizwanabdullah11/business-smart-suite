@@ -1,13 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 
 export default function NewImprovementPage() {
+  const router = useRouter()
   const [title, setTitle] = useState("")
-  const [category, setCategory] = useState("1")
+  const [category, setCategory] = useState("")
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
+  const [categoriesLoading, setCategoriesLoading] = useState(true)
   const [source, setSource] = useState("Internal Audit")
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [assignee, setAssignee] = useState("")
@@ -16,22 +20,73 @@ export default function NewImprovementPage() {
   const [status, setStatus] = useState("Open")
   const [highlighted, setHighlighted] = useState(false)
   const [approved, setApproved] = useState(false)
+  const [saving, setSaving] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const token = localStorage.getItem("token")
+        const response = await fetch("/api/categories?type=improvement-register", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        if (!response.ok) throw new Error("Failed to load categories")
+        const data = await response.json()
+        const normalized = (Array.isArray(data) ? data : [])
+          .filter((cat: any) => !cat?.archived && !cat?.isArchived)
+          .map((cat: any) => ({ id: String(cat._id || cat.id), name: String(cat.name || "") }))
+          .filter((cat: { id: string; name: string }) => cat.id && cat.name)
+        setCategories(normalized)
+        setCategory((prev) => prev || normalized[0]?.id || "")
+      } catch (error) {
+        console.error("Error loading improvement categories:", error)
+      } finally {
+        setCategoriesLoading(false)
+      }
+    }
+    loadCategories()
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement API call to create improvement record
-    console.log({
-      title,
-      category,
-      source,
-      date,
-      assignee,
-      rootCause,
-      description,
-      status,
-      highlighted,
-      approved
-    })
+    if (!title.trim()) {
+      alert("Title is required")
+      return
+    }
+    if (!category) {
+      alert("Please select a category")
+      return
+    }
+    try {
+      setSaving(true)
+      const token = localStorage.getItem("token")
+      const response = await fetch("/api/improvement-register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          title: title.trim(),
+          category,
+          categoryId: category,
+          source,
+          date,
+          assignee,
+          rootCause,
+          description,
+          status,
+          highlighted,
+          approved,
+        }),
+      })
+      if (!response.ok) throw new Error("Failed to create improvement record")
+      router.push("/improvement-register")
+    } catch (error) {
+      console.error("Error creating improvement record:", error)
+      alert("Failed to create improvement record")
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -103,10 +158,17 @@ export default function NewImprovementPage() {
                     color: COLORS.textPrimary,
                   }}
                 >
-                  <option value="1">Non-Conformance Reports (NCR)</option>
-                  <option value="2">Opportunities for Improvement (OFI)</option>
-                  <option value="3">Customer Complaints</option>
-                  <option value="4">Supplier Issues</option>
+                  {categoriesLoading ? (
+                    <option value="">Loading categories...</option>
+                  ) : categories.length === 0 ? (
+                    <option value="">No categories found</option>
+                  ) : (
+                    categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 

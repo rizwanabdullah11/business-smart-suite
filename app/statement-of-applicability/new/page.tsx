@@ -1,13 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 
 export default function NewSoAControlPage() {
+    const router = useRouter()
     const [title, setTitle] = useState("")
-    const [domain, setDomain] = useState("1")
+    const [domain, setDomain] = useState("")
+    const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
+    const [categoriesLoading, setCategoriesLoading] = useState(true)
+    const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0])
     const [description, setDescription] = useState("")
     const [applicable, setApplicable] = useState(true)
     const [justification, setJustification] = useState("")
@@ -15,21 +20,74 @@ export default function NewSoAControlPage() {
     const [owner, setOwner] = useState("")
     const [highlighted, setHighlighted] = useState(false)
     const [approved, setApproved] = useState(false)
+    const [saving, setSaving] = useState(false)
 
-    const handleSubmit = (e: React.FormEvent) => {
+    useEffect(() => {
+        const loadCategories = async () => {
+            try {
+                const token = localStorage.getItem("token")
+                const response = await fetch("/api/categories?type=statement-of-applicability", {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                })
+                if (!response.ok) throw new Error("Failed to load categories")
+                const data = await response.json()
+                const normalized = (Array.isArray(data) ? data : [])
+                    .filter((cat: any) => !cat?.archived && !cat?.isArchived)
+                    .map((cat: any) => ({ id: String(cat._id || cat.id), name: String(cat.name || "") }))
+                    .filter((cat: { id: string; name: string }) => cat.id && cat.name)
+                setCategories(normalized)
+                setDomain((prev) => prev || normalized[0]?.id || "")
+            } catch (error) {
+                console.error("Error loading SoA categories:", error)
+            } finally {
+                setCategoriesLoading(false)
+            }
+        }
+        loadCategories()
+    }, [])
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        // TODO: Implement API call to create control
-        console.log({
-            title,
-            domain,
-            description,
-            applicable,
-            justification,
-            status,
-            owner,
-            highlighted,
-            approved
-        })
+        if (!title.trim()) {
+            alert("Control title is required")
+            return
+        }
+        if (!domain) {
+            alert("Please select a category")
+            return
+        }
+        try {
+            setSaving(true)
+            const token = localStorage.getItem("token")
+            const response = await fetch("/api/statement-of-applicability", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({
+                    title: title.trim(),
+                    domain,
+                    category: domain,
+                    categoryId: domain,
+                    issueDate,
+                    description,
+                    applicable,
+                    justification,
+                    status,
+                    owner,
+                    highlighted,
+                    approved,
+                }),
+            })
+            if (!response.ok) throw new Error("Failed to create control")
+            router.push("/statement-of-applicability")
+        } catch (error) {
+            console.error("Error creating SoA control:", error)
+            alert("Failed to create control")
+        } finally {
+            setSaving(false)
+        }
     }
 
     return (
@@ -119,13 +177,35 @@ export default function NewSoAControlPage() {
                                         color: COLORS.textPrimary,
                                     }}
                                 >
-                                    <option value="1">A.5 Information Security Policies</option>
-                                    <option value="2">A.6 Organization of Information Security</option>
-                                    <option value="3">A.7 Human Resource Security</option>
-                                    <option value="4">A.8 Asset Management</option>
-                                    <option value="5">A.9 Access Control</option>
-                                    <option value="6">A.10 Cryptography</option>
+                                    {categoriesLoading ? (
+                                        <option value="">Loading categories...</option>
+                                    ) : categories.length === 0 ? (
+                                        <option value="">No categories found</option>
+                                    ) : (
+                                        categories.map((cat) => (
+                                            <option key={cat.id} value={cat.id}>
+                                                {cat.name}
+                                            </option>
+                                        ))
+                                    )}
                                 </select>
+                            </div>
+
+                            {/* Status & Owner */}
+                            <div>
+                                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                                    Date
+                                </label>
+                                <input
+                                    type="date"
+                                    value={issueDate}
+                                    onChange={(e) => setIssueDate(e.target.value)}
+                                    className="w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    style={{
+                                        borderColor: COLORS.border,
+                                        color: COLORS.textPrimary,
+                                    }}
+                                />
                             </div>
 
                             {/* Status & Owner */}

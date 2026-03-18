@@ -4,8 +4,17 @@ import { useState, use } from "react"
 import Link from "next/link"
 import { ArrowLeft, Upload } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import GenericModuleUploadPage from "@/components/generic-module-upload-page"
 
 export default function UploadRiskAssessmentPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <GenericModuleUploadPage
+      moduleSlug="risk-assessments"
+      backLabel="Back to Risk Assessments"
+      uploadTitle="Upload Risk Assessment Document"
+    />
+  )
+
   const { id } = use(params)
 
   return (

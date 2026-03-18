@@ -168,6 +168,17 @@ export default function UniversalTaskDetailPage() {
     return Object.entries(item).filter(([key, value]) => !hidden.has(key) && value !== undefined && value !== null && value !== "")
   }, [item])
 
+  const categoryLabel = useMemo(() => {
+    if (!item) return ""
+    const categoryName = item?.category?.name
+    if (categoryName) return String(categoryName)
+    const rawCategory =
+      item?.category?._id ||
+      item?.categoryId ||
+      (typeof item?.category === "string" ? item.category : "")
+    return rawCategory ? String(rawCategory) : ""
+  }, [item])
+
   const reviews = useMemo(() => {
     if (!Array.isArray(item?.reviews)) return []
     return item.reviews
@@ -504,6 +515,16 @@ export default function UniversalTaskDetailPage() {
 
           {activeTab === "Details" && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {categoryLabel ? (
+                <div>
+                  <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>
+                    category
+                  </p>
+                  <div className="px-3 py-2 rounded border" style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}>
+                    {categoryLabel}
+                  </div>
+                </div>
+              ) : null}
               {detailEntries.map(([key, value]) => (
                 <div key={key}>
                   <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>

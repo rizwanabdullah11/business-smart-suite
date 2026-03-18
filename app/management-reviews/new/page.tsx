@@ -4,8 +4,18 @@ import { useState } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import GenericModuleNewPage from "@/components/generic-module-new-page"
 
 export default function NewManagementReviewPage() {
+  return (
+    <GenericModuleNewPage
+      moduleSlug="management-reviews"
+      pageTitle="Create New Management Review"
+      createLabel="Create Management Review"
+      backLabel="Back to Management Reviews"
+    />
+  )
+
   const [title, setTitle] = useState("")
   const [version, setVersion] = useState("")
   const [category, setCategory] = useState("1")

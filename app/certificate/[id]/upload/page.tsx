@@ -1,12 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, use } from "react"
 import Link from "next/link"
 import { ArrowLeft, Upload } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 
-export default function UploadCertificatePage({ params }: { params: { id: string } }) {
+export default function UploadCertificatePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const detailHref = id ? `/task/certificates/${id}?back=${encodeURIComponent("/certificate")}` : "/certificate"
 
   return (
     <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
@@ -15,7 +17,7 @@ export default function UploadCertificatePage({ params }: { params: { id: string
           {/* Back Button */}
           <div className="mb-6">
             <Link
-              href={`/certificate/${params.id}`}
+              href={detailHref}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all"
               style={{
                 background: COLORS.bgWhite,
@@ -93,7 +95,7 @@ export default function UploadCertificatePage({ params }: { params: { id: string
                 Upload
               </button>
               <Link
-                href={`/certificate/${params.id}`}
+                href={detailHref}
                 className="px-6 py-2 rounded-lg font-medium"
                 style={{
                   background: COLORS.bgGray,

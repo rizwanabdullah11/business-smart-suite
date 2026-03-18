@@ -4,8 +4,17 @@ import { useState, use } from "react"
 import Link from "next/link"
 import { ArrowLeft, Upload } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import GenericModuleUploadPage from "@/components/generic-module-upload-page"
 
 export default function UploadCOSHHPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <GenericModuleUploadPage
+      moduleSlug="coshh"
+      backLabel="Back to COSHH"
+      uploadTitle="Upload COSHH Document"
+    />
+  )
+
   const { id } = use(params)
 
   return (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
@@ -9,7 +9,35 @@ export default function NewPolicyPage() {
   const [title, setTitle] = useState("")
   const [version, setVersion] = useState("")
   const [location, setLocation] = useState("")
-  const [category, setCategory] = useState("1")
+  const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0])
+  const [category, setCategory] = useState("")
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
+  const [categoriesLoading, setCategoriesLoading] = useState(true)
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const token = localStorage.getItem("token")
+        const response = await fetch("/api/categories?type=policy", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        if (!response.ok) throw new Error("Failed to load categories")
+        const data = await response.json()
+        const normalized = (Array.isArray(data) ? data : [])
+          .filter((cat: any) => !cat?.archived && !cat?.isArchived)
+          .map((cat: any) => ({ id: String(cat._id || cat.id), name: String(cat.name || "") }))
+          .filter((cat: { id: string; name: string }) => cat.id && cat.name)
+        setCategories(normalized)
+        setCategory((prev) => prev || normalized[0]?.id || "")
+      } catch (error) {
+        console.error("Error loading policy categories:", error)
+      } finally {
+        setCategoriesLoading(false)
+      }
+    }
+
+    loadCategories()
+  }, [])
 
   return (
     <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
@@ -57,8 +85,17 @@ export default function NewPolicyPage() {
                     color: COLORS.textPrimary,
                   }}
                 >
-                  <option value="1">General Policies</option>
-                  <option value="2">HR Policies</option>
+                  {categoriesLoading ? (
+                    <option value="">Loading categories...</option>
+                  ) : categories.length === 0 ? (
+                    <option value="">No policy categories found</option>
+                  ) : (
+                    categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -105,6 +142,22 @@ export default function NewPolicyPage() {
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="e.g., QMS"
+                  className="w-full px-3 py-2 rounded border"
+                  style={{
+                    borderColor: COLORS.border,
+                    color: COLORS.textPrimary,
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                  Issue Date
+                </label>
+                <input
+                  type="date"
+                  value={issueDate}
+                  onChange={(e) => setIssueDate(e.target.value)}
                   className="w-full px-3 py-2 rounded border"
                   style={{
                     borderColor: COLORS.border,

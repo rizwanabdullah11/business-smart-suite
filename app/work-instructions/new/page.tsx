@@ -4,8 +4,18 @@ import { useState } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import GenericModuleNewPage from "@/components/generic-module-new-page"
 
 export default function NewWorkInstructionPage() {
+  return (
+    <GenericModuleNewPage
+      moduleSlug="work-instructions"
+      pageTitle="Create New Work Instruction"
+      createLabel="Create Work Instruction"
+      backLabel="Back to Work Instructions"
+    />
+  )
+
   const [title, setTitle] = useState("")
   const [version, setVersion] = useState("")
   const [area, setArea] = useState("")

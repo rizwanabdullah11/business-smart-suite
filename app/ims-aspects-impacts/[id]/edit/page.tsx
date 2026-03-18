@@ -4,8 +4,17 @@ import { useState, use } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import GenericModuleEditPage from "@/components/generic-module-edit-page"
 
 export default function EditIMSAspectPage({ params }: { params: Promise<{ id: string }> }) {
+    return (
+        <GenericModuleEditPage
+            moduleSlug="ims-aspects-impacts"
+            pageTitle="Edit IMS Aspect & Impact"
+            backLabel="Back to IMS Aspects & Impacts"
+        />
+    )
+
     const { id } = use(params)
 
     return (

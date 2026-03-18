@@ -1,13 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 
 export default function NewEnergyReadingPage() {
+    const router = useRouter()
     const [title, setTitle] = useState("")
-    const [meterType, setMeterType] = useState("1")
+    const [meterType, setMeterType] = useState("")
+    const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
+    const [categoriesLoading, setCategoriesLoading] = useState(true)
     const [reading, setReading] = useState("")
     const [previousReading, setPreviousReading] = useState("")
     const [unit, setUnit] = useState("kWh")
@@ -17,23 +21,75 @@ export default function NewEnergyReadingPage() {
     const [status, setStatus] = useState("Pending")
     const [highlighted, setHighlighted] = useState(false)
     const [approved, setApproved] = useState(false)
+    const [saving, setSaving] = useState(false)
 
-    const handleSubmit = (e: React.FormEvent) => {
+    useEffect(() => {
+        const loadCategories = async () => {
+            try {
+                const token = localStorage.getItem("token")
+                const response = await fetch("/api/categories?type=energy-consumption", {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                })
+                if (!response.ok) throw new Error("Failed to load categories")
+                const data = await response.json()
+                const normalized = (Array.isArray(data) ? data : [])
+                    .filter((cat: any) => !cat?.archived && !cat?.isArchived)
+                    .map((cat: any) => ({ id: String(cat._id || cat.id), name: String(cat.name || "") }))
+                    .filter((cat: { id: string; name: string }) => cat.id && cat.name)
+                setCategories(normalized)
+                setMeterType((prev) => prev || normalized[0]?.id || "")
+            } catch (error) {
+                console.error("Error loading energy categories:", error)
+            } finally {
+                setCategoriesLoading(false)
+            }
+        }
+        loadCategories()
+    }, [])
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        // TODO: Implement API call to record reading
-        console.log({
-            title,
-            meterType,
-            reading,
-            previousReading,
-            unit,
-            cost,
-            date,
-            location,
-            status,
-            highlighted,
-            approved
-        })
+        if (!title.trim()) {
+            alert("Description is required")
+            return
+        }
+        if (!meterType) {
+            alert("Please select a category")
+            return
+        }
+        try {
+            setSaving(true)
+            const token = localStorage.getItem("token")
+            const response = await fetch("/api/energy-consumption", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({
+                    title: title.trim(),
+                    meterType,
+                    category: meterType,
+                    categoryId: meterType,
+                    reading,
+                    previousReading,
+                    unit,
+                    cost,
+                    date,
+                    location,
+                    status,
+                    highlighted,
+                    approved,
+                }),
+            })
+            if (!response.ok) throw new Error("Failed to create energy record")
+            router.push("/energy-consumption")
+        } catch (error) {
+            console.error("Error creating energy record:", error)
+            alert("Failed to create energy record")
+        } finally {
+            setSaving(false)
+        }
     }
 
     return (
@@ -106,10 +162,17 @@ export default function NewEnergyReadingPage() {
                                             color: COLORS.textPrimary,
                                         }}
                                     >
-                                        <option value="1">Electricity</option>
-                                        <option value="2">Gas</option>
-                                        <option value="3">Water</option>
-                                        <option value="4">Fuel/Oil</option>
+                                        {categoriesLoading ? (
+                                            <option value="">Loading categories...</option>
+                                        ) : categories.length === 0 ? (
+                                            <option value="">No categories found</option>
+                                        ) : (
+                                            categories.map((cat) => (
+                                                <option key={cat.id} value={cat.id}>
+                                                    {cat.name}
+                                                </option>
+                                            ))
+                                        )}
                                     </select>
                                 </div>
                                 <div>

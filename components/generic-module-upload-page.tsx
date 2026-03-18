@@ -1,20 +1,79 @@
 "use client"
 
-import { useState, use } from "react"
+import { useRef, useState } from "react"
 import Link from "next/link"
+import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, Upload } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 
-export default function UploadFormPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
+type Props = {
+  moduleSlug: string
+  backLabel: string
+  uploadTitle: string
+  accept?: string
+}
+
+export default function GenericModuleUploadPage({
+  moduleSlug,
+  backLabel,
+  uploadTitle,
+  accept = ".pdf,.doc,.docx,.xlsx,.xls,.jpg,.jpeg,.png",
+}: Props) {
+  const params = useParams<{ id: string }>()
+  const id = String(params?.id || "")
+  const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const detailHref = id ? `/task/forms/${id}?back=${encodeURIComponent("/forms")}` : "/forms"
+  const [uploading, setUploading] = useState(false)
+  const detailHref = id ? `/task/${moduleSlug}/${id}?back=${encodeURIComponent(`/${moduleSlug}`)}` : `/${moduleSlug}`
+
+  const handleUpload = async () => {
+    if (!selectedFile || !id) return
+    try {
+      setUploading(true)
+      const reader = new FileReader()
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = String(reader.result || "")
+          const marker = "base64,"
+          const idx = result.indexOf(marker)
+          if (idx >= 0) resolve(result.slice(idx + marker.length))
+          else resolve(result)
+        }
+        reader.onerror = () => reject(new Error("Failed to read file"))
+        reader.readAsDataURL(selectedFile)
+      })
+
+      const token = localStorage.getItem("token")
+      const response = await fetch(`/api/${moduleSlug}/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          fileName: selectedFile.name,
+          fileType: selectedFile.type || "application/octet-stream",
+          fileSize: selectedFile.size,
+          fileData: base64Data,
+          uploadedAt: new Date().toISOString(),
+        }),
+      })
+      if (!response.ok) throw new Error("Failed to upload file")
+      router.replace(detailHref)
+      if (typeof window !== "undefined") window.location.assign(detailHref)
+    } catch (error) {
+      console.error(`Upload failed for ${moduleSlug}:`, error)
+      alert("Failed to upload file")
+    } finally {
+      setUploading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
       <div className="p-6">
         <div className="max-w-4xl mx-auto">
-          {/* Back Button */}
           <div className="mb-6">
             <Link
               href={detailHref}
@@ -26,11 +85,10 @@ export default function UploadFormPage({ params }: { params: Promise<{ id: strin
               }}
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Form
+              {backLabel}
             </Link>
           </div>
 
-          {/* Upload Form */}
           <div
             className="rounded-lg p-6"
             style={{
@@ -39,7 +97,7 @@ export default function UploadFormPage({ params }: { params: Promise<{ id: strin
             }}
           >
             <h1 className="text-2xl font-bold mb-6" style={{ color: COLORS.textPrimary }}>
-              Upload Form Document
+              {uploadTitle}
             </h1>
 
             <div
@@ -50,15 +108,13 @@ export default function UploadFormPage({ params }: { params: Promise<{ id: strin
               <p className="text-lg font-medium mb-2" style={{ color: COLORS.textPrimary }}>
                 Drop files here or click to browse
               </p>
-              <p className="text-sm mb-4" style={{ color: COLORS.textSecondary }}>
-                Supported formats: PDF, DOCX, XLSX
-              </p>
               <input
+                ref={fileInputRef}
                 type="file"
                 onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                 className="hidden"
                 id="file-upload"
-                accept=".pdf,.docx,.xlsx"
+                accept={accept}
               />
               <label
                 htmlFor="file-upload"
@@ -85,14 +141,16 @@ export default function UploadFormPage({ params }: { params: Promise<{ id: strin
 
             <div className="flex gap-2 mt-6">
               <button
+                onClick={handleUpload}
                 className="px-6 py-2 rounded-lg font-medium"
                 style={{
                   background: COLORS.primary,
                   color: COLORS.textWhite,
+                  opacity: !selectedFile || uploading ? 0.7 : 1,
                 }}
-                disabled={!selectedFile}
+                disabled={!selectedFile || uploading}
               >
-                Upload
+                {uploading ? "Uploading..." : "Upload"}
               </button>
               <Link
                 href={detailHref}

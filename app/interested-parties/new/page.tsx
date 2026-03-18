@@ -1,13 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 
 export default function NewInterestedPartyPage() {
+    const router = useRouter()
     const [name, setName] = useState("")
-    const [category, setCategory] = useState("1")
+    const [category, setCategory] = useState("")
+    const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
+    const [categoriesLoading, setCategoriesLoading] = useState(true)
+    const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0])
     const [needs, setNeeds] = useState("")
     const [influence, setInfluence] = useState("Low")
     const [interest, setInterest] = useState("Low")
@@ -15,21 +20,76 @@ export default function NewInterestedPartyPage() {
     const [opportunities, setOpportunities] = useState("")
     const [highlighted, setHighlighted] = useState(false)
     const [approved, setApproved] = useState(false)
+    const [saving, setSaving] = useState(false)
 
-    const handleSubmit = (e: React.FormEvent) => {
+    useEffect(() => {
+        const loadCategories = async () => {
+            try {
+                const token = localStorage.getItem("token")
+                const response = await fetch("/api/categories?type=interested-parties", {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                })
+                if (!response.ok) throw new Error("Failed to load categories")
+                const data = await response.json()
+                const normalized = (Array.isArray(data) ? data : [])
+                    .filter((cat: any) => !cat?.archived && !cat?.isArchived)
+                    .map((cat: any) => ({ id: String(cat._id || cat.id), name: String(cat.name || "") }))
+                    .filter((cat: { id: string; name: string }) => cat.id && cat.name)
+                setCategories(normalized)
+                setCategory((prev) => prev || normalized[0]?.id || "")
+            } catch (error) {
+                console.error("Error loading interested party categories:", error)
+            } finally {
+                setCategoriesLoading(false)
+            }
+        }
+        loadCategories()
+    }, [])
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        // TODO: Implement API call to create interested party
-        console.log({
-            name,
-            category,
-            needs,
-            influence,
-            interest,
-            risks,
-            opportunities,
-            highlighted,
-            approved
-        })
+        if (!name.trim()) {
+            alert("Party name is required")
+            return
+        }
+        if (!category) {
+            alert("Please select a category")
+            return
+        }
+
+        try {
+            setSaving(true)
+            const token = localStorage.getItem("token")
+            const response = await fetch("/api/interested-parties", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({
+                    title: name.trim(),
+                    name: name.trim(),
+                    category,
+                    categoryId: category,
+                    issueDate,
+                    needs,
+                    influence,
+                    interest,
+                    risks,
+                    opportunities,
+                    highlighted,
+                    approved,
+                }),
+            })
+
+            if (!response.ok) throw new Error("Failed to create interested party")
+            router.push("/interested-parties")
+        } catch (error) {
+            console.error("Error creating interested party:", error)
+            alert("Failed to create interested party")
+        } finally {
+            setSaving(false)
+        }
     }
 
     return (
@@ -101,11 +161,35 @@ export default function NewInterestedPartyPage() {
                                         color: COLORS.textPrimary,
                                     }}
                                 >
-                                    <option value="1">Internal Stakeholders</option>
-                                    <option value="2">External Stakeholders</option>
-                                    <option value="3">Regulators / Government</option>
-                                    <option value="4">Partners / Suppliers</option>
+                                    {categoriesLoading ? (
+                                        <option value="">Loading categories...</option>
+                                    ) : categories.length === 0 ? (
+                                        <option value="">No categories found</option>
+                                    ) : (
+                                        categories.map((cat) => (
+                                            <option key={cat.id} value={cat.id}>
+                                                {cat.name}
+                                            </option>
+                                        ))
+                                    )}
                                 </select>
+                            </div>
+
+                            {/* Needs */}
+                            <div>
+                                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                                    Date
+                                </label>
+                                <input
+                                    type="date"
+                                    value={issueDate}
+                                    onChange={(e) => setIssueDate(e.target.value)}
+                                    className="w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    style={{
+                                        borderColor: COLORS.border,
+                                        color: COLORS.textPrimary,
+                                    }}
+                                />
                             </div>
 
                             {/* Needs */}
@@ -235,13 +319,15 @@ export default function NewInterestedPartyPage() {
                             <div className="flex gap-2 pt-4">
                                 <button
                                     type="submit"
+                                    disabled={saving || categoriesLoading || !category}
                                     className="px-6 py-2 rounded-lg font-medium hover:shadow-md transition-all"
                                     style={{
                                         background: COLORS.primary,
                                         color: COLORS.textWhite,
+                                        opacity: saving || categoriesLoading || !category ? 0.7 : 1,
                                     }}
                                 >
-                                    Add Party
+                                    {saving ? "Saving..." : "Add Party"}
                                 </button>
                                 <Link
                                     href="/interested-parties"

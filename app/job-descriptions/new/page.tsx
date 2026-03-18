@@ -4,8 +4,18 @@ import { useState } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import GenericModuleNewPage from "@/components/generic-module-new-page"
 
 export default function NewJobDescriptionPage() {
+  return (
+    <GenericModuleNewPage
+      moduleSlug="job-descriptions"
+      pageTitle="Create New Job Description"
+      createLabel="Create Job Description"
+      backLabel="Back to Job Descriptions"
+    />
+  )
+
   const [title, setTitle] = useState("")
   const [version, setVersion] = useState("")
   const [location, setLocation] = useState("")

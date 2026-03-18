@@ -4,8 +4,17 @@ import { useState, use } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import GenericModuleEditPage from "@/components/generic-module-edit-page"
 
 export default function EditCOSHHPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <GenericModuleEditPage
+      moduleSlug="coshh"
+      pageTitle="Edit COSHH Record"
+      backLabel="Back to COSHH"
+    />
+  )
+
   const { id } = use(params)
 
   return (

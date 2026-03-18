@@ -4,8 +4,18 @@ import { useState } from "react"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import GenericModuleNewPage from "@/components/generic-module-new-page"
 
 export default function NewRiskAssessmentPage() {
+  return (
+    <GenericModuleNewPage
+      moduleSlug="risk-assessments"
+      pageTitle="Create New Risk Assessment"
+      createLabel="Create Risk Assessment"
+      backLabel="Back to Risk Assessments"
+    />
+  )
+
   const [title, setTitle] = useState("")
   const [version, setVersion] = useState("")
   const [area, setArea] = useState("")
