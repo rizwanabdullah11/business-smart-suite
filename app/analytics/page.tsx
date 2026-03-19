@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, Zap, RefreshCw } from "lucide-react"
 import { COLORS } from "@/constant/colors"
@@ -16,33 +16,52 @@ import {
   Area,
 } from "recharts"
 
-type ImprovementItem = {
-  _id: string
-  title?: string
-  source?: string
-  status?: string
-  date?: string
-  issueDate?: string
-  createdAt?: string
-  cost?: number | string
+type MonthlyActivityPoint = {
+  name: string
+  value: number
 }
 
-function toDateValue(item: ImprovementItem) {
-  const raw = item.date || item.issueDate || item.createdAt
-  const d = raw ? new Date(raw) : null
-  return d && !Number.isNaN(d.getTime()) ? d : null
+type AchievementPoint = {
+  name: string
+  late: number
+  onTime: number
+}
+
+type CostPoint = {
+  name: string
+  cost: number
+}
+
+type AnalyticsSummary = {
+  totalItems: number
+  completed: number
+  pending: number
+  totalCost: number
+  averageCost: number
+}
+
+type AnalyticsResponse = {
+  summary: AnalyticsSummary
+  monthlyActivity: MonthlyActivityPoint[]
+  achievementData: AchievementPoint[]
+  costTrend: CostPoint[]
 }
 
 function formatDateInput(value: Date) {
   return value.toISOString().split("T")[0]
 }
 
-function monthShort(date: Date) {
-  return date.toLocaleString("en", { month: "short" })
-}
-
 export default function AnalyticsPage() {
-  const [items, setItems] = useState<ImprovementItem[]>([])
+  const [summary, setSummary] = useState<AnalyticsSummary>({
+    totalItems: 0,
+    completed: 0,
+    pending: 0,
+    totalCost: 0,
+    averageCost: 0,
+  })
+  const [monthlyActivity, setMonthlyActivity] = useState<MonthlyActivityPoint[]>([])
+  const [achievementData, setAchievementData] = useState<AchievementPoint[]>([])
+  const [costData, setCostData] = useState<CostPoint[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [startDate, setStartDate] = useState(() => {
@@ -57,14 +76,18 @@ export default function AnalyticsPage() {
     setError(null)
     try {
       const token = localStorage.getItem("token")
-      const res = await fetch("/api/improvement-register", {
+      const query = new URLSearchParams({ startDate, endDate })
+      const res = await fetch(`/api/analytics?${query.toString()}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
       if (!res.ok) {
         throw new Error("Failed to fetch analytics data")
       }
-      const data = await res.json()
-      setItems(Array.isArray(data) ? data : [])
+      const data = (await res.json()) as AnalyticsResponse
+      setSummary(data.summary || { totalItems: 0, completed: 0, pending: 0, totalCost: 0, averageCost: 0 })
+      setMonthlyActivity(Array.isArray(data.monthlyActivity) ? data.monthlyActivity : [])
+      setAchievementData(Array.isArray(data.achievementData) ? data.achievementData : [])
+      setCostData(Array.isArray(data.costTrend) ? data.costTrend : [])
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch analytics data")
     } finally {
@@ -75,87 +98,6 @@ export default function AnalyticsPage() {
   useEffect(() => {
     loadData()
   }, [])
-
-  const filteredItems = useMemo(() => {
-    const start = new Date(startDate)
-    const end = new Date(endDate)
-    end.setHours(23, 59, 59, 999)
-    return items.filter((item) => {
-      const d = toDateValue(item)
-      if (!d) return false
-      return d >= start && d <= end
-    })
-  }, [items, startDate, endDate])
-
-  const improvementData = useMemo(() => {
-    const result: { name: string; value: number }[] = []
-    const cursor = new Date(startDate)
-    cursor.setDate(1)
-    const end = new Date(endDate)
-    end.setDate(1)
-    const monthMap = new Map<string, number>()
-    while (cursor <= end) {
-      const key = `${cursor.getFullYear()}-${cursor.getMonth()}`
-      monthMap.set(key, 0)
-      result.push({ name: monthShort(cursor), value: 0 })
-      cursor.setMonth(cursor.getMonth() + 1)
-    }
-    filteredItems.forEach((item) => {
-      const d = toDateValue(item)
-      if (!d) return
-      const key = `${d.getFullYear()}-${d.getMonth()}`
-      monthMap.set(key, (monthMap.get(key) || 0) + 1)
-    })
-    return result.map((entry, i) => {
-      const date = new Date(startDate)
-      date.setDate(1)
-      date.setMonth(date.getMonth() + i)
-      const key = `${date.getFullYear()}-${date.getMonth()}`
-      return { ...entry, value: monthMap.get(key) || 0 }
-    })
-  }, [filteredItems, startDate, endDate])
-
-  const achievementData = useMemo(() => {
-    const group = new Map<string, { name: string; late: number; onTime: number }>()
-    filteredItems.forEach((item) => {
-      const area = item.source || "Unspecified"
-      const status = String(item.status || "").toLowerCase()
-      const isOnTime = ["closed", "completed", "done", "approved"].some((k) => status.includes(k))
-      const row = group.get(area) || { name: area, late: 0, onTime: 0 }
-      if (isOnTime) row.onTime += 1
-      else row.late += 1
-      group.set(area, row)
-    })
-    return Array.from(group.values()).slice(0, 10)
-  }, [filteredItems])
-
-  const costData = useMemo(() => {
-    const monthTotals = new Map<string, number>()
-    const monthList: { name: string; key: string }[] = []
-    const d = new Date()
-    d.setDate(1)
-    d.setMonth(d.getMonth() - 11)
-    for (let i = 0; i < 12; i++) {
-      const key = `${d.getFullYear()}-${d.getMonth()}`
-      monthTotals.set(key, 0)
-      monthList.push({ key, name: monthShort(d) })
-      d.setMonth(d.getMonth() + 1)
-    }
-    filteredItems.forEach((item) => {
-      const date = toDateValue(item)
-      if (!date) return
-      const key = `${date.getFullYear()}-${date.getMonth()}`
-      if (!monthTotals.has(key)) return
-      const raw = typeof item.cost === "number" ? item.cost : Number(item.cost || 0)
-      const value = Number.isFinite(raw) ? raw : 0
-      monthTotals.set(key, (monthTotals.get(key) || 0) + value)
-    })
-    return monthList.map((m) => ({ name: m.name, cost: Number((monthTotals.get(m.key) || 0).toFixed(2)) }))
-  }, [filteredItems])
-
-  const totalCost = useMemo(() => costData.reduce((sum, m) => sum + m.cost, 0), [costData])
-  const totalItems = filteredItems.length
-  const avgCost = totalItems > 0 ? totalCost / totalItems : 0
 
   return (
     <div className="min-h-screen p-8" style={{ background: COLORS.bgGrayLight }}>
@@ -176,7 +118,7 @@ export default function AnalyticsPage() {
           </div>
           <div>
             <h2 className="text-xl font-bold text-black">Analytics Dashboard</h2>
-            <p className="text-gray-500 text-sm mt-1">Real-time insights from Improvement Register data</p>
+            <p className="text-gray-500 text-sm mt-1">Real-time insights directly from database</p>
           </div>
         </div>
 
@@ -222,10 +164,10 @@ export default function AnalyticsPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <div className="bg-white rounded-xl border p-6 shadow-sm" style={{ borderColor: COLORS.border }}>
-            <h3 className="text-sm font-semibold text-black mb-6">Improvement Register - Root Cause Analysis</h3>
+            <h3 className="text-sm font-semibold text-black mb-6">Monthly Document Activity</h3>
             <div className="h-64 border-2 border-dashed rounded-lg flex flex-col items-center justify-center relative overflow-hidden" style={{ borderColor: COLORS.neutral200 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={improvementData}>
+                <BarChart data={monthlyActivity}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="name" />
                   <YAxis />
@@ -281,9 +223,11 @@ export default function AnalyticsPage() {
           <div className="mb-6">
             <h3 className="text-sm font-semibold text-black">Cost of Quality (12-Month Period)</h3>
             <div className="flex gap-4 mt-2 text-xs text-gray-500">
-              <span>Total Cost: <strong className="text-gray-900">£{totalCost.toFixed(2)}</strong></span>
-              <span>Total Items: <strong className="text-gray-900">{totalItems}</strong></span>
-              <span>Average Cost: <strong className="text-gray-900">£{avgCost.toFixed(2)}</strong></span>
+              <span>Total Cost: <strong className="text-gray-900">£{summary.totalCost.toFixed(2)}</strong></span>
+              <span>Total Items: <strong className="text-gray-900">{summary.totalItems}</strong></span>
+              <span>Pending: <strong className="text-gray-900">{summary.pending}</strong></span>
+              <span>Completed: <strong className="text-gray-900">{summary.completed}</strong></span>
+              <span>Average Cost: <strong className="text-gray-900">£{summary.averageCost.toFixed(2)}</strong></span>
             </div>
           </div>
 
