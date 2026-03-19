@@ -7,6 +7,7 @@ export interface IManual extends mongoose.Document {
   issueDate?: string | Date
   category?: mongoose.Types.ObjectId
   categoryId?: mongoose.Types.ObjectId
+  organizationId?: mongoose.Types.ObjectId | string | null
   highlighted: boolean
   approved: boolean
   paused: boolean
@@ -46,6 +47,11 @@ const manualSchema = new Schema<IManual>(
     categoryId: {
       type: Schema.Types.ObjectId,
       ref: "Category",
+    },
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
     highlighted: {
       type: Boolean,

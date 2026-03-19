@@ -3,7 +3,10 @@ import { withAuth } from "@/lib/middleware/auth-middleware"
 import { Permission } from "@/lib/types/permissions"
 import { connectToDatabase } from "@/lib/server/db"
 import Category from "@/lib/server/models/Category"
+import Manual from "@/lib/server/models/Manual"
+import { getModuleModel } from "@/lib/server/models/module-item"
 import mongoose from "mongoose"
+import { buildOwnershipFilter, toObjectId } from "@/lib/server/organization-context"
 
 const TYPE_ALIASES: Record<string, string> = {
   manuals: "manual",
@@ -26,22 +29,90 @@ function normalizeCategoryType(type?: string | null): string | null {
   return TYPE_ALIASES[key] || key
 }
 
+function categoryTypeToModule(type: string | null) {
+  if (!type) return null
+  if (type === "manual") return "manuals"
+  if (type === "policy") return "policies"
+  if (type === "procedure") return "procedures"
+  if (type === "form") return "forms"
+  if (type === "certificate") return "certificates"
+  if (type === "task") return "tasks"
+  return type
+}
+
+function toCategoryRefId(value: unknown): string | null {
+  if (!value) return null
+  if (typeof value === "string") return value
+  if (typeof value === "object" && value !== null && "_id" in value) {
+    return String((value as { _id?: unknown })._id || "")
+  }
+  return null
+}
+
 export const GET = withAuth(
-  async (request: NextRequest) => {
+  async (request: NextRequest, user) => {
     try {
       await connectToDatabase()
       const { searchParams } = new URL(request.url)
       const archivedOnly = searchParams.get("archived") === "true"
       const normalizedType = normalizeCategoryType(searchParams.get("type"))
 
-      const query: Record<string, unknown> = {}
+      const andConditions: Record<string, unknown>[] = []
       if (archivedOnly) {
-        query.$or = [{ archived: true }, { isArchived: true }]
+        andConditions.push({ $or: [{ archived: true }, { isArchived: true }] })
+      } else {
+        andConditions.push(
+          { $or: [{ archived: { $exists: false } }, { archived: false }] },
+          { $or: [{ isArchived: { $exists: false } }, { isArchived: false }] }
+        )
       }
       if (normalizedType) {
-        query.type = normalizedType
+        andConditions.push({ type: normalizedType })
+      }
+      const { activeOrganizationId } = await buildOwnershipFilter(request, user)
+      if (activeOrganizationId) {
+        const orgObjectId = toObjectId(activeOrganizationId)
+        const moduleSlug = categoryTypeToModule(normalizedType)
+        if (orgObjectId && moduleSlug) {
+          const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
+          const Model = moduleSlug === "manuals" ? Manual : getModuleModel(moduleSlug)
+          const docs = await Model.find({
+            ...(ownershipFilter || {}),
+            $or: [
+              { category: { $exists: true, $ne: null } },
+              { categoryId: { $exists: true, $ne: null } },
+            ],
+          })
+            .select("category categoryId")
+            .lean()
+
+          const legacyCategoryIds = Array.from(
+            new Set(
+              docs
+                .flatMap((doc: any) => [toCategoryRefId(doc?.category), toCategoryRefId(doc?.categoryId)])
+                .filter((id): id is string => Boolean(id && mongoose.Types.ObjectId.isValid(id)))
+            )
+          ).map((id) => new mongoose.Types.ObjectId(id))
+
+          if (legacyCategoryIds.length > 0) {
+            await Category.updateMany(
+              {
+                _id: { $in: legacyCategoryIds },
+                $or: [{ organizationId: null }, { organizationId: { $exists: false } }],
+              },
+              { $set: { organizationId: orgObjectId } }
+            )
+          }
+        }
+
+        andConditions.push({
+          $or: [
+          { organizationId: orgObjectId },
+          { organizationId: activeOrganizationId },
+        ]})
       }
 
+      const query = andConditions.length > 0 ? { $and: andConditions } : {}
       const categories = await Category.find(query).sort({ createdAt: -1 }).lean()
       return NextResponse.json(categories)
     } catch (error) {
@@ -57,7 +128,7 @@ export const GET = withAuth(
 )
 
 export const POST = withAuth(
-  async (request: NextRequest) => {
+  async (request: NextRequest, user) => {
     try {
       const body = await request.json()
       if (!body?.name) {
@@ -66,9 +137,11 @@ export const POST = withAuth(
 
       await connectToDatabase()
       const normalizedType = normalizeCategoryType(body.type) || "manual"
+      const { activeOrganizationId } = await buildOwnershipFilter(request, user)
       const category = await Category.create({
         name: String(body.name).trim(),
         type: normalizedType,
+        organizationId: toObjectId(activeOrganizationId) || activeOrganizationId || undefined,
         archived: false,
         isArchived: false,
         highlighted: false,

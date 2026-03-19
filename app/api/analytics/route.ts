@@ -4,6 +4,7 @@ import { Permission } from "@/lib/types/permissions"
 import { connectToDatabase } from "@/lib/server/db"
 import Manual from "@/lib/server/models/Manual"
 import { getModuleModel } from "@/lib/server/models/module-item"
+import { buildOwnershipFilter } from "@/lib/server/organization-context"
 
 const MODULES = [
   "policies",
@@ -155,7 +156,7 @@ function buildCostTrend(rows: AnalyticsDoc[]) {
 }
 
 export const GET = withAuth(
-  async (request: NextRequest) => {
+  async (request: NextRequest, user) => {
     try {
       await connectToDatabase()
       const { searchParams } = new URL(request.url)
@@ -172,15 +173,19 @@ export const GET = withAuth(
           { $or: [{ isArchived: { $exists: false } }, { isArchived: false }] },
         ],
       }
+      const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
+      const mergedFilter = Object.keys(ownershipFilter).length > 0
+        ? { $and: [activeFilter, ownershipFilter] }
+        : activeFilter
 
       const [manualRows, ...moduleRows] = await Promise.all([
-        Manual.find(activeFilter)
+        Manual.find(mergedFilter)
           .select("title source status approved date issueDate createdAt cost category")
           .populate("category", "name")
           .lean(),
         ...MODULES.map((module) => {
           const Model = getModuleModel(module)
-          return Model.find(activeFilter)
+          return Model.find(mergedFilter)
             .select("title source status approved date issueDate createdAt cost category")
             .populate("category", "name")
             .lean()

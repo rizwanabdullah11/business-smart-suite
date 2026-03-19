@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useMemo, useState } from "react"
 import { Bell, Search, LogOut, Plus, BarChart2 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
@@ -12,6 +13,39 @@ interface TopNavbarProps {
 }
 
 export function TopNavbar({ user, isCollapsed, onLogout, onAddFolder }: TopNavbarProps) {
+    const [organizations, setOrganizations] = useState<Array<{ _id: string; name?: string; email?: string }>>([])
+    const [activeOrganizationId, setActiveOrganizationId] = useState("")
+    const isAdmin = useMemo(() => String(user?.role || "").toLowerCase() === "admin", [user?.role])
+
+    useEffect(() => {
+        if (!isAdmin) return
+
+        const token = localStorage.getItem("token")
+        if (!token) return
+
+        const selected = localStorage.getItem("activeOrganizationId") || ""
+        setActiveOrganizationId(selected)
+
+        fetch("/api/organizations", {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+            .then((res) => (res.ok ? res.json() : []))
+            .then((rows) => {
+                setOrganizations(Array.isArray(rows) ? rows : [])
+            })
+            .catch(() => {
+                setOrganizations([])
+            })
+    }, [isAdmin])
+
+    const onOrganizationChange = (value: string) => {
+        setActiveOrganizationId(value)
+        if (value) localStorage.setItem("activeOrganizationId", value)
+        else localStorage.removeItem("activeOrganizationId")
+        window.dispatchEvent(new Event("organization-change"))
+        window.location.reload()
+    }
+
     return (
         <header
             className="fixed top-0 left-0 right-0 h-20 border-b z-30 flex items-center justify-between backdrop-blur-md transition-all duration-300"
@@ -52,6 +86,29 @@ export function TopNavbar({ user, isCollapsed, onLogout, onAddFolder }: TopNavba
                         style={{ color: COLORS.textSecondary }}
                     />
                 </div>
+
+                {isAdmin ? (
+                    <div className="hidden xl:block">
+                        <select
+                            value={activeOrganizationId}
+                            onChange={(e) => onOrganizationChange(e.target.value)}
+                            className="px-3 py-2 rounded-lg border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            style={{
+                                borderColor: COLORS.border,
+                                background: COLORS.bgWhite,
+                                color: COLORS.textPrimary,
+                            }}
+                            title="Switch organization scope"
+                        >
+                            <option value="">All Organizations</option>
+                            {organizations.map((org) => (
+                                <option key={org._id} value={org._id}>
+                                    {org.name || org.email || org._id}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                ) : null}
 
                 {/* Analytics Button */}
                 <Link href="/analytics">
