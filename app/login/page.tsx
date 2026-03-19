@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
     Loader2,
@@ -18,13 +17,14 @@ import { Checkbox } from "@/components/ui/Checkbox"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { COLORS } from "@/constant/colors"
+import { useAuth } from "@/contexts/auth-context"
 
 // API Config
 const API_URL = "/api";
 
 export default function LoginPage() {
-    const router = useRouter()
     const { toast } = useToast()
+    const { refreshUser } = useAuth()
 
     // State for form inputs
     const [email, setEmail] = useState("")
@@ -41,7 +41,11 @@ export default function LoginPage() {
             const response = await fetch(`${API_URL}/auth/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
+                credentials: "include",
+                body: JSON.stringify({
+                    email: email.trim(),
+                    password: password,
+                }),
             });
 
             const data = await response.json();
@@ -57,19 +61,18 @@ export default function LoginPage() {
                 // Clear any existing auth data first
                 localStorage.removeItem("token");
                 localStorage.removeItem("user");
-                document.cookie = "token=; path=/; max-age=0";
                 
                 // Set new auth data
                 localStorage.setItem("token", data.token);
                 if (data.user) {
                     localStorage.setItem("user", JSON.stringify(data.user));
                 }
-                document.cookie = `token=${data.token}; path=/; max-age=86400; SameSite=Strict`;
                 
                 console.log("✅ Login: Auth data set, triggering refresh...");
                 
-                // Trigger storage event to refresh auth context
-                window.dispatchEvent(new Event('storage'));
+                // Trigger auth context refresh on the same tab
+                window.dispatchEvent(new Event("auth-change"));
+                await refreshUser()
                 
                 toast({
                     title: "Welcome back!",
@@ -79,8 +82,7 @@ export default function LoginPage() {
 
                 // Navigate to dashboard
                 console.log("✅ Login: Redirecting to dashboard...");
-                router.push("/dashboard");
-                router.refresh(); // Force a refresh of the current route
+                window.location.assign("/dashboard");
             }
 
         } catch (error: any) {

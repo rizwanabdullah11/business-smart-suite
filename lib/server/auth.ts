@@ -30,13 +30,15 @@ function roleForClient(input?: string): AuthUser["role"] {
 }
 
 export function extractTokenFromRequest(request: NextRequest): string | null {
+  const authHeader = request.headers.get("authorization")
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.slice(7)
+  }
+
   const fromCookie = request.cookies.get("token")?.value
   if (fromCookie) return fromCookie
 
-  const authHeader = request.headers.get("authorization")
-  if (!authHeader?.startsWith("Bearer ")) return null
-
-  return authHeader.slice(7)
+  return null
 }
 
 export function signAuthToken(user: { _id: string; email: string; role: string }) {

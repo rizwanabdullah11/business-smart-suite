@@ -27,6 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const fetchUser = async () => {
+    setLoading(true)
     try {
       // Check if token exists
       const token = localStorage.getItem("token")
@@ -38,7 +39,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       console.log("🔍 Auth: Fetching user data...")
-      const response = await fetch("/api/auth/me")
+      const response = await fetch("/api/auth/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
       if (response.ok) {
         const userData = await response.json()
         console.log("✅ Auth: User loaded -", userData.name, `(${userData.role})`)
