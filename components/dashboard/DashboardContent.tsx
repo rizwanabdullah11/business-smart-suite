@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { TrendingUp, TrendingDown, FileText, Users, AlertCircle, CheckCircle } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import { useAuth } from "@/contexts/auth-context"
 
 type DashboardStat = {
   title: string
@@ -73,6 +74,7 @@ function formatTimeAgo(dateValue?: string) {
 }
 
 export function DashboardContent() {
+  const { isAuthenticated, loading: authLoading } = useAuth()
   const [stats, setStats] = useState<DashboardStat[]>([
     { title: "Total Documents", value: "-", change: "0%", trend: "up", icon: FileText, color: COLORS.blue500, subtitle: "live data" },
     { title: "Active Users", value: "-", change: "0%", trend: "up", icon: Users, color: COLORS.emerald500, subtitle: "live data" },
@@ -84,7 +86,11 @@ export function DashboardContent() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const loadDashboardData = async () => {
+    if (authLoading || !isAuthenticated) return
+
+    let cancelled = false
+
+    const loadDashboardData = async (allowRetry = true) => {
       setLoading(true)
       try {
         const token = localStorage.getItem("token")
@@ -153,6 +159,7 @@ export function DashboardContent() {
             subtitle: "approved/completed",
           },
         ]
+        if (cancelled) return
         setStats(nextStats)
 
         const activities: ActivityItem[] = activeDocs
@@ -175,16 +182,35 @@ export function DashboardContent() {
           .sort((a: any, b: any) => b.sortTime - a.sortTime)
           .map(({ sortTime, ...rest }: any) => rest)
 
+        if (cancelled) return
         setRecentActivities(activities)
+
+        // On first login redirect there can be a brief token/cookie race on some hosts.
+        // If everything comes back empty, retry once shortly after.
+        if (allowRetry && activeDocs.length === 0) {
+          window.setTimeout(() => {
+            if (!cancelled) loadDashboardData(false)
+          }, 900)
+        }
       } catch (error) {
         console.error("Failed to load dashboard data:", error)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     loadDashboardData()
-  }, [])
+
+    const handleAuthChange = () => {
+      if (!cancelled) loadDashboardData(false)
+    }
+    window.addEventListener("auth-change", handleAuthChange)
+
+    return () => {
+      cancelled = true
+      window.removeEventListener("auth-change", handleAuthChange)
+    }
+  }, [authLoading, isAuthenticated])
 
   const gradients = useMemo(
     () => [COLORS.gradientBlue, COLORS.gradientGreen, COLORS.gradientSunset, COLORS.gradientIndigo],
