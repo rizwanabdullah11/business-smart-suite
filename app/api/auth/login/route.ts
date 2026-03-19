@@ -7,8 +7,10 @@ import { signAuthToken } from "@/lib/server/auth"
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json()
+    const normalizedEmail = String(email || "").trim().toLowerCase()
+    const rawPassword = String(password || "")
 
-    if (!email || !password) {
+    if (!normalizedEmail || !rawPassword) {
       return NextResponse.json(
         { error: "Bad request", message: "Email and password are required" },
         { status: 400 }
@@ -16,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     await connectToDatabase()
-    const user = await User.findOne({ email: String(email).toLowerCase() })
+    const user = await User.findOne({ email: normalizedEmail })
     if (!user) {
       return NextResponse.json(
         { error: "Unauthorized", message: "Invalid email or password" },
@@ -24,7 +26,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const isMatch = await bcrypt.compare(String(password), user.password)
+    const isMatch = await bcrypt.compare(rawPassword, user.password)
     if (!isMatch) {
       return NextResponse.json(
         { error: "Unauthorized", message: "Invalid email or password" },
@@ -44,8 +46,8 @@ export async function POST(request: NextRequest) {
     })
 
     response.cookies.set("token", token, {
-      httpOnly: false,
-      sameSite: "strict",
+      httpOnly: true,
+      sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       path: "/",
       maxAge: 60 * 60 * 24,

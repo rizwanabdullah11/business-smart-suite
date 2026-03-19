@@ -4,6 +4,8 @@ export async function POST() {
   const response = NextResponse.json({ success: true })
   response.cookies.set("token", "", {
     path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
     maxAge: 0,
   })
   return response
