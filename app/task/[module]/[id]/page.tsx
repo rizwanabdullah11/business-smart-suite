@@ -48,6 +48,8 @@ export default function UniversalTaskDetailPage() {
   const [savingVersion, setSavingVersion] = useState(false)
   const [showPermissionModal, setShowPermissionModal] = useState(false)
   const [savingPermission, setSavingPermission] = useState(false)
+  const [employeeUsers, setEmployeeUsers] = useState<Array<{ id: string; name: string; role: string; email: string }>>([])
+  const [permissionUsersLoading, setPermissionUsersLoading] = useState(false)
   const [showAuditModal, setShowAuditModal] = useState(false)
   const [savingAudit, setSavingAudit] = useState(false)
   const [currentUserName, setCurrentUserName] = useState("Current User")
@@ -421,6 +423,42 @@ export default function UniversalTaskDetailPage() {
       setSavingPermission(false)
     }
   }
+
+  const loadPermissionUsers = async () => {
+    try {
+      setPermissionUsersLoading(true)
+      const token = localStorage.getItem("token")
+      const response = await fetch("/api/users?role=employee", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (!response.ok) throw new Error("Failed to load users")
+      const data = await response.json()
+      const normalized = (Array.isArray(data) ? data : [])
+        .map((u: any) => ({
+          id: String(u?._id || u?.id || ""),
+          name: String(u?.name || "Unknown User"),
+          role: String(u?.role || "Employee"),
+          email: String(u?.email || ""),
+        }))
+        .filter((u: { id: string }) => Boolean(u.id))
+      setEmployeeUsers(normalized.filter((u) => String(u.role).toLowerCase() === "employee"))
+    } catch (err) {
+      console.error("Failed to load permission users:", err)
+      setEmployeeUsers([])
+    } finally {
+      setPermissionUsersLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!showPermissionModal) return
+    loadPermissionUsers()
+  }, [showPermissionModal])
+
+  useEffect(() => {
+    if (!showAuditModal) return
+    loadPermissionUsers()
+  }, [showAuditModal])
 
   const handleSaveAudit = async () => {
     if (!auditForm.auditor.trim() || !auditForm.auditDate) {
@@ -855,14 +893,27 @@ export default function UniversalTaskDetailPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: COLORS.textPrimary }}>Role/User</label>
-                  <input
-                    type="text"
+                  <label className="block text-sm font-medium mb-1" style={{ color: COLORS.textPrimary }}>Employee</label>
+                  <select
                     value={permissionForm.roleOrUser}
                     onChange={(e) => setPermissionForm((prev) => ({ ...prev, roleOrUser: e.target.value }))}
                     className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
                     style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
-                  />
+                  >
+                    <option value="">
+                      {permissionUsersLoading ? "Loading employees..." : "Select employee"}
+                    </option>
+                    {employeeUsers.map((u) => (
+                      <option key={u.id} value={`${u.name} (${u.role})`}>
+                        {u.name} - {u.role} ({u.email})
+                      </option>
+                    ))}
+                  </select>
+                  {!permissionUsersLoading && employeeUsers.length === 0 ? (
+                    <p className="text-xs mt-1" style={{ color: COLORS.textSecondary }}>
+                      No employees found for this organization.
+                    </p>
+                  ) : null}
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1" style={{ color: COLORS.textPrimary }}>Access Level</label>
@@ -955,14 +1006,27 @@ export default function UniversalTaskDetailPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: COLORS.textPrimary }}>Auditor</label>
-                  <input
-                    type="text"
+                  <label className="block text-sm font-medium mb-1" style={{ color: COLORS.textPrimary }}>Employee Auditor</label>
+                  <select
                     value={auditForm.auditor}
                     onChange={(e) => setAuditForm((prev) => ({ ...prev, auditor: e.target.value }))}
                     className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
                     style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
-                  />
+                  >
+                    <option value="">
+                      {permissionUsersLoading ? "Loading employees..." : "Select employee auditor"}
+                    </option>
+                    {employeeUsers.map((u) => (
+                      <option key={u.id} value={u.name}>
+                        {u.name} ({u.email})
+                      </option>
+                    ))}
+                  </select>
+                  {!permissionUsersLoading && employeeUsers.length === 0 ? (
+                    <p className="text-xs mt-1" style={{ color: COLORS.textSecondary }}>
+                      No employees found for this organization.
+                    </p>
+                  ) : null}
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1" style={{ color: COLORS.textPrimary }}>Status</label>
