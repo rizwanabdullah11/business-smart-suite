@@ -3,13 +3,18 @@ import { withAuth } from "@/lib/middleware/auth-middleware"
 import { Permission } from "@/lib/types/permissions"
 import { connectToDatabase } from "@/lib/server/db"
 import Manual from "@/lib/server/models/Manual"
+import { buildOwnershipFilter } from "@/lib/server/organization-context"
 
 export const GET = withAuth(
-  async (_request: NextRequest) => {
+  async (request: NextRequest, user) => {
     try {
       await connectToDatabase()
+      const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
       const manuals = await Manual.find({
-        $or: [{ archived: true }, { isArchived: true }],
+        $and: [
+          { $or: [{ archived: true }, { isArchived: true }] },
+          ...(Object.keys(ownershipFilter).length > 0 ? [ownershipFilter] : []),
+        ],
       })
         .populate("category", "_id name")
         .sort({ updatedAt: -1 })

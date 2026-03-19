@@ -6,6 +6,7 @@ import User from "@/lib/server/models/User"
 import { normalizeRole, ROLE } from "@/lib/server/utils/roles"
 import bcrypt from "bcryptjs"
 import mongoose from "mongoose"
+import { getActiveOrganizationIdFromRequest } from "@/lib/server/organization-context"
 
 /**
  * GET /api/users - Get users list (dynamic based on role)
@@ -33,10 +34,19 @@ export const GET = withAuth(
       const userIdFilter = searchParams.get("_id")
 
       const query: Record<string, unknown> = {}
+      const activeOrganizationId =
+        user.role === "admin" ? getActiveOrganizationIdFromRequest(request, user) : null
+
       if (user.role === "organization") {
         query.$or = [
           { organizationId: new mongoose.Types.ObjectId(user.id) },
           { _id: new mongoose.Types.ObjectId(user.id) },
+        ]
+      } else if (user.role === "admin" && activeOrganizationId && mongoose.Types.ObjectId.isValid(activeOrganizationId)) {
+        const orgObjectId = new mongoose.Types.ObjectId(activeOrganizationId)
+        query.$or = [
+          { organizationId: orgObjectId },
+          { _id: orgObjectId },
         ]
       }
 

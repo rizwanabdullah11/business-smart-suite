@@ -5,6 +5,7 @@ import { Permission } from "@/lib/types/permissions"
 import { connectToDatabase } from "@/lib/server/db"
 import { getModuleModel, isSupportedModule } from "@/lib/server/models/module-item"
 import { notifyExpiredCertificates } from "@/lib/server/certificate-expiry-notifier"
+import { buildOwnershipFilter } from "@/lib/server/organization-context"
 
 function unsupportedModule(module: string) {
   return NextResponse.json({ error: `Unsupported module: ${module}` }, { status: 404 })
@@ -15,7 +16,7 @@ function notFound() {
 }
 
 export const GET = withAuth(
-  async (_request: NextRequest, _user, { params }: { params: { module: string; id: string } }) => {
+  async (request: NextRequest, user, { params }: { params: { module: string; id: string } }) => {
     try {
       const { module, id } = params
       if (!isSupportedModule(module)) return unsupportedModule(module)
@@ -23,7 +24,13 @@ export const GET = withAuth(
 
       await connectToDatabase()
       const Model = getModuleModel(module)
-      const row = await Model.findById(id).populate("category", "_id name").lean()
+      const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
+      const row = await Model.findOne({
+        _id: new mongoose.Types.ObjectId(id),
+        ...(ownershipFilter || {}),
+      })
+        .populate("category", "_id name")
+        .lean()
       if (!row) return notFound()
       return NextResponse.json(row)
     } catch (error) {
@@ -37,7 +44,7 @@ export const GET = withAuth(
 )
 
 export const PUT = withAuth(
-  async (request: NextRequest, _user, { params }: { params: { module: string; id: string } }) => {
+  async (request: NextRequest, user, { params }: { params: { module: string; id: string } }) => {
     try {
       const { module, id } = params
       if (!isSupportedModule(module)) return unsupportedModule(module)
@@ -46,6 +53,7 @@ export const PUT = withAuth(
       const body = await request.json()
       await connectToDatabase()
       const Model = getModuleModel(module)
+      const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
 
       const payload = { ...body } as Record<string, unknown>
       const categoryId = payload.category || payload.categoryId
@@ -54,8 +62,11 @@ export const PUT = withAuth(
         payload.categoryId = new mongoose.Types.ObjectId(categoryId)
       }
 
-      const updated = await Model.findByIdAndUpdate(
-        id,
+      const updated = await Model.findOneAndUpdate(
+        {
+          _id: new mongoose.Types.ObjectId(id),
+          ...(ownershipFilter || {}),
+        },
         { $set: payload },
         { new: true }
       )
@@ -80,7 +91,7 @@ export const PUT = withAuth(
 )
 
 export const DELETE = withAuth(
-  async (_request: NextRequest, _user, { params }: { params: { module: string; id: string } }) => {
+  async (request: NextRequest, user, { params }: { params: { module: string; id: string } }) => {
     try {
       const { module, id } = params
       if (!isSupportedModule(module)) return unsupportedModule(module)
@@ -88,7 +99,11 @@ export const DELETE = withAuth(
 
       await connectToDatabase()
       const Model = getModuleModel(module)
-      const deleted = await Model.findByIdAndDelete(id).lean()
+      const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
+      const deleted = await Model.findOneAndDelete({
+        _id: new mongoose.Types.ObjectId(id),
+        ...(ownershipFilter || {}),
+      }).lean()
       if (!deleted) return notFound()
       return NextResponse.json({ success: true, message: "Entry deleted" })
     } catch (error) {

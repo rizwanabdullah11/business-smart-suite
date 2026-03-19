@@ -5,13 +5,14 @@ import { Permission } from "@/lib/types/permissions"
 import { connectToDatabase } from "@/lib/server/db"
 import { getModuleModel, isSupportedModule } from "@/lib/server/models/module-item"
 import { notifyExpiredCertificates } from "@/lib/server/certificate-expiry-notifier"
+import { buildOwnershipFilter, toObjectId } from "@/lib/server/organization-context"
 
 function unsupportedModule(module: string) {
   return NextResponse.json({ error: `Unsupported module: ${module}` }, { status: 404 })
 }
 
 export const GET = withAuth(
-  async (request: NextRequest, _user, { params }: { params: { module: string } }) => {
+  async (request: NextRequest, user, { params }: { params: { module: string } }) => {
     try {
       const module = params.module
       if (!isSupportedModule(module)) return unsupportedModule(module)
@@ -22,6 +23,7 @@ export const GET = withAuth(
 
       await connectToDatabase()
       const Model = getModuleModel(module)
+      const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
       const { searchParams } = new URL(request.url)
       const categoryFilter = searchParams.get("category")
       const archivedParam = searchParams.get("archived")
@@ -43,6 +45,10 @@ export const GET = withAuth(
             { categoryId: new mongoose.Types.ObjectId(categoryFilter) },
           ],
         })
+      }
+
+      if (Object.keys(ownershipFilter).length > 0) {
+        andConditions.push(ownershipFilter)
       }
 
       const query = andConditions.length ? { $and: andConditions } : {}
@@ -75,6 +81,7 @@ export const POST = withAuth(
 
       await connectToDatabase()
       const Model = getModuleModel(module)
+      const { activeOrganizationId } = await buildOwnershipFilter(request, user)
       const categoryId = body.category || body.categoryId
       const categoryObjectId =
         categoryId && mongoose.Types.ObjectId.isValid(categoryId)
@@ -94,6 +101,7 @@ export const POST = withAuth(
         title: String(body.title).trim(),
         category: categoryObjectId,
         categoryId: categoryObjectId,
+        organizationId: toObjectId(activeOrganizationId) || activeOrganizationId || undefined,
         highlighted: Boolean(body.highlighted ?? false),
         approved: Boolean(body.approved ?? false),
         paused: Boolean(body.paused ?? false),

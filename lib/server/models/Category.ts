@@ -3,6 +3,7 @@ import mongoose, { Schema, type Model } from "mongoose"
 export interface ICategory extends mongoose.Document {
   name: string
   type?: string
+  organizationId?: mongoose.Types.ObjectId | string
   archived: boolean
   isArchived: boolean
   highlighted: boolean
@@ -21,6 +22,11 @@ const categorySchema = new Schema<ICategory>(
       type: String,
       default: "manual",
       trim: true,
+    },
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
     archived: {
       type: Boolean,

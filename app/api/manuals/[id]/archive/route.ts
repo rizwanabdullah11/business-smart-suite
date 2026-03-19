@@ -4,17 +4,22 @@ import { Permission } from "@/lib/types/permissions"
 import { connectToDatabase } from "@/lib/server/db"
 import Manual from "@/lib/server/models/Manual"
 import mongoose from "mongoose"
+import { buildOwnershipFilter } from "@/lib/server/organization-context"
 
 export const POST = withAuth(
-  async (_request: NextRequest, _user, { params }: { params: { id: string } }) => {
+  async (request: NextRequest, user, { params }: { params: { id: string } }) => {
     try {
       const { id } = params
       if (!mongoose.Types.ObjectId.isValid(id)) {
         return NextResponse.json({ error: "Manual not found" }, { status: 404 })
       }
       await connectToDatabase()
-      const manual = await Manual.findByIdAndUpdate(
-        id,
+      const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
+      const manual = await Manual.findOneAndUpdate(
+        {
+          _id: new mongoose.Types.ObjectId(id),
+          ...(ownershipFilter || {}),
+        },
         { $set: { archived: true, isArchived: true } },
         { new: true }
       ).lean()

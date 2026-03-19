@@ -5,6 +5,7 @@ import { connectToDatabase } from "@/lib/server/db"
 import Category from "@/lib/server/models/Category"
 import mongoose from "mongoose"
 import Manual from "@/lib/server/models/Manual"
+import { buildOwnershipFilter, toObjectId } from "@/lib/server/organization-context"
 
 const TYPE_ALIASES: Record<string, string> = {
   manuals: "manual",
@@ -36,14 +37,26 @@ function notFound() {
 }
 
 export const GET = withAuth(
-  async (request: NextRequest, _user, { params }: { params: { id: string } }) => {
+  async (request: NextRequest, user, { params }: { params: { id: string } }) => {
     try {
       const { id } = params
       if (!mongoose.Types.ObjectId.isValid(id)) return notFound()
       const requestedType = normalizeCategoryType(new URL(request.url).searchParams.get("type"))
+      const { activeOrganizationId } = await buildOwnershipFilter(request, user)
 
       await connectToDatabase()
-      const category = await Category.findById(id).lean()
+      const organizationFilter = activeOrganizationId
+        ? {
+            $or: [
+              { organizationId: toObjectId(activeOrganizationId) },
+              { organizationId: activeOrganizationId },
+            ],
+          }
+        : {}
+      const category = await Category.findOne({
+        _id: new mongoose.Types.ObjectId(id),
+        ...(organizationFilter as Record<string, unknown>),
+      }).lean()
       if (!category) return notFound()
       if (requestedType && category.type && normalizeCategoryType(String(category.type)) !== requestedType) {
         return typeMismatch()
@@ -62,22 +75,37 @@ export const GET = withAuth(
 )
 
 export const PUT = withAuth(
-  async (request: NextRequest, _user, { params }: { params: { id: string } }) => {
+  async (request: NextRequest, user, { params }: { params: { id: string } }) => {
     try {
       const { id } = params
       if (!mongoose.Types.ObjectId.isValid(id)) return notFound()
       const requestedType = normalizeCategoryType(new URL(request.url).searchParams.get("type"))
+      const { activeOrganizationId } = await buildOwnershipFilter(request, user)
 
       const body = await request.json()
       await connectToDatabase()
-      const existingCategory = await Category.findById(id).lean()
+      const organizationFilter = activeOrganizationId
+        ? {
+            $or: [
+              { organizationId: toObjectId(activeOrganizationId) },
+              { organizationId: activeOrganizationId },
+            ],
+          }
+        : {}
+      const existingCategory = await Category.findOne({
+        _id: new mongoose.Types.ObjectId(id),
+        ...(organizationFilter as Record<string, unknown>),
+      }).lean()
       if (!existingCategory) return notFound()
       if (requestedType && existingCategory.type && normalizeCategoryType(String(existingCategory.type)) !== requestedType) {
         return typeMismatch()
       }
 
-      const updatedCategory = await Category.findByIdAndUpdate(
-        id,
+      const updatedCategory = await Category.findOneAndUpdate(
+        {
+          _id: new mongoose.Types.ObjectId(id),
+          ...(organizationFilter as Record<string, unknown>),
+        },
         { $set: body },
         { new: true }
       ).lean()
@@ -97,20 +125,35 @@ export const PUT = withAuth(
 )
 
 export const DELETE = withAuth(
-  async (request: NextRequest, _user, { params }: { params: { id: string } }) => {
+  async (request: NextRequest, user, { params }: { params: { id: string } }) => {
     try {
       const { id } = params
       if (!mongoose.Types.ObjectId.isValid(id)) return notFound()
       const requestedType = normalizeCategoryType(new URL(request.url).searchParams.get("type"))
+      const { activeOrganizationId } = await buildOwnershipFilter(request, user)
 
       await connectToDatabase()
-      const existingCategory = await Category.findById(id).lean()
+      const organizationFilter = activeOrganizationId
+        ? {
+            $or: [
+              { organizationId: toObjectId(activeOrganizationId) },
+              { organizationId: activeOrganizationId },
+            ],
+          }
+        : {}
+      const existingCategory = await Category.findOne({
+        _id: new mongoose.Types.ObjectId(id),
+        ...(organizationFilter as Record<string, unknown>),
+      }).lean()
       if (!existingCategory) return notFound()
       if (requestedType && existingCategory.type && normalizeCategoryType(String(existingCategory.type)) !== requestedType) {
         return typeMismatch()
       }
 
-      const deleted = await Category.findByIdAndDelete(id).lean()
+      const deleted = await Category.findOneAndDelete({
+        _id: new mongoose.Types.ObjectId(id),
+        ...(organizationFilter as Record<string, unknown>),
+      }).lean()
       if (!deleted) return notFound()
 
       // Keep data consistent with old behavior by archiving linked manuals.

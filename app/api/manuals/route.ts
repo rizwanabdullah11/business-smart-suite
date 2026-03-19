@@ -4,6 +4,7 @@ import { Permission } from "@/lib/types/permissions"
 import { connectToDatabase } from "@/lib/server/db"
 import Manual from "@/lib/server/models/Manual"
 import mongoose from "mongoose"
+import { buildOwnershipFilter, toObjectId } from "@/lib/server/organization-context"
 
 function extractCategoryId(input: unknown): string | null {
   if (!input) return null
@@ -16,12 +17,13 @@ function extractCategoryId(input: unknown): string | null {
 }
 
 export const GET = withAuth(
-  async (request: NextRequest) => {
+  async (request: NextRequest, user) => {
     try {
       await connectToDatabase()
       const { searchParams } = new URL(request.url)
       const categoryFilter = searchParams.get("category")
       const archivedParam = searchParams.get("archived")
+      const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
 
       const andConditions: Record<string, unknown>[] = []
       if (archivedParam === "true") {
@@ -43,6 +45,10 @@ export const GET = withAuth(
             { categoryId: categoryFilter },
           ],
         })
+      }
+
+      if (Object.keys(ownershipFilter).length > 0) {
+        andConditions.push(ownershipFilter)
       }
 
       const query = andConditions.length > 0 ? { $and: andConditions } : {}
@@ -74,6 +80,7 @@ export const POST = withAuth(
       }
 
       await connectToDatabase()
+      const { activeOrganizationId } = await buildOwnershipFilter(request, user)
       const rawCategoryId = extractCategoryId(body.category) || extractCategoryId(body.categoryId)
 
       const manual = await Manual.create({
@@ -86,6 +93,7 @@ export const POST = withAuth(
         highlighted: Boolean(body.highlighted),
         approved: Boolean(body.approved),
         paused: Boolean(body.paused),
+        organizationId: toObjectId(activeOrganizationId) || activeOrganizationId || undefined,
         archived: false,
         isArchived: false,
         createdBy: user.id,

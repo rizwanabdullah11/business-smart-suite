@@ -3,21 +3,26 @@ import { withAuth } from "@/lib/middleware/auth-middleware"
 import { Permission } from "@/lib/types/permissions"
 import { connectToDatabase } from "@/lib/server/db"
 import { getModuleModel, isSupportedModule } from "@/lib/server/models/module-item"
+import { buildOwnershipFilter } from "@/lib/server/organization-context"
 
 function unsupportedModule(module: string) {
   return NextResponse.json({ error: `Unsupported module: ${module}` }, { status: 404 })
 }
 
 export const GET = withAuth(
-  async (_request: NextRequest, _user, { params }: { params: { module: string } }) => {
+  async (request: NextRequest, user, { params }: { params: { module: string } }) => {
     try {
       const module = params.module
       if (!isSupportedModule(module)) return unsupportedModule(module)
 
       await connectToDatabase()
       const Model = getModuleModel(module)
+      const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
       const rows = await Model.find({
-        $or: [{ archived: true }, { isArchived: true }],
+        $and: [
+          { $or: [{ archived: true }, { isArchived: true }] },
+          ...(Object.keys(ownershipFilter).length > 0 ? [ownershipFilter] : []),
+        ],
       })
         .populate("category", "_id name")
         .sort({ updatedAt: -1 })
