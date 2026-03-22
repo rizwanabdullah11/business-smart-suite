@@ -5,7 +5,7 @@ import { Permission } from "@/lib/types/permissions"
 import { connectToDatabase } from "@/lib/server/db"
 import { getModuleModel, isSupportedModule } from "@/lib/server/models/module-item"
 import { notifyExpiredCertificates } from "@/lib/server/certificate-expiry-notifier"
-import { buildOwnershipFilter, toObjectId } from "@/lib/server/organization-context"
+import { buildModuleAccessFilter, buildOwnershipFilter, toObjectId } from "@/lib/server/organization-context"
 
 function unsupportedModule(module: string) {
   return NextResponse.json({ error: `Unsupported module: ${module}` }, { status: 404 })
@@ -23,7 +23,7 @@ export const GET = withAuth(
 
       await connectToDatabase()
       const Model = getModuleModel(module)
-      const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
+      const { filter: ownershipFilter } = await buildModuleAccessFilter(request, user)
       const { searchParams } = new URL(request.url)
       const categoryFilter = searchParams.get("category")
       const archivedParam = searchParams.get("archived")

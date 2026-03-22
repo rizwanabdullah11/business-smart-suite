@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import Link from "next/link"
 import { useParams, useSearchParams } from "next/navigation"
 import { ArrowLeft, Download } from "lucide-react"
@@ -20,6 +20,129 @@ function formatDate(value?: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
   return date.toLocaleDateString()
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return "—"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  return date.toLocaleString()
+}
+
+function humanizeWorkflowStatus(value: unknown) {
+  const s = String(value ?? "").trim()
+  if (!s) return "—"
+  return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+function parseJsonArray<T = Record<string, unknown>>(raw: unknown): T[] {
+  if (Array.isArray(raw)) return raw as T[]
+  if (typeof raw === "string" && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw)
+      return Array.isArray(parsed) ? (parsed as T[]) : []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
+function workflowStatusStyle(status: string): CSSProperties {
+  const s = status.toLowerCase()
+  if (s.includes("complete") || s.includes("approved")) {
+    return { background: "#dcfce7", color: "#166534", border: "1px solid #86efac" }
+  }
+  if (s.includes("reject")) {
+    return { background: "#fee2e2", color: "#991b1b", border: "1px solid #fecaca" }
+  }
+  if (s.includes("progress")) {
+    return { background: "#dbeafe", color: "#1e40af", border: "1px solid #93c5fd" }
+  }
+  if (s.includes("review") || s.includes("pending")) {
+    return { background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d" }
+  }
+  if (s.includes("assign")) {
+    return { background: "#e0e7ff", color: "#3730a3", border: "1px solid #a5b4fc" }
+  }
+  return {
+    background: COLORS.bgGray,
+    color: COLORS.textPrimary,
+    border: `1px solid ${COLORS.border}`,
+  }
+}
+
+function workflowEventLabel(type: string) {
+  const t = type.toLowerCase()
+  if (t === "assigned") return "Assignment"
+  if (t === "status") return "Status update"
+  if (t === "comment") return "Comment"
+  if (t === "review") return "Review"
+  if (t === "submitted") return "Submitted for review"
+  return humanizeWorkflowStatus(type)
+}
+
+/** Turn schema keys into readable labels (Issue date, not issueDate). */
+function humanizeFieldKey(key: string): string {
+  const fixed: Record<string, string> = {
+    issueDate: "Issue date",
+    expiryDate: "Expiry date",
+    createdAt: "Created",
+    updatedAt: "Last updated",
+    categoryId: "Category ID",
+    organizationId: "Organization",
+  }
+  if (fixed[key]) return fixed[key]
+  const spaced = key.replace(/([A-Z])/g, " $1").replace(/_/g, " ")
+  const trimmed = spaced.trim()
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
+}
+
+const DETAIL_FIELD_PRIORITY = [
+  "title",
+  "name",
+  "version",
+  "location",
+  "source",
+  "status",
+  "issueDate",
+  "date",
+  "expiryDate",
+  "description",
+  "cost",
+]
+
+function sortDetailEntries(entries: [string, unknown][]): [string, unknown][] {
+  return [...entries].sort((a, b) => {
+    const ia = DETAIL_FIELD_PRIORITY.indexOf(a[0])
+    const ib = DETAIL_FIELD_PRIORITY.indexOf(b[0])
+    const pa = ia === -1 ? 1000 : ia
+    const pb = ib === -1 ? 1000 : ib
+    if (pa !== pb) return pa - pb
+    return a[0].localeCompare(b[0])
+  })
+}
+
+function formatDetailFieldValue(key: string, value: unknown): string {
+  if (value === null || value === undefined) return "—"
+  if (typeof value === "boolean") return value ? "Yes" : "No"
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value, null, 2)
+    } catch {
+      return String(value)
+    }
+  }
+  const s = String(value).trim()
+  if (!s) return "—"
+  const lower = key.toLowerCase()
+  if (lower.includes("date") || lower === "duedate") {
+    const d = new Date(s)
+    if (!Number.isNaN(d.getTime())) {
+      return s.length > 12 ? d.toLocaleString() : d.toLocaleDateString()
+    }
+  }
+  return s
 }
 
 function parseVersionNumber(input: unknown) {
@@ -49,6 +172,7 @@ export default function UniversalTaskDetailPage() {
   const [showPermissionModal, setShowPermissionModal] = useState(false)
   const [savingPermission, setSavingPermission] = useState(false)
   const [employeeUsers, setEmployeeUsers] = useState<Array<{ id: string; name: string; role: string; email: string }>>([])
+  const [selectedPermissionUserId, setSelectedPermissionUserId] = useState("")
   const [permissionUsersLoading, setPermissionUsersLoading] = useState(false)
   const [showAuditModal, setShowAuditModal] = useState(false)
   const [savingAudit, setSavingAudit] = useState(false)
@@ -88,6 +212,7 @@ export default function UniversalTaskDetailPage() {
     const token = localStorage.getItem("token")
     const response = await fetch(endpoint, {
       method: "PUT",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -124,13 +249,15 @@ export default function UniversalTaskDetailPage() {
         const token = localStorage.getItem("token")
 
         const response = await fetch(endpoint, {
+          credentials: "include",
+          cache: "no-store",
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         })
-        const data = await response.json()
+        const data = await response.json().catch(() => ({}))
         if (!response.ok) {
-          throw new Error(data?.error || "Failed to load task")
+          throw new Error((data as { error?: string })?.error || "Failed to load task")
         }
-        setItem(data)
+        setItem(data as Record<string, unknown>)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load task")
       } finally {
@@ -166,8 +293,30 @@ export default function UniversalTaskDetailPage() {
       "versionHistory",
       "permissionsHistory",
       "audits",
+      "taskAssignees",
+      "workflowHistory",
+      "workflowStatus",
+      "title",
+      "name",
+      "organizationId",
+      "expiryNotificationSentAt",
+      "expiryNotificationRecipients",
     ])
-    return Object.entries(item).filter(([key, value]) => !hidden.has(key) && value !== undefined && value !== null && value !== "")
+    const raw = Object.entries(item).filter(
+      ([key, value]) => !hidden.has(key) && value !== undefined && value !== null && value !== ""
+    ) as [string, unknown][]
+    return sortDetailEntries(raw)
+  }, [item])
+
+  const taskAssigneesList = useMemo(() => parseJsonArray(item?.taskAssignees), [item])
+
+  const workflowHistorySorted = useMemo(() => {
+    const list = parseJsonArray<Record<string, unknown>>(item?.workflowHistory)
+    return [...list].sort((a, b) => {
+      const ta = new Date(String((a as { createdAt?: string })?.createdAt || 0)).getTime()
+      const tb = new Date(String((b as { createdAt?: string })?.createdAt || 0)).getTime()
+      return tb - ta
+    })
   }, [item])
 
   const categoryLabel = useMemo(() => {
@@ -391,16 +540,19 @@ export default function UniversalTaskDetailPage() {
 
   const handleSavePermission = async () => {
     if (!permissionForm.roleOrUser.trim()) {
-      alert("Role/User is required")
+      alert("Employee is required")
       return
     }
     const now = new Date().toISOString()
+    const selectedUser = employeeUsers.find((u) => u.id === selectedPermissionUserId)
     setSavingPermission(true)
     try {
       const nextPermissions = [
         ...(Array.isArray(item?.permissionsHistory) ? item.permissionsHistory : []),
         {
           roleOrUser: permissionForm.roleOrUser.trim(),
+          userId: selectedPermissionUserId || undefined,
+          userEmail: selectedUser?.email || undefined,
           accessLevel: permissionForm.accessLevel,
           permissionDetails: permissionForm.permissionDetails.trim(),
           effectiveDate: permissionForm.effectiveDate || now,
@@ -416,6 +568,7 @@ export default function UniversalTaskDetailPage() {
         permissionDetails: "",
         effectiveDate: "",
       })
+      setSelectedPermissionUserId("")
     } catch (err) {
       console.error("Save permission failed:", err)
       alert("Failed to save permission")
@@ -429,6 +582,7 @@ export default function UniversalTaskDetailPage() {
       setPermissionUsersLoading(true)
       const token = localStorage.getItem("token")
       const response = await fetch("/api/users?role=employee", {
+        credentials: "include",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
       if (!response.ok) throw new Error("Failed to load users")
@@ -556,20 +710,128 @@ export default function UniversalTaskDetailPage() {
               {categoryLabel ? (
                 <div>
                   <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>
-                    category
+                    Category
                   </p>
                   <div className="px-3 py-2 rounded border" style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}>
                     {categoryLabel}
                   </div>
                 </div>
               ) : null}
+
+              {item?.workflowStatus !== undefined && item?.workflowStatus !== null && String(item.workflowStatus).trim() !== "" ? (
+                <div className="md:col-span-2">
+                  <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>
+                    Workflow status
+                  </p>
+                  <div className="inline-flex items-center px-3 py-1.5 rounded-lg border text-sm font-semibold" style={workflowStatusStyle(String(item.workflowStatus))}>
+                    {humanizeWorkflowStatus(item.workflowStatus)}
+                  </div>
+                </div>
+              ) : null}
+
+              {taskAssigneesList.length > 0 ? (
+                <div className="md:col-span-2">
+                  <p className="text-sm font-medium mb-2" style={{ color: COLORS.textSecondary }}>
+                    Assigned to
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    {taskAssigneesList.map((a: Record<string, unknown>, idx: number) => (
+                      <div
+                        key={`${String(a.userId ?? idx)}-${idx}`}
+                        className="flex-1 min-w-[200px] max-w-md px-4 py-3 rounded-lg border"
+                        style={{ borderColor: COLORS.border, background: COLORS.bgGray }}
+                      >
+                        <p className="font-semibold" style={{ color: COLORS.textPrimary }}>
+                          {String(a.name || a.email || "Assignee")}
+                        </p>
+                        {a.email ? (
+                          <p className="text-sm mt-0.5" style={{ color: COLORS.textSecondary }}>
+                            {String(a.email)}
+                          </p>
+                        ) : null}
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: COLORS.textSecondary }}>
+                          {a.dueDate ? <span>Due: {formatDate(String(a.dueDate))}</span> : null}
+                          {a.assignedAt ? <span>Assigned: {formatDateTime(String(a.assignedAt))}</span> : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {workflowHistorySorted.length > 0 ? (
+                <div className="md:col-span-2">
+                  <p className="text-sm font-medium mb-3" style={{ color: COLORS.textSecondary }}>
+                    Activity &amp; workflow history
+                  </p>
+                  <ul className="space-y-0 border-l-2 pl-4 ml-1" style={{ borderColor: COLORS.border }}>
+                    {workflowHistorySorted.map((entry: Record<string, unknown>, idx: number) => {
+                      const type = String(entry.type || "event")
+                      const byName = String(entry.byName || "")
+                      const byRole = String(entry.byRole || "")
+                      const targetName = String(entry.targetUserName || "")
+                      const comment = String(entry.comment || "").trim()
+                      const statusTo =
+                        entry.statusTo != null
+                          ? String(entry.statusTo)
+                          : entry.status != null
+                            ? String(entry.status)
+                            : ""
+                      const createdAt = String(entry.createdAt || "")
+                      return (
+                        <li key={idx} className="relative pb-6 last:pb-0">
+                          <span
+                            className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white"
+                            style={{ background: COLORS.primary }}
+                          />
+                          <div className="rounded-lg border px-3 py-2.5" style={{ borderColor: COLORS.border, background: COLORS.bgWhite }}>
+                            <div className="flex flex-wrap items-baseline justify-between gap-2">
+                              <span className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+                                {workflowEventLabel(type)}
+                              </span>
+                              <span className="text-xs" style={{ color: COLORS.textSecondary }}>
+                                {formatDateTime(createdAt)}
+                              </span>
+                            </div>
+                            <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                              {type.toLowerCase() === "status" && statusTo ? (
+                                <>
+                                  <span style={{ color: COLORS.textPrimary }}>{byName || "Someone"}</span>
+                                  {byRole ? ` · ${humanizeWorkflowStatus(byRole)}` : ""}
+                                  {" — "}status: <strong style={{ color: COLORS.textPrimary }}>{humanizeWorkflowStatus(statusTo)}</strong>
+                                </>
+                              ) : (
+                                <>
+                                  {byName || "Someone"}
+                                  {byRole ? ` · ${humanizeWorkflowStatus(byRole)}` : ""}
+                                  {targetName ? ` → ${targetName}` : ""}
+                                  {statusTo && type.toLowerCase() !== "status" ? ` · ${humanizeWorkflowStatus(statusTo)}` : ""}
+                                </>
+                              )}
+                            </p>
+                            {comment ? (
+                              <p className="text-sm mt-2 p-2 rounded" style={{ background: COLORS.bgGray, color: COLORS.textPrimary }}>
+                                {comment}
+                              </p>
+                            ) : null}
+                          </div>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              ) : null}
+
               {detailEntries.map(([key, value]) => (
                 <div key={key}>
                   <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>
-                    {key}
+                    {humanizeFieldKey(key)}
                   </p>
-                  <div className="px-3 py-2 rounded border" style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}>
-                    {typeof value === "object" ? JSON.stringify(value) : String(value)}
+                  <div
+                    className="px-3 py-2 rounded border whitespace-pre-wrap break-words"
+                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}
+                  >
+                    {formatDetailFieldValue(key, value)}
                   </div>
                 </div>
               ))}
@@ -888,15 +1150,31 @@ export default function UniversalTaskDetailPage() {
             <div className="w-full max-w-xl rounded-2xl p-6" style={{ background: COLORS.bgWhite }}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-3xl font-semibold" style={{ color: COLORS.textPrimary }}>Add Permission</h3>
-                <button onClick={() => setShowPermissionModal(false)} style={{ color: COLORS.textSecondary }}>X</button>
+                <button
+                  onClick={() => {
+                    setShowPermissionModal(false)
+                    setSelectedPermissionUserId("")
+                  }}
+                  style={{ color: COLORS.textSecondary }}
+                >
+                  X
+                </button>
               </div>
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1" style={{ color: COLORS.textPrimary }}>Employee</label>
                   <select
-                    value={permissionForm.roleOrUser}
-                    onChange={(e) => setPermissionForm((prev) => ({ ...prev, roleOrUser: e.target.value }))}
+                    value={selectedPermissionUserId}
+                    onChange={(e) => {
+                      const userId = e.target.value
+                      setSelectedPermissionUserId(userId)
+                      const selected = employeeUsers.find((u) => u.id === userId)
+                      setPermissionForm((prev) => ({
+                        ...prev,
+                        roleOrUser: selected ? `${selected.name} (${selected.role})` : "",
+                      }))
+                    }}
                     className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
                     style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                   >
@@ -904,7 +1182,7 @@ export default function UniversalTaskDetailPage() {
                       {permissionUsersLoading ? "Loading employees..." : "Select employee"}
                     </option>
                     {employeeUsers.map((u) => (
-                      <option key={u.id} value={`${u.name} (${u.role})`}>
+                      <option key={u.id} value={u.id}>
                         {u.name} - {u.role} ({u.email})
                       </option>
                     ))}
@@ -953,7 +1231,10 @@ export default function UniversalTaskDetailPage() {
 
               <div className="flex justify-end gap-3 mt-5">
                 <button
-                  onClick={() => setShowPermissionModal(false)}
+                  onClick={() => {
+                    setShowPermissionModal(false)
+                    setSelectedPermissionUserId("")
+                  }}
                   className="px-4 py-2 rounded-lg font-medium"
                   style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}
                 >

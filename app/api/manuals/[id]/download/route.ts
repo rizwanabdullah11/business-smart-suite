@@ -4,7 +4,7 @@ import { Permission } from "@/lib/types/permissions"
 import { connectToDatabase } from "@/lib/server/db"
 import Manual from "@/lib/server/models/Manual"
 import mongoose from "mongoose"
-import { buildOwnershipFilter } from "@/lib/server/organization-context"
+import { buildModuleAccessFilter } from "@/lib/server/organization-context"
 
 export const GET = withAuth(
   async (request: NextRequest, user, { params }: { params: { id: string } }) => {
@@ -15,7 +15,7 @@ export const GET = withAuth(
       }
 
       await connectToDatabase()
-      const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
+      const { filter: ownershipFilter } = await buildModuleAccessFilter(request, user)
       const manual = await Manual.findOne({
         _id: new mongoose.Types.ObjectId(id),
         ...(ownershipFilter || {}),

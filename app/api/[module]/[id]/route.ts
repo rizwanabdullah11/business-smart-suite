@@ -5,7 +5,7 @@ import { Permission } from "@/lib/types/permissions"
 import { connectToDatabase } from "@/lib/server/db"
 import { getModuleModel, isSupportedModule } from "@/lib/server/models/module-item"
 import { notifyExpiredCertificates } from "@/lib/server/certificate-expiry-notifier"
-import { buildOwnershipFilter } from "@/lib/server/organization-context"
+import { buildModuleAccessFilter } from "@/lib/server/organization-context"
 
 function unsupportedModule(module: string) {
   return NextResponse.json({ error: `Unsupported module: ${module}` }, { status: 404 })
@@ -24,7 +24,7 @@ export const GET = withAuth(
 
       await connectToDatabase()
       const Model = getModuleModel(module)
-      const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
+      const { filter: ownershipFilter } = await buildModuleAccessFilter(request, user)
       const row = await Model.findOne({
         _id: new mongoose.Types.ObjectId(id),
         ...(ownershipFilter || {}),
@@ -53,7 +53,7 @@ export const PUT = withAuth(
       const body = await request.json()
       await connectToDatabase()
       const Model = getModuleModel(module)
-      const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
+      const { filter: ownershipFilter } = await buildModuleAccessFilter(request, user)
 
       const payload = { ...body } as Record<string, unknown>
       const categoryId = payload.category || payload.categoryId
@@ -99,7 +99,7 @@ export const DELETE = withAuth(
 
       await connectToDatabase()
       const Model = getModuleModel(module)
-      const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
+      const { filter: ownershipFilter } = await buildModuleAccessFilter(request, user)
       const deleted = await Model.findOneAndDelete({
         _id: new mongoose.Types.ObjectId(id),
         ...(ownershipFilter || {}),
