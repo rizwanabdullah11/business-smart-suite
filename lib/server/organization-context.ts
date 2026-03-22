@@ -84,3 +84,60 @@ export async function buildOwnershipFilter(request: NextRequest, user: AuthUser)
 
   return { activeOrganizationId, filter }
 }
+
+function escapeRegex(input: string) {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+function buildEmployeePermissionFilter(user: AuthUser) {
+  if (user.role !== "employee") return {}
+
+  const conditions: Record<string, unknown>[] = []
+
+  const userIdObject = toObjectId(user.id)
+  if (userIdObject) {
+    conditions.push({ "permissionsHistory.userId": userIdObject })
+    conditions.push({ "permissionsHistory.userId": user.id })
+  }
+
+  if (user.name) {
+    conditions.push({
+      "permissionsHistory.roleOrUser": {
+        $regex: escapeRegex(user.name),
+        $options: "i",
+      },
+    })
+  }
+
+  if (user.email) {
+    conditions.push({
+      "permissionsHistory.roleOrUser": {
+        $regex: escapeRegex(user.email),
+        $options: "i",
+      },
+    })
+  }
+
+  if (conditions.length === 0) {
+    return { _id: { $exists: false } }
+  }
+
+  return { $or: conditions }
+}
+
+export async function buildModuleAccessFilter(request: NextRequest, user: AuthUser) {
+  const base = await buildOwnershipFilter(request, user)
+  if (user.role !== "employee") return base
+
+  const permissionFilter = buildEmployeePermissionFilter(user)
+  const baseHasFilter = Object.keys(base.filter || {}).length > 0
+  const filter =
+    baseHasFilter
+      ? { $and: [base.filter, permissionFilter] }
+      : permissionFilter
+
+  return {
+    ...base,
+    filter,
+  }
+}

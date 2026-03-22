@@ -4,7 +4,7 @@ import { Permission } from "@/lib/types/permissions"
 import { connectToDatabase } from "@/lib/server/db"
 import Manual from "@/lib/server/models/Manual"
 import mongoose from "mongoose"
-import { buildOwnershipFilter, toObjectId } from "@/lib/server/organization-context"
+import { buildModuleAccessFilter, buildOwnershipFilter, toObjectId } from "@/lib/server/organization-context"
 
 function extractCategoryId(input: unknown): string | null {
   if (!input) return null
@@ -23,7 +23,7 @@ export const GET = withAuth(
       const { searchParams } = new URL(request.url)
       const categoryFilter = searchParams.get("category")
       const archivedParam = searchParams.get("archived")
-      const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
+      const { filter: ownershipFilter } = await buildModuleAccessFilter(request, user)
 
       const andConditions: Record<string, unknown>[] = []
       if (archivedParam === "true") {

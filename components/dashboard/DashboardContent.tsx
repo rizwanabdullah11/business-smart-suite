@@ -32,6 +32,34 @@ type AnyDoc = {
   updatedAt?: string
 }
 
+const DASHBOARD_CACHE_KEY_PREFIX = "dashboardCache:v1"
+const DASHBOARD_CACHE_TTL_MS = 2 * 60 * 1000
+
+type DashboardCachePayload = {
+  stats: Omit<DashboardStat, "icon">[]
+  recentActivities: ActivityItem[]
+  cachedAt: number
+}
+
+function getDashboardIconByTitle(title: string) {
+  if (title === "Total Documents") return FileText
+  if (title === "Active Users") return Users
+  if (title === "Pending Reviews") return AlertCircle
+  if (title === "Completed Tasks") return CheckCircle
+  return FileText
+}
+
+function toSerializableStats(stats: DashboardStat[]): Omit<DashboardStat, "icon">[] {
+  return stats.map(({ icon: _icon, ...rest }) => rest)
+}
+
+function hydrateCachedStats(stats: Omit<DashboardStat, "icon">[]): DashboardStat[] {
+  return stats.map((stat) => ({
+    ...stat,
+    icon: getDashboardIconByTitle(stat.title),
+  }))
+}
+
 const MODULE_ENDPOINTS = [
   "policies",
   "procedures",
@@ -89,8 +117,39 @@ export function DashboardContent() {
     if (authLoading || !isAuthenticated) return
 
     let cancelled = false
+    const activeOrganizationId = localStorage.getItem("activeOrganizationId") || "no-org"
+    const userRaw = localStorage.getItem("user")
+    let userId = "anonymous"
+    try {
+      const parsed = userRaw ? JSON.parse(userRaw) : null
+      userId = String(parsed?.id || parsed?._id || parsed?.email || "anonymous")
+    } catch {
+      userId = "anonymous"
+    }
+    const cacheKey = `${DASHBOARD_CACHE_KEY_PREFIX}:${activeOrganizationId}:${userId}`
 
-    const loadDashboardData = async (allowRetry = true) => {
+    const applyCached = () => {
+      try {
+        const raw = sessionStorage.getItem(cacheKey)
+        if (!raw) return false
+        const parsed = JSON.parse(raw) as DashboardCachePayload
+        if (!parsed?.cachedAt) return false
+        if (Date.now() - parsed.cachedAt > DASHBOARD_CACHE_TTL_MS) return false
+        if (!Array.isArray(parsed.stats) || !Array.isArray(parsed.recentActivities)) return false
+        if (cancelled) return true
+        setStats(hydrateCachedStats(parsed.stats))
+        setRecentActivities(parsed.recentActivities)
+        setLoading(false)
+        return true
+      } catch {
+        return false
+      }
+    }
+
+    const loadDashboardData = async (allowRetry = true, forceRefresh = false) => {
+      if (!forceRefresh && applyCached()) {
+        return
+      }
       setLoading(true)
       try {
         const token = localStorage.getItem("token")
@@ -184,12 +243,22 @@ export function DashboardContent() {
 
         if (cancelled) return
         setRecentActivities(activities)
+        try {
+          const payload: DashboardCachePayload = {
+            stats: toSerializableStats(nextStats),
+            recentActivities: activities,
+            cachedAt: Date.now(),
+          }
+          sessionStorage.setItem(cacheKey, JSON.stringify(payload))
+        } catch {
+          // Ignore cache write failures.
+        }
 
         // On first login redirect there can be a brief token/cookie race on some hosts.
         // If everything comes back empty, retry once shortly after.
         if (allowRetry && activeDocs.length === 0) {
           window.setTimeout(() => {
-            if (!cancelled) loadDashboardData(false)
+            if (!cancelled) loadDashboardData(false, true)
           }, 900)
         }
       } catch (error) {
@@ -202,7 +271,7 @@ export function DashboardContent() {
     loadDashboardData()
 
     const handleAuthChange = () => {
-      if (!cancelled) loadDashboardData(false)
+      if (!cancelled) loadDashboardData(false, true)
     }
     window.addEventListener("auth-change", handleAuthChange)
 

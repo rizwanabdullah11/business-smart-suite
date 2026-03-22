@@ -4,7 +4,7 @@ import { Permission } from "@/lib/types/permissions"
 import { connectToDatabase } from "@/lib/server/db"
 import Manual from "@/lib/server/models/Manual"
 import mongoose from "mongoose"
-import { buildOwnershipFilter } from "@/lib/server/organization-context"
+import { buildModuleAccessFilter } from "@/lib/server/organization-context"
 
 function notFound() {
   return NextResponse.json({ error: "Manual not found" }, { status: 404 })
@@ -16,7 +16,7 @@ export const GET = withAuth(
       const { id } = params
       if (!mongoose.Types.ObjectId.isValid(id)) return notFound()
       await connectToDatabase()
-      const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
+      const { filter: ownershipFilter } = await buildModuleAccessFilter(request, user)
 
       const manual = await Manual.findOne({
         _id: new mongoose.Types.ObjectId(id),
@@ -46,7 +46,7 @@ export const PUT = withAuth(
       const body = await request.json()
 
       await connectToDatabase()
-      const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
+      const { filter: ownershipFilter } = await buildModuleAccessFilter(request, user)
       const payload = { ...body } as Record<string, unknown>
 
       const categoryId = payload.category || payload.categoryId
@@ -86,7 +86,7 @@ export const DELETE = withAuth(
       const { id } = params
       if (!mongoose.Types.ObjectId.isValid(id)) return notFound()
       await connectToDatabase()
-      const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
+      const { filter: ownershipFilter } = await buildModuleAccessFilter(request, user)
 
       const deleted = await Manual.findOneAndDelete({
         _id: new mongoose.Types.ObjectId(id),

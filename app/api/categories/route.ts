@@ -6,7 +6,7 @@ import Category from "@/lib/server/models/Category"
 import Manual from "@/lib/server/models/Manual"
 import { getModuleModel } from "@/lib/server/models/module-item"
 import mongoose from "mongoose"
-import { buildOwnershipFilter, toObjectId } from "@/lib/server/organization-context"
+import { buildModuleAccessFilter, buildOwnershipFilter, toObjectId } from "@/lib/server/organization-context"
 
 const TYPE_ALIASES: Record<string, string> = {
   manuals: "manual",
@@ -70,31 +70,37 @@ export const GET = withAuth(
         andConditions.push({ type: normalizedType })
       }
       const { activeOrganizationId } = await buildOwnershipFilter(request, user)
+      const { filter: moduleAccessFilter } = await buildModuleAccessFilter(request, user)
       if (activeOrganizationId) {
         const orgObjectId = toObjectId(activeOrganizationId)
         const moduleSlug = categoryTypeToModule(normalizedType)
-        if (orgObjectId && moduleSlug) {
-          const { filter: ownershipFilter } = await buildOwnershipFilter(request, user)
+        if (moduleSlug) {
           const Model = moduleSlug === "manuals" ? Manual : getModuleModel(moduleSlug)
-          const docs = await Model.find({
-            ...(ownershipFilter || {}),
+          const docsQuery: Record<string, unknown> = {
             $or: [
               { category: { $exists: true, $ne: null } },
               { categoryId: { $exists: true, $ne: null } },
             ],
-          })
+          }
+          if (Object.keys(moduleAccessFilter || {}).length > 0) {
+            docsQuery.$and = [moduleAccessFilter]
+          }
+
+          const docs = await (Model as any).find(docsQuery)
             .select("category categoryId")
             .lean()
 
-          const legacyCategoryIds = Array.from(
+          const legacyCategoryIdStrings: string[] = Array.from(
             new Set(
               docs
                 .flatMap((doc: any) => [toCategoryRefId(doc?.category), toCategoryRefId(doc?.categoryId)])
-                .filter((id): id is string => Boolean(id && mongoose.Types.ObjectId.isValid(id)))
+                .filter((id: string | null): id is string => Boolean(id && mongoose.Types.ObjectId.isValid(id)))
             )
-          ).map((id) => new mongoose.Types.ObjectId(id))
+          )
 
-          if (legacyCategoryIds.length > 0) {
+          const legacyCategoryIds = legacyCategoryIdStrings.map((id) => new mongoose.Types.ObjectId(id))
+
+          if (orgObjectId && legacyCategoryIds.length > 0) {
             await Category.updateMany(
               {
                 _id: { $in: legacyCategoryIds },
@@ -103,6 +109,11 @@ export const GET = withAuth(
               { $set: { organizationId: orgObjectId } }
             )
           }
+
+          // Employee should only see categories that contain explicitly assigned tasks.
+          if (user.role === "employee") {
+            andConditions.push({ _id: { $in: legacyCategoryIds } })
+          }
         }
 
         andConditions.push({
@@ -110,6 +121,10 @@ export const GET = withAuth(
           { organizationId: orgObjectId },
           { organizationId: activeOrganizationId },
         ]})
+      }
+
+      if (user.role === "employee" && !categoryTypeToModule(normalizedType)) {
+        return NextResponse.json([])
       }
 
       const query = andConditions.length > 0 ? { $and: andConditions } : {}
