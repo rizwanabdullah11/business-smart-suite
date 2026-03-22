@@ -26,6 +26,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
+import { useAuth } from "@/contexts/auth-context"
 
 // // Sample data
 // const initialCategories = [
@@ -51,6 +52,7 @@ import { COLORS } from "@/constant/colors"
 type SortType = "name" | "date"
 
 export default function ManualPage() {
+  const { isEmployee } = useAuth()
   const [categories, setCategories] = useState<any[]>([])
   const [archivedCategories, setArchivedCategories] = useState<any[]>([])
   const [categoryItemView, setCategoryItemView] = useState<
@@ -79,10 +81,6 @@ export default function ManualPage() {
   const [aiLoading, setAiLoading] = useState(false)
   const [selectedManualId, setSelectedManualId] = useState("")
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
   const toIdString = (value: any) => {
     if (!value) return null
     if (typeof value === "string") return value
@@ -101,27 +99,32 @@ export default function ManualPage() {
 
       // 1) Get categories
       const catRes = await fetch("/api/categories?type=manual", {
+        credentials: "include",
         headers: {
-          Authorization: `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       })
       const categoriesData = await catRes.json()
 
       // 2) Get active manuals
       const manRes = await fetch("/api/manuals", {
+        credentials: "include",
         headers: {
-          Authorization: `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       })
       const manualsData = await manRes.json()
 
-      // 3) Get archived manuals
-      const archivedRes = await fetch("/api/manuals/archived/all", {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      })
-      const archivedData = archivedRes.ok ? await archivedRes.json() : []
+      // 3) Get archived manuals (managers only — employees use a simpler list)
+      const archivedRes = !isEmployee
+        ? await fetch("/api/manuals/archived/all", {
+            credentials: "include",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+        : null
+      const archivedData = archivedRes && archivedRes.ok ? await archivedRes.json() : []
       const archivedById = new Map<string, any>()
       archivedData.forEach((item: any) => {
         if (item?._id) archivedById.set(String(item._id), item)
@@ -202,6 +205,11 @@ export default function ManualPage() {
       console.log(err)
     }
   }
+
+  useEffect(() => {
+    loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEmployee])
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories(prev =>
@@ -780,15 +788,17 @@ export default function ManualPage() {
                 <ArrowLeft className="w-5 h-5" />
               </button>
             </Link>
-            <div
-              className="flex items-center justify-center w-12 h-12 rounded-xl"
-              style={{
-                backgroundColor: `${COLORS.primary}15`,
-                color: COLORS.primary,
-              }}
-            >
-              <FileText className="w-6 h-6" />
-            </div>
+            {!isEmployee ? (
+              <div
+                className="flex items-center justify-center w-12 h-12 rounded-xl"
+                style={{
+                  backgroundColor: `${COLORS.primary}15`,
+                  color: COLORS.primary,
+                }}
+              >
+                <FileText className="w-6 h-6" />
+              </div>
+            ) : null}
             <div>
               <h1 className="text-3xl font-bold" style={{ color: COLORS.textPrimary }}>
                 Manuals
@@ -798,31 +808,35 @@ export default function ManualPage() {
               </p>
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
+            {!isEmployee ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const categoryOptions = allCategoryOptions()
+                  const firstCategoryId = categoryOptions[0]?.id || ""
+                  setSelectedCategoryId(firstCategoryId)
+                  const options = allManualOptions()
+                  const firstManual =
+                    options.find((m: any) => m.categoryId === firstCategoryId) || options[0]
+                  setSelectedManualId(firstManual?.id || "")
+                  setAiQuestion("")
+                  setAiReply("")
+                  setShowAskMe(true)
+                }}
+                className="px-4 py-2.5 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2"
+                style={{
+                  background: COLORS.bgWhite,
+                  color: COLORS.textPrimary,
+                  border: `1px solid ${COLORS.border}`,
+                }}
+              >
+                <Bot className="w-4 h-4" />
+                Ask Me
+              </button>
+            ) : null}
             <button
-              onClick={() => {
-                const categoryOptions = allCategoryOptions()
-                const firstCategoryId = categoryOptions[0]?.id || ""
-                setSelectedCategoryId(firstCategoryId)
-                const options = allManualOptions()
-                const firstManual =
-                  options.find((m: any) => m.categoryId === firstCategoryId) || options[0]
-                setSelectedManualId(firstManual?.id || "")
-                setAiQuestion("")
-                setAiReply("")
-                setShowAskMe(true)
-              }}
-              className="px-4 py-2.5 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2"
-              style={{
-                background: COLORS.bgWhite,
-                color: COLORS.textPrimary,
-                border: `1px solid ${COLORS.border}`,
-              }}
-            >
-              <Bot className="w-4 h-4" />
-              Ask Me
-            </button>
-            <button
+              type="button"
               onClick={() => setShowAddCategory(!showAddCategory)}
               className="px-4 py-2.5 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2"
               style={{
@@ -834,20 +848,24 @@ export default function ManualPage() {
               <Plus className="w-4 h-4" />
               Add Category
             </button>
-            <button
-              onClick={() => setShowArchived(!showArchived)}
-              className="px-4 py-2.5 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2"
-              style={{
-                background: COLORS.bgWhite,
-                color: COLORS.textPrimary,
-                border: `1px solid ${COLORS.border}`,
-              }}
-            >
-              <Archive className="w-4 h-4" />
-              {showArchived ? "Show Active" : "Show Archived"}
-            </button>
+            {!isEmployee ? (
+              <button
+                type="button"
+                onClick={() => setShowArchived(!showArchived)}
+                className="px-4 py-2.5 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2"
+                style={{
+                  background: COLORS.bgWhite,
+                  color: COLORS.textPrimary,
+                  border: `1px solid ${COLORS.border}`,
+                }}
+              >
+                <Archive className="w-4 h-4" />
+                {showArchived ? "Show Active" : "Show Archived"}
+              </button>
+            ) : null}
             <Link href="/manual/new">
               <button
+                type="button"
                 className="px-5 py-2.5 rounded-lg font-medium transition-all hover:shadow-lg flex items-center gap-2"
                 style={{
                   background: COLORS.primaryGradient,
@@ -855,7 +873,7 @@ export default function ManualPage() {
                 }}
               >
                 <Plus className="w-4 h-4" />
-                Add New Manual
+                New Manual
               </button>
             </Link>
           </div>
@@ -914,30 +932,34 @@ export default function ManualPage() {
         )}
 
         {/* Tabs */}
-        <div className="mb-6">
-          <div className="flex gap-1 border-b-2" style={{ borderColor: COLORS.border }}>
-            <button
-              className="px-6 py-3 font-semibold border-b-2 transition-all"
-              style={{
-                borderColor: !showArchived ? COLORS.primary : "transparent",
-                color: !showArchived ? COLORS.primary : COLORS.textSecondary,
-              }}
-              onClick={() => setShowArchived(false)}
-            >
-              Active ({categories.length})
-            </button>
-            <button
-              className="px-6 py-3 font-semibold border-b-2 transition-all"
-              style={{
-                borderColor: showArchived ? COLORS.primary : "transparent",
-                color: showArchived ? COLORS.primary : COLORS.textSecondary,
-              }}
-              onClick={() => setShowArchived(true)}
-            >
-              Archived ({archivedCategories.length})
-            </button>
+        {!isEmployee ? (
+          <div className="mb-6">
+            <div className="flex gap-1 border-b-2" style={{ borderColor: COLORS.border }}>
+              <button
+                type="button"
+                className="px-6 py-3 font-semibold border-b-2 transition-all"
+                style={{
+                  borderColor: !showArchived ? COLORS.primary : "transparent",
+                  color: !showArchived ? COLORS.primary : COLORS.textSecondary,
+                }}
+                onClick={() => setShowArchived(false)}
+              >
+                Active ({categories.length})
+              </button>
+              <button
+                type="button"
+                className="px-6 py-3 font-semibold border-b-2 transition-all"
+                style={{
+                  borderColor: showArchived ? COLORS.primary : "transparent",
+                  color: showArchived ? COLORS.primary : COLORS.textSecondary,
+                }}
+                onClick={() => setShowArchived(true)}
+              >
+                Archived ({archivedCategories.length})
+              </button>
+            </div>
           </div>
-        </div>
+        ) : null}
 
         {/* Sort Controls */}
         <div className="mb-4 flex items-center gap-3">
@@ -1022,18 +1044,22 @@ export default function ManualPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
+                    {!isEmployee ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          startEditCategory(category.id, category.title)
+                        }}
+                        className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
+                        title="Edit Category"
+                        style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
+                      >
+                        <Edit className="w-5 h-5" />
+                      </button>
+                    ) : null}
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        startEditCategory(category.id, category.title)
-                      }}
-                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
-                      title="Edit Category"
-                      style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
-                    >
-                      <Edit className="w-5 h-5" />
-                    </button>
-                    <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation()
                         if (isViewingArchivedItems) {
@@ -1050,42 +1076,49 @@ export default function ManualPage() {
                     >
                       <Plus className="w-5 h-5" />
                     </button>
-                    {showArchived ? (
+                    {!isEmployee ? (
+                      showArchived ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            unarchiveCategory(category.id)
+                          }}
+                          className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
+                          title="Unarchive Category"
+                          style={{ background: COLORS.bgWhite, color: COLORS.green600 }}
+                        >
+                          <Archive className="w-5 h-5" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            archiveCategory(category.id)
+                          }}
+                          className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
+                          title="Archive Category"
+                          style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
+                        >
+                          <Archive className="w-5 h-5" />
+                        </button>
+                      )
+                    ) : null}
+                    {!isEmployee ? (
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation()
-                          unarchiveCategory(category.id)
+                          deleteCategory(category.id)
                         }}
                         className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
-                        title="Unarchive Category"
-                        style={{ background: COLORS.bgWhite, color: COLORS.green600 }}
+                        title="Delete Category"
+                        style={{ background: COLORS.bgWhite, color: COLORS.pink600 }}
                       >
-                        <Archive className="w-5 h-5" />
+                        <Trash2 className="w-5 h-5" />
                       </button>
-                    ) : (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          archiveCategory(category.id)
-                        }}
-                        className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
-                        title="Archive Category"
-                        style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
-                      >
-                        <Archive className="w-5 h-5" />
-                      </button>
-                    )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        deleteCategory(category.id)
-                      }}
-                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
-                      title="Delete Category"
-                      style={{ background: COLORS.bgWhite, color: COLORS.pink600 }}
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                    ) : null}
                   </div>
                 </div>
 
@@ -1153,8 +1186,9 @@ export default function ManualPage() {
                 {/* Manuals List */}
                 {isExpanded && (
                   <div className="p-5">
-                    <div className="mb-4 flex gap-2">
+                    <div className="mb-4 flex gap-2 flex-wrap">
                       <button
+                        type="button"
                         onClick={() =>
                           setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))
                         }
@@ -1165,22 +1199,26 @@ export default function ManualPage() {
                           borderColor: currentItemView === "active" ? COLORS.primary : COLORS.border,
                         }}
                       >
-                        Active ({(category.manuals || []).length})
+                        To do ({(category.manuals || []).length})
                       </button>
+                      {!isEmployee ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCategoryItemView((prev) => ({ ...prev, [category.id]: "archived" }))
+                          }
+                          className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                          style={{
+                            background: currentItemView === "archived" ? COLORS.primaryGradient : COLORS.bgWhite,
+                            color: currentItemView === "archived" ? COLORS.textWhite : COLORS.textPrimary,
+                            borderColor: currentItemView === "archived" ? COLORS.primary : COLORS.border,
+                          }}
+                        >
+                          Archived ({(category.archivedManuals || []).length})
+                        </button>
+                      ) : null}
                       <button
-                        onClick={() =>
-                          setCategoryItemView((prev) => ({ ...prev, [category.id]: "archived" }))
-                        }
-                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
-                        style={{
-                          background: currentItemView === "archived" ? COLORS.primaryGradient : COLORS.bgWhite,
-                          color: currentItemView === "archived" ? COLORS.textWhite : COLORS.textPrimary,
-                          borderColor: currentItemView === "archived" ? COLORS.primary : COLORS.border,
-                        }}
-                      >
-                        Archived ({(category.archivedManuals || []).length})
-                      </button>
-                      <button
+                        type="button"
                         onClick={() =>
                           setCategoryItemView((prev) => ({ ...prev, [category.id]: "completed" }))
                         }
@@ -1191,21 +1229,24 @@ export default function ManualPage() {
                           borderColor: currentItemView === "completed" ? COLORS.primary : COLORS.border,
                         }}
                       >
-                        Completed ({(category.completedManuals || []).length})
+                        Done ({(category.completedManuals || []).length})
                       </button>
-                      <button
-                        onClick={() =>
-                          setCategoryItemView((prev) => ({ ...prev, [category.id]: "highlighted" }))
-                        }
-                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
-                        style={{
-                          background: currentItemView === "highlighted" ? COLORS.primaryGradient : COLORS.bgWhite,
-                          color: currentItemView === "highlighted" ? COLORS.textWhite : COLORS.textPrimary,
-                          borderColor: currentItemView === "highlighted" ? COLORS.primary : COLORS.border,
-                        }}
-                      >
-                        Highlighted ({(category.highlightedManuals || []).length})
-                      </button>
+                      {!isEmployee ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCategoryItemView((prev) => ({ ...prev, [category.id]: "highlighted" }))
+                          }
+                          className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                          style={{
+                            background: currentItemView === "highlighted" ? COLORS.primaryGradient : COLORS.bgWhite,
+                            color: currentItemView === "highlighted" ? COLORS.textWhite : COLORS.textPrimary,
+                            borderColor: currentItemView === "highlighted" ? COLORS.primary : COLORS.border,
+                          }}
+                        >
+                          Starred ({(category.highlightedManuals || []).length})
+                        </button>
+                      ) : null}
                     </div>
 
                     {/* Add Manual Form */}
@@ -1360,10 +1401,12 @@ export default function ManualPage() {
                               border: `1px solid ${COLORS.border}`,
                             }}
                           >
-                            <button className="cursor-move hover:bg-gray-100 p-1 rounded">
-                              <GripVertical className="w-4 h-4" style={{ color: COLORS.textSecondary }} />
-                            </button>
-                            <div className="flex-1">
+                            {!isEmployee ? (
+                              <button type="button" className="cursor-move hover:bg-gray-100 p-1 rounded">
+                                <GripVertical className="w-4 h-4" style={{ color: COLORS.textSecondary }} />
+                              </button>
+                            ) : null}
+                            <div className="flex-1 min-w-0">
                               <Link
                                 href={`/task/manuals/${manual.id}?back=${encodeURIComponent("/manual")}`}
                                 className="font-bold hover:underline text-xl"
@@ -1371,23 +1414,58 @@ export default function ManualPage() {
                               >
                                 {manual.title}
                               </Link>
-                              <div className="flex gap-5 text-base mt-2" style={{ color: COLORS.textSecondary }}>
+                              <div className="flex gap-5 text-base mt-2 flex-wrap" style={{ color: COLORS.textSecondary }}>
                                 <span className="flex items-center gap-1.5">
                                   <span className="font-semibold text-gray-400">Version:</span> {manual.version}
                                 </span>
                                 <span className="flex items-center gap-1.5">
-                                  <Calendar className="w-4 h-4 text-primary" style={{ color: COLORS.primary }} />
-                                  {manual.issueDate}
+                                  {isEmployee ? (
+                                    <span>Date: {manual.issueDate}</span>
+                                  ) : (
+                                    <>
+                                      <Calendar className="w-4 h-4 text-primary" style={{ color: COLORS.primary }} />
+                                      {manual.issueDate}
+                                    </>
+                                  )}
                                 </span>
                                 <span className="flex items-center gap-1.5">
                                   <span className="font-semibold text-gray-400">Location:</span> {manual.location}
                                 </span>
                               </div>
                             </div>
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              {isEmployee ? (
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleApprove(category.id, manual.id, manual.approved)}
+                                    disabled={loadingAction === `approve-${manual.id}`}
+                                    className="px-3 py-1.5 rounded text-sm font-medium border"
+                                    style={{ borderColor: COLORS.border, color: manual.approved ? COLORS.green500 : COLORS.textSecondary }}
+                                  >
+                                    {manual.approved ? "Reopen" : "Mark done"}
+                                  </button>
+                                  <Link href={`/manual/${manual.id}/edit`}>
+                                    <span className="px-3 py-1.5 rounded text-sm font-medium border inline-block" style={{ borderColor: COLORS.border, color: COLORS.primary }}>
+                                      Edit
+                                    </span>
+                                  </Link>
+                                  <button
+                                    type="button"
+                                    onClick={() => downloadManual(manual)}
+                                    disabled={loadingAction === `download-${manual.id}`}
+                                    className="px-3 py-1.5 rounded text-sm font-medium border"
+                                    style={{ borderColor: COLORS.border, color: COLORS.primary, opacity: loadingAction === `download-${manual.id}` ? 0.6 : 1 }}
+                                  >
+                                    Download
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
                               {/* Primary Actions */}
                               <div className="flex items-center gap-1 mr-2">
                                 <button
+                                  type="button"
                                   onClick={() => toggleHighlight(category.id, manual.id, manual.highlighted)}
                                   disabled={loadingAction === `highlight-${manual.id}`}
                                   className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `highlight-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
@@ -1401,6 +1479,7 @@ export default function ManualPage() {
                                   <Star className={`w-5 h-5 ${manual.highlighted ? "fill-current" : ""}`} />
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => toggleApprove(category.id, manual.id, manual.approved)}
                                   disabled={loadingAction === `approve-${manual.id}`}
                                   className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `approve-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
@@ -1414,6 +1493,7 @@ export default function ManualPage() {
                                   <Check className="w-5 h-5" />
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => togglePause(category.id, manual.id, manual.paused)}
                                   disabled={loadingAction === `pause-${manual.id}`}
                                   className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `pause-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
@@ -1435,6 +1515,7 @@ export default function ManualPage() {
                               <div className="flex items-center gap-1">
                                 <Link href={`/manual/${manual.id}/edit`}>
                                   <button
+                                    type="button"
                                     className="p-3 rounded-lg transition-all hover:scale-110 shadow-sm border cursor-pointer"
                                     style={{
                                       background: COLORS.bgWhite,
@@ -1447,6 +1528,7 @@ export default function ManualPage() {
                                   </button>
                                 </Link>
                                 <button
+                                  type="button"
                                   onClick={() => copyManual(category.id, manual.id)}
                                   disabled={loadingAction === `copy-${manual.id}`}
                                   className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `copy-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
@@ -1460,6 +1542,7 @@ export default function ManualPage() {
                                   <Copy className="w-5 h-5" />
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => downloadManual(manual)}
                                   disabled={loadingAction === `download-${manual.id}`}
                                   className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `download-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
@@ -1474,6 +1557,7 @@ export default function ManualPage() {
                                 </button>
                                 {!isViewingArchivedItems ? (
                                   <button
+                                    type="button"
                                     onClick={() => archiveManual(category.id, manual.id)}
                                     disabled={loadingAction === `archive-${manual.id}`}
                                     className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `archive-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
@@ -1488,6 +1572,7 @@ export default function ManualPage() {
                                   </button>
                                 ) : (
                                   <button
+                                    type="button"
                                     onClick={() => unarchiveManual(category.id, manual.id)}
                                     disabled={loadingAction === `unarchive-${manual.id}`}
                                     className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `unarchive-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
@@ -1502,6 +1587,7 @@ export default function ManualPage() {
                                   </button>
                                 )}
                                 <button
+                                  type="button"
                                   onClick={() => deleteManual(category.id, manual.id)}
                                   className="p-3 rounded-lg transition-all hover:scale-110 shadow-sm border cursor-pointer"
                                   style={{
@@ -1514,6 +1600,8 @@ export default function ManualPage() {
                                   <Trash2 className="w-5 h-5" />
                                 </button>
                               </div>
+                                </>
+                              )}
                             </div>
                           </div>
                         ))}

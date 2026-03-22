@@ -47,7 +47,7 @@ export function Sidebar({}: SidebarProps = {}) {
     const pathname = usePathname()
     const [expandedSection, setExpandedSection] = useState<string | null>("Core Management")
     const isExpanded = true // Always expanded
-    const { can, isAdmin, loading } = usePermissions()
+    const { can, isAdmin, isEmployee, loading } = usePermissions()
     const [customSections, setCustomSections] = useState<any[]>([])
     const [customModules, setCustomModules] = useState<Array<{ label: string; href: string; icon?: string }>>([])
 
@@ -265,7 +265,7 @@ export function Sidebar({}: SidebarProps = {}) {
                             color: isActive('/dashboard') ? COLORS.primary : COLORS.textSecondary
                         }}
                     >
-                        <LayoutDashboard className="w-6 h-6 flex-shrink-0" />
+                        {!isEmployee ? <LayoutDashboard className="w-6 h-6 flex-shrink-0" /> : null}
                         <span className="text-base">Dashboard</span>
                     </div>
                 </Link>
@@ -295,7 +295,7 @@ export function Sidebar({}: SidebarProps = {}) {
                                 }}
                             >
                                 <div className="flex items-center gap-3">
-                                    <SectionIcon className="w-6 h-6 flex-shrink-0" />
+                                    {!isEmployee ? <SectionIcon className="w-6 h-6 flex-shrink-0" /> : null}
                                     <span className="text-base font-bold">{section.title}</span>
                                 </div>
                                 <ChevronRight
@@ -324,7 +324,7 @@ export function Sidebar({}: SidebarProps = {}) {
                                                             : COLORS.textSecondary
                                                     }}
                                                 >
-                                                    <ItemIcon className="w-5 h-5 flex-shrink-0" />
+                                                    {!isEmployee ? <ItemIcon className="w-5 h-5 flex-shrink-0" /> : null}
                                                     <span className="text-base">{item.label}</span>
                                                     {item.badge && (
                                                         <span

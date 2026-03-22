@@ -5,8 +5,10 @@ import Link from "next/link"
 import { useParams, useSearchParams } from "next/navigation"
 import { ArrowLeft, Download } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import { useAuth } from "@/contexts/auth-context"
 
-const TABS = ["Details", "Document", "Version history", "Reviews", "Permissions", "Audits"] as const
+const FULL_TABS = ["Details", "Document", "Version history", "Reviews", "Permissions", "Audits"] as const
+const EMPLOYEE_TABS = ["Details", "Document", "Version history"] as const
 
 function toTitle(moduleSlug: string) {
   if (!moduleSlug) return "Task"
@@ -156,11 +158,14 @@ function parseVersionNumber(input: unknown) {
 export default function UniversalTaskDetailPage() {
   const params = useParams<{ module: string; id: string }>()
   const searchParams = useSearchParams()
+  const { isEmployee, user } = useAuth()
   const moduleSlug = params?.module || ""
   const id = params?.id || ""
   const backPath = searchParams.get("back") || `/${moduleSlug}`
 
-  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("Details")
+  const visibleTabs = useMemo(() => (isEmployee ? [...EMPLOYEE_TABS] : [...FULL_TABS]), [isEmployee])
+
+  const [activeTab, setActiveTab] = useState<(typeof FULL_TABS)[number]>("Details")
   const [item, setItem] = useState<Record<string, any> | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -239,6 +244,13 @@ export default function UniversalTaskDetailPage() {
       console.warn("Could not read user from localStorage:", err)
     }
   }, [])
+
+  useEffect(() => {
+    if (!isEmployee) return
+    setActiveTab((t) =>
+      EMPLOYEE_TABS.includes(t as (typeof EMPLOYEE_TABS)[number]) ? t : "Details"
+    )
+  }, [isEmployee])
 
   useEffect(() => {
     const loadItem = async () => {
@@ -674,15 +686,22 @@ export default function UniversalTaskDetailPage() {
         </div>
 
         <div className="rounded-xl p-5 mb-4" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
-          <h1 className="text-3xl font-bold mb-2" style={{ color: COLORS.textPrimary }}>{title}</h1>
-          <div className="p-2 text-sm rounded-lg" style={{ background: "#FEF9C3", color: COLORS.textSecondary }}>
-            Last viewed: {new Date().toLocaleString()} (Current User)
-          </div>
+          <h1 className="text-3xl font-bold mb-1" style={{ color: COLORS.textPrimary }}>{title}</h1>
+          {!isEmployee ? (
+            <div className="p-2 text-sm rounded-lg mt-2" style={{ background: "#FEF9C3", color: COLORS.textSecondary }}>
+              Last viewed: {new Date().toLocaleString()} ({currentUserName})
+            </div>
+          ) : (
+            <p className="text-sm mt-2" style={{ color: COLORS.textSecondary }}>
+              {user?.name ? `${user.name} · ` : ""}
+              {toTitle(moduleSlug).replace(/s$/, "")} record
+            </p>
+          )}
         </div>
 
         <div className="rounded-xl p-4" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
           <div className="flex items-center gap-2 mb-4 border-b pb-2" style={{ borderColor: COLORS.border }}>
-            {TABS.map((tab) => (
+            {visibleTabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -697,11 +716,16 @@ export default function UniversalTaskDetailPage() {
               </button>
             ))}
             <button
+              type="button"
               onClick={handleDownloadFile}
-              className="ml-auto inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm"
-              style={{ color: COLORS.textSecondary }}
+              className="ml-auto px-3 py-1.5 rounded text-sm font-medium"
+              style={{ color: COLORS.primary, border: `1px solid ${COLORS.border}` }}
             >
-              <Download className="w-4 h-4" /> Download
+              {isEmployee ? "Download file" : (
+                <>
+                  <Download className="w-4 h-4 inline mr-1 align-text-bottom" /> Download
+                </>
+              )}
             </button>
           </div>
 
@@ -914,7 +938,7 @@ export default function UniversalTaskDetailPage() {
             </div>
           )}
 
-          {activeTab === "Reviews" && (
+          {activeTab === "Reviews" && !isEmployee && (
             <div className="space-y-4">
               <button
                 onClick={() => setShowReviewModal(true)}
@@ -943,7 +967,7 @@ export default function UniversalTaskDetailPage() {
             </div>
           )}
 
-          {activeTab === "Permissions" && (
+          {activeTab === "Permissions" && !isEmployee && (
             <div className="space-y-4">
               <button
                 onClick={() => setShowPermissionModal(true)}
@@ -973,7 +997,7 @@ export default function UniversalTaskDetailPage() {
             </div>
           )}
 
-          {activeTab === "Audits" && (
+          {activeTab === "Audits" && !isEmployee && (
             <div className="space-y-4">
               <button
                 onClick={() => setShowAuditModal(true)}
@@ -1011,7 +1035,7 @@ export default function UniversalTaskDetailPage() {
           )}
         </div>
 
-        {showReviewModal && (
+        {showReviewModal && !isEmployee && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.5)" }}>
             <div className="w-full max-w-xl rounded-2xl p-6" style={{ background: COLORS.bgWhite }}>
               <div className="flex items-center justify-between mb-4">
@@ -1145,7 +1169,7 @@ export default function UniversalTaskDetailPage() {
           </div>
         )}
 
-        {showPermissionModal && (
+        {showPermissionModal && !isEmployee && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.5)" }}>
             <div className="w-full max-w-xl rounded-2xl p-6" style={{ background: COLORS.bgWhite }}>
               <div className="flex items-center justify-between mb-4">
@@ -1253,7 +1277,7 @@ export default function UniversalTaskDetailPage() {
           </div>
         )}
 
-        {showAuditModal && (
+        {showAuditModal && !isEmployee && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.5)" }}>
             <div className="w-full max-w-xl rounded-2xl p-6" style={{ background: COLORS.bgWhite }}>
               <div className="flex items-center justify-between mb-4">

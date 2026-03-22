@@ -207,9 +207,12 @@ export const ROLE_PERMISSIONS: PermissionMap = {
   ],
   
   [Role.EMPLOYEE]: [
-    // Employee has read-only access and can submit forms
+    // Employee: view modules, create own tasks & categories, edit own work (API enforces scope)
     Permission.VIEW_DASHBOARD,
     Permission.VIEW_MANUALS,
+    Permission.CREATE_MANUAL,
+    Permission.EDIT_MANUAL,
+    Permission.UPLOAD_MANUAL,
     Permission.VIEW_PROCEDURES,
     Permission.VIEW_POLICIES,
     Permission.VIEW_FORMS,
@@ -220,6 +223,8 @@ export const ROLE_PERMISSIONS: PermissionMap = {
     Permission.VIEW_AUDIT_SCHEDULE,
     Permission.VIEW_IMPROVEMENTS,
     Permission.VIEW_CATEGORIES,
+    Permission.CREATE_CATEGORY,
+    Permission.EDIT_CATEGORY,
   ],
 }
 
