@@ -74,6 +74,76 @@ function workflowStatusStyle(status: string): CSSProperties {
   }
 }
 
+function accessLevelStyle(level: string): CSSProperties {
+  const s = level.toLowerCase()
+  if (s.includes("admin")) {
+    return { background: "#ede9fe", color: "#5b21b6", border: "1px solid #c4b5fd" }
+  }
+  if (s.includes("approve")) {
+    return { background: "#dcfce7", color: "#166534", border: "1px solid #86efac" }
+  }
+  if (s.includes("write")) {
+    return { background: "#dbeafe", color: "#1d4ed8", border: "1px solid #93c5fd" }
+  }
+  return { background: "#f3f4f6", color: "#374151", border: "1px solid #d1d5db" }
+}
+
+function auditTypeStyle(type: string): CSSProperties {
+  const s = type.toLowerCase()
+  if (s.includes("external")) {
+    return { background: "#fee2e2", color: "#991b1b", border: "1px solid #fecaca" }
+  }
+  if (s.includes("compliance")) {
+    return { background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d" }
+  }
+  if (s.includes("surveillance")) {
+    return { background: "#e0e7ff", color: "#3730a3", border: "1px solid #a5b4fc" }
+  }
+  return { background: "#dbeafe", color: "#1e40af", border: "1px solid #93c5fd" }
+}
+
+function getReviewRealtimeState(nextReviewDate?: string | null) {
+  if (!nextReviewDate) {
+    return {
+      label: "Completed",
+      style: { background: "#ecfdf5", color: "#065f46", border: "1px solid #a7f3d0" } satisfies CSSProperties,
+    }
+  }
+
+  const now = new Date()
+  const due = new Date(nextReviewDate)
+  if (Number.isNaN(due.getTime())) {
+    return {
+      label: "Scheduled",
+      style: { background: "#f3f4f6", color: "#374151", border: "1px solid #d1d5db" } satisfies CSSProperties,
+    }
+  }
+
+  const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+  if (diffDays < 0) {
+    return {
+      label: "Overdue",
+      style: { background: "#fee2e2", color: "#991b1b", border: "1px solid #fecaca" } satisfies CSSProperties,
+    }
+  }
+  if (diffDays === 0) {
+    return {
+      label: "Due today",
+      style: { background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d" } satisfies CSSProperties,
+    }
+  }
+  if (diffDays <= 14) {
+    return {
+      label: "Upcoming",
+      style: { background: "#dbeafe", color: "#1e40af", border: "1px solid #93c5fd" } satisfies CSSProperties,
+    }
+  }
+  return {
+    label: "Scheduled",
+    style: { background: "#e0f2fe", color: "#075985", border: "1px solid #7dd3fc" } satisfies CSSProperties,
+  }
+}
+
 /** Turn schema keys into readable labels (Issue date, not issueDate). */
 function humanizeFieldKey(key: string): string {
   const fixed: Record<string, string> = {
@@ -396,6 +466,41 @@ export default function UniversalTaskDetailPage() {
       return bTime - aTime
     })
   }, [item])
+
+  const reviewSummary = useMemo(() => {
+    const overdue = reviews.filter((review: any) => getReviewRealtimeState(review?.nextReviewDate).label === "Overdue").length
+    const upcoming = reviews.filter((review: any) => {
+      const state = getReviewRealtimeState(review?.nextReviewDate).label
+      return state === "Upcoming" || state === "Due today"
+    }).length
+    return {
+      total: reviews.length,
+      overdue,
+      upcoming,
+    }
+  }, [reviews])
+
+  const permissionSummary = useMemo(() => {
+    const elevated = permissionsHistory.filter((entry: any) => {
+      const level = String(entry?.accessLevel || "").toLowerCase()
+      return level === "write" || level === "approve" || level === "admin"
+    }).length
+    return {
+      total: permissionsHistory.length,
+      elevated,
+      latest: permissionsHistory[0]?.effectiveDate || permissionsHistory[0]?.createdAt || null,
+    }
+  }, [permissionsHistory])
+
+  const auditSummary = useMemo(() => {
+    const open = audits.filter((audit: any) => String(audit?.status || "").toLowerCase() === "open").length
+    const inProgress = audits.filter((audit: any) => String(audit?.status || "").toLowerCase() === "in progress").length
+    return {
+      total: audits.length,
+      open,
+      inProgress,
+    }
+  }, [audits])
 
   const versionHistory = useMemo(() => {
     const existingRaw = Array.isArray(item?.versionHistory) ? item.versionHistory : []
@@ -937,6 +1042,21 @@ export default function UniversalTaskDetailPage() {
 
           {activeTab === "Reviews" && !isEmployee && (
             <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: COLORS.bgGray }}>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>Total reviews</p>
+                  <p className="text-2xl font-semibold" style={{ color: COLORS.textPrimary }}>{reviewSummary.total}</p>
+                </div>
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: "#fef2f2" }}>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>Overdue</p>
+                  <p className="text-2xl font-semibold" style={{ color: "#991b1b" }}>{reviewSummary.overdue}</p>
+                </div>
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: "#eff6ff" }}>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>Upcoming</p>
+                  <p className="text-2xl font-semibold" style={{ color: "#1d4ed8" }}>{reviewSummary.upcoming}</p>
+                </div>
+              </div>
+
               <button
                 onClick={() => setShowReviewModal(true)}
                 className="px-4 py-2 rounded-lg font-medium"
@@ -952,11 +1072,35 @@ export default function UniversalTaskDetailPage() {
               ) : (
                 <div className="space-y-3">
                   {reviews.map((review: any, idx: number) => (
-                    <div key={idx} className="p-4 rounded-lg border" style={{ borderColor: COLORS.border }}>
-                      <p style={{ color: COLORS.textPrimary }}><strong>Reviewer:</strong> {review.reviewerName}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Review Date:</strong> {formatDate(review.reviewDate)}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Next Review Date:</strong> {review.nextReviewDate ? formatDate(review.nextReviewDate) : "N/A"}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Details:</strong> {review.reviewDetails || "-"}</p>
+                    <div key={idx} className="p-4 rounded-xl border" style={{ borderColor: COLORS.border, background: COLORS.bgWhite }}>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold" style={{ color: COLORS.textPrimary }}>{review.reviewerName || "Reviewer"}</p>
+                          <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                            Reviewed on {formatDate(review.reviewDate)}
+                          </p>
+                        </div>
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" style={getReviewRealtimeState(review.nextReviewDate).style}>
+                          {getReviewRealtimeState(review.nextReviewDate).label}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                        <div className="rounded-lg border px-3 py-2" style={{ borderColor: COLORS.border }}>
+                          <p className="text-xs uppercase" style={{ color: COLORS.textSecondary }}>Next review</p>
+                          <p className="font-medium" style={{ color: COLORS.textPrimary }}>
+                            {review.nextReviewDate ? formatDate(review.nextReviewDate) : "Not scheduled"}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border px-3 py-2" style={{ borderColor: COLORS.border }}>
+                          <p className="text-xs uppercase" style={{ color: COLORS.textSecondary }}>Created</p>
+                          <p className="font-medium" style={{ color: COLORS.textPrimary }}>
+                            {formatDateTime(review.createdAt || review.reviewDate)}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-sm mt-4" style={{ color: COLORS.textSecondary }}>
+                        {review.reviewDetails || "No review notes added."}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -966,6 +1110,23 @@ export default function UniversalTaskDetailPage() {
 
           {activeTab === "Permissions" && !isEmployee && (
             <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: COLORS.bgGray }}>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>Total permissions</p>
+                  <p className="text-2xl font-semibold" style={{ color: COLORS.textPrimary }}>{permissionSummary.total}</p>
+                </div>
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: "#eff6ff" }}>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>Write or above</p>
+                  <p className="text-2xl font-semibold" style={{ color: "#1d4ed8" }}>{permissionSummary.elevated}</p>
+                </div>
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: "#f9fafb" }}>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>Latest effective date</p>
+                  <p className="text-base font-semibold" style={{ color: COLORS.textPrimary }}>
+                    {permissionSummary.latest ? formatDate(permissionSummary.latest) : "N/A"}
+                  </p>
+                </div>
+              </div>
+
               <button
                 onClick={() => setShowPermissionModal(true)}
                 className="px-4 py-2 rounded-lg font-medium"
@@ -981,12 +1142,35 @@ export default function UniversalTaskDetailPage() {
               ) : (
                 <div className="space-y-3">
                   {permissionsHistory.map((entry: any, idx: number) => (
-                    <div key={idx} className="p-4 rounded-lg border" style={{ borderColor: COLORS.border }}>
-                      <p style={{ color: COLORS.textPrimary }}><strong>Role/User:</strong> {entry.roleOrUser || "-"}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Access Level:</strong> {entry.accessLevel || "-"}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Effective Date:</strong> {formatDate(entry.effectiveDate || entry.createdAt)}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Details:</strong> {entry.permissionDetails || "-"}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Updated By:</strong> {entry.updatedBy || "Current User"}</p>
+                    <div key={idx} className="p-4 rounded-xl border" style={{ borderColor: COLORS.border, background: COLORS.bgWhite }}>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold" style={{ color: COLORS.textPrimary }}>{entry.roleOrUser || "-"}</p>
+                          <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                            Effective {formatDate(entry.effectiveDate || entry.createdAt)}
+                          </p>
+                        </div>
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" style={accessLevelStyle(String(entry.accessLevel || "Read"))}>
+                          {entry.accessLevel || "Read"}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                        <div className="rounded-lg border px-3 py-2" style={{ borderColor: COLORS.border }}>
+                          <p className="text-xs uppercase" style={{ color: COLORS.textSecondary }}>Updated by</p>
+                          <p className="font-medium" style={{ color: COLORS.textPrimary }}>
+                            {entry.updatedBy || "Current User"}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border px-3 py-2" style={{ borderColor: COLORS.border }}>
+                          <p className="text-xs uppercase" style={{ color: COLORS.textSecondary }}>Employee email</p>
+                          <p className="font-medium" style={{ color: COLORS.textPrimary }}>
+                            {entry.userEmail || "Not linked"}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-sm mt-4" style={{ color: COLORS.textSecondary }}>
+                        {entry.permissionDetails || "No permission notes added."}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -996,6 +1180,21 @@ export default function UniversalTaskDetailPage() {
 
           {activeTab === "Audits" && !isEmployee && (
             <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: COLORS.bgGray }}>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>Total audits</p>
+                  <p className="text-2xl font-semibold" style={{ color: COLORS.textPrimary }}>{auditSummary.total}</p>
+                </div>
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: "#fef2f2" }}>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>Open</p>
+                  <p className="text-2xl font-semibold" style={{ color: "#991b1b" }}>{auditSummary.open}</p>
+                </div>
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: "#eff6ff" }}>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>In progress</p>
+                  <p className="text-2xl font-semibold" style={{ color: "#1d4ed8" }}>{auditSummary.inProgress}</p>
+                </div>
+              </div>
+
               <button
                 onClick={() => setShowAuditModal(true)}
                 className="px-4 py-2 rounded-lg font-medium"
@@ -1011,13 +1210,40 @@ export default function UniversalTaskDetailPage() {
               ) : (
                 <div className="space-y-3">
                   {audits.map((audit: any, idx: number) => (
-                    <div key={idx} className="p-4 rounded-lg border" style={{ borderColor: COLORS.border }}>
-                      <p style={{ color: COLORS.textPrimary }}><strong>Audit Type:</strong> {audit.auditType || "-"}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Audit Date:</strong> {formatDate(audit.auditDate || audit.createdAt)}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Auditor:</strong> {audit.auditor || "-"}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Status:</strong> {audit.status || "-"}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Findings:</strong> {audit.findings || "-"}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Updated By:</strong> {audit.updatedBy || "Current User"}</p>
+                    <div key={idx} className="p-4 rounded-xl border" style={{ borderColor: COLORS.border, background: COLORS.bgWhite }}>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold" style={{ color: COLORS.textPrimary }}>{audit.auditor || "Auditor not set"}</p>
+                          <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                            Audit date {formatDate(audit.auditDate || audit.createdAt)}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" style={auditTypeStyle(String(audit.auditType || "Internal"))}>
+                            {audit.auditType || "Internal"}
+                          </span>
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" style={workflowStatusStyle(String(audit.status || "Open"))}>
+                            {audit.status || "Open"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                        <div className="rounded-lg border px-3 py-2" style={{ borderColor: COLORS.border }}>
+                          <p className="text-xs uppercase" style={{ color: COLORS.textSecondary }}>Updated by</p>
+                          <p className="font-medium" style={{ color: COLORS.textPrimary }}>
+                            {audit.updatedBy || "Current User"}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border px-3 py-2" style={{ borderColor: COLORS.border }}>
+                          <p className="text-xs uppercase" style={{ color: COLORS.textSecondary }}>Created</p>
+                          <p className="font-medium" style={{ color: COLORS.textPrimary }}>
+                            {formatDateTime(audit.createdAt || audit.auditDate)}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-sm mt-4" style={{ color: COLORS.textSecondary }}>
+                        {audit.findings || "No findings recorded."}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -1080,6 +1306,22 @@ export default function UniversalTaskDetailPage() {
                     className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
                     style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                   />
+                </div>
+
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: COLORS.bgGray }}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold" style={{ color: COLORS.textPrimary }}>
+                        {reviewForm.reviewerName.trim() || "Reviewer preview"}
+                      </p>
+                      <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                        Review date: {reviewForm.reviewDate ? formatDate(reviewForm.reviewDate) : "Not selected"}
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" style={getReviewRealtimeState(reviewForm.nextReviewDate || null).style}>
+                      {getReviewRealtimeState(reviewForm.nextReviewDate || null).label}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -1248,6 +1490,22 @@ export default function UniversalTaskDetailPage() {
                     style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                   />
                 </div>
+
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: COLORS.bgGray }}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold" style={{ color: COLORS.textPrimary }}>
+                        {permissionForm.roleOrUser || "Permission preview"}
+                      </p>
+                      <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                        Effective: {permissionForm.effectiveDate ? formatDate(permissionForm.effectiveDate) : "Not selected"}
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" style={accessLevelStyle(permissionForm.accessLevel)}>
+                      {permissionForm.accessLevel}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 mt-5">
@@ -1352,6 +1610,27 @@ export default function UniversalTaskDetailPage() {
                     className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
                     style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                   />
+                </div>
+
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: COLORS.bgGray }}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold" style={{ color: COLORS.textPrimary }}>
+                        {auditForm.auditor || "Audit preview"}
+                      </p>
+                      <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                        Audit date: {auditForm.auditDate ? formatDate(auditForm.auditDate) : "Not selected"}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" style={auditTypeStyle(auditForm.auditType)}>
+                        {auditForm.auditType}
+                      </span>
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" style={workflowStatusStyle(auditForm.status)}>
+                        {auditForm.status}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
