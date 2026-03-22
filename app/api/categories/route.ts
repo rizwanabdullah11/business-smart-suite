@@ -110,9 +110,26 @@ export const GET = withAuth(
             )
           }
 
-          // Employee should only see categories that contain explicitly assigned tasks.
-          if (user.role === "employee") {
-            andConditions.push({ _id: { $in: legacyCategoryIds } })
+          // Employee: categories tied to visible tasks OR categories they created (empty new categories).
+          if (user.role === "employee" && orgObjectId && normalizedType) {
+            const creatorCats = await Category.find({
+              type: normalizedType,
+              organizationId: orgObjectId,
+              $or: [{ createdBy: user.id }, ...(toObjectId(user.id) ? [{ createdBy: toObjectId(user.id) }] : [])],
+            })
+              .select("_id")
+              .lean()
+            const creatorIds = creatorCats.map((c: { _id: unknown }) => c._id)
+            const merged = [...new Set([...legacyCategoryIds.map((id) => String(id)), ...creatorIds.map((id) => String(id))])].filter(
+              (id) => mongoose.Types.ObjectId.isValid(id)
+            )
+            if (merged.length > 0) {
+              andConditions.push({ _id: { $in: merged.map((id) => new mongoose.Types.ObjectId(id)) } })
+            } else {
+              andConditions.push({
+                $or: [{ createdBy: user.id }, ...(toObjectId(user.id) ? [{ createdBy: toObjectId(user.id) }] : [])],
+              })
+            }
           }
         }
 
@@ -157,6 +174,7 @@ export const POST = withAuth(
         name: String(body.name).trim(),
         type: normalizedType,
         organizationId: toObjectId(activeOrganizationId) || activeOrganizationId || undefined,
+        createdBy: user.id,
         archived: false,
         isArchived: false,
         highlighted: false,

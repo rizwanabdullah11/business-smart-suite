@@ -98,6 +98,12 @@ function buildEmployeePermissionFilter(user: AuthUser) {
   if (userIdObject) {
     conditions.push({ "permissionsHistory.userId": userIdObject })
     conditions.push({ "permissionsHistory.userId": user.id })
+    // Tasks created by this employee (visible to org + creator)
+    conditions.push({ createdBy: userIdObject })
+    conditions.push({ createdBy: user.id })
+    // Workflow assignees
+    conditions.push({ "taskAssignees.userId": userIdObject })
+    conditions.push({ "taskAssignees.userId": user.id })
   }
 
   if (user.name) {

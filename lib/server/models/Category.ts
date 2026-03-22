@@ -4,6 +4,8 @@ export interface ICategory extends mongoose.Document {
   name: string
   type?: string
   organizationId?: mongoose.Types.ObjectId | string
+  /** User id who created the category (e.g. employee-owned categories). */
+  createdBy?: mongoose.Types.ObjectId | string
   archived: boolean
   isArchived: boolean
   highlighted: boolean
@@ -24,6 +26,11 @@ const categorySchema = new Schema<ICategory>(
       trim: true,
     },
     organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    createdBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
       default: null,

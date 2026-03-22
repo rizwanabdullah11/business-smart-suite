@@ -47,7 +47,7 @@ export function Sidebar({}: SidebarProps = {}) {
     const pathname = usePathname()
     const [expandedSection, setExpandedSection] = useState<string | null>("Core Management")
     const isExpanded = true // Always expanded
-    const { can, isAdmin, loading } = usePermissions()
+    const { can, isAdmin, isEmployee, loading } = usePermissions()
     const [customSections, setCustomSections] = useState<any[]>([])
     const [customModules, setCustomModules] = useState<Array<{ label: string; href: string; icon?: string }>>([])
 

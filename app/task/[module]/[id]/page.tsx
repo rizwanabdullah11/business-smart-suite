@@ -5,8 +5,10 @@ import Link from "next/link"
 import { useParams, useSearchParams } from "next/navigation"
 import { ArrowLeft, Download } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import { useAuth } from "@/contexts/auth-context"
 
-const TABS = ["Details", "Document", "Version history", "Reviews", "Permissions", "Audits"] as const
+const FULL_TABS = ["Details", "Document", "Version history", "Reviews", "Permissions", "Audits"] as const
+const EMPLOYEE_TABS = ["Details", "Document", "Version history", "Reviews", "Audits"] as const
 
 function toTitle(moduleSlug: string) {
   if (!moduleSlug) return "Task"
@@ -72,14 +74,74 @@ function workflowStatusStyle(status: string): CSSProperties {
   }
 }
 
-function workflowEventLabel(type: string) {
-  const t = type.toLowerCase()
-  if (t === "assigned") return "Assignment"
-  if (t === "status") return "Status update"
-  if (t === "comment") return "Comment"
-  if (t === "review") return "Review"
-  if (t === "submitted") return "Submitted for review"
-  return humanizeWorkflowStatus(type)
+function accessLevelStyle(level: string): CSSProperties {
+  const s = level.toLowerCase()
+  if (s.includes("admin")) {
+    return { background: "#ede9fe", color: "#5b21b6", border: "1px solid #c4b5fd" }
+  }
+  if (s.includes("approve")) {
+    return { background: "#dcfce7", color: "#166534", border: "1px solid #86efac" }
+  }
+  if (s.includes("write")) {
+    return { background: "#dbeafe", color: "#1d4ed8", border: "1px solid #93c5fd" }
+  }
+  return { background: "#f3f4f6", color: "#374151", border: "1px solid #d1d5db" }
+}
+
+function auditTypeStyle(type: string): CSSProperties {
+  const s = type.toLowerCase()
+  if (s.includes("external")) {
+    return { background: "#fee2e2", color: "#991b1b", border: "1px solid #fecaca" }
+  }
+  if (s.includes("compliance")) {
+    return { background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d" }
+  }
+  if (s.includes("surveillance")) {
+    return { background: "#e0e7ff", color: "#3730a3", border: "1px solid #a5b4fc" }
+  }
+  return { background: "#dbeafe", color: "#1e40af", border: "1px solid #93c5fd" }
+}
+
+function getReviewRealtimeState(nextReviewDate?: string | null) {
+  if (!nextReviewDate) {
+    return {
+      label: "Completed",
+      style: { background: "#ecfdf5", color: "#065f46", border: "1px solid #a7f3d0" } satisfies CSSProperties,
+    }
+  }
+
+  const now = new Date()
+  const due = new Date(nextReviewDate)
+  if (Number.isNaN(due.getTime())) {
+    return {
+      label: "Scheduled",
+      style: { background: "#f3f4f6", color: "#374151", border: "1px solid #d1d5db" } satisfies CSSProperties,
+    }
+  }
+
+  const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+  if (diffDays < 0) {
+    return {
+      label: "Overdue",
+      style: { background: "#fee2e2", color: "#991b1b", border: "1px solid #fecaca" } satisfies CSSProperties,
+    }
+  }
+  if (diffDays === 0) {
+    return {
+      label: "Due today",
+      style: { background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d" } satisfies CSSProperties,
+    }
+  }
+  if (diffDays <= 14) {
+    return {
+      label: "Upcoming",
+      style: { background: "#dbeafe", color: "#1e40af", border: "1px solid #93c5fd" } satisfies CSSProperties,
+    }
+  }
+  return {
+    label: "Scheduled",
+    style: { background: "#e0f2fe", color: "#075985", border: "1px solid #7dd3fc" } satisfies CSSProperties,
+  }
 }
 
 /** Turn schema keys into readable labels (Issue date, not issueDate). */
@@ -156,11 +218,14 @@ function parseVersionNumber(input: unknown) {
 export default function UniversalTaskDetailPage() {
   const params = useParams<{ module: string; id: string }>()
   const searchParams = useSearchParams()
+  const { isEmployee, user } = useAuth()
   const moduleSlug = params?.module || ""
   const id = params?.id || ""
   const backPath = searchParams.get("back") || `/${moduleSlug}`
 
-  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("Details")
+  const visibleTabs = useMemo(() => (isEmployee ? [...EMPLOYEE_TABS] : [...FULL_TABS]), [isEmployee])
+
+  const [activeTab, setActiveTab] = useState<(typeof FULL_TABS)[number]>("Details")
   const [item, setItem] = useState<Record<string, any> | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -241,6 +306,13 @@ export default function UniversalTaskDetailPage() {
   }, [])
 
   useEffect(() => {
+    if (!isEmployee) return
+    setActiveTab((t) =>
+      EMPLOYEE_TABS.includes(t as (typeof EMPLOYEE_TABS)[number]) ? t : "Details"
+    )
+  }, [isEmployee])
+
+  useEffect(() => {
     const loadItem = async () => {
       if (!moduleSlug || !id) return
       setLoading(true)
@@ -296,6 +368,7 @@ export default function UniversalTaskDetailPage() {
       "taskAssignees",
       "workflowHistory",
       "workflowStatus",
+      "status",
       "title",
       "name",
       "organizationId",
@@ -309,15 +382,6 @@ export default function UniversalTaskDetailPage() {
   }, [item])
 
   const taskAssigneesList = useMemo(() => parseJsonArray(item?.taskAssignees), [item])
-
-  const workflowHistorySorted = useMemo(() => {
-    const list = parseJsonArray<Record<string, unknown>>(item?.workflowHistory)
-    return [...list].sort((a, b) => {
-      const ta = new Date(String((a as { createdAt?: string })?.createdAt || 0)).getTime()
-      const tb = new Date(String((b as { createdAt?: string })?.createdAt || 0)).getTime()
-      return tb - ta
-    })
-  }, [item])
 
   const categoryLabel = useMemo(() => {
     if (!item) return ""
@@ -344,6 +408,56 @@ export default function UniversalTaskDetailPage() {
     })
   }, [item])
 
+  const assignedPeople = useMemo(() => {
+    const merged = new Map<
+      string,
+      {
+        userId?: string
+        name: string
+        email?: string
+        dueDate?: string
+        assignedAt?: string
+        accessLevel?: string
+      }
+    >()
+
+    taskAssigneesList.forEach((entry: Record<string, unknown>, idx: number) => {
+      const userId = String(entry.userId || "").trim()
+      const email = String(entry.email || "").trim()
+      const name = String(entry.name || email || `Assignee ${idx + 1}`).trim()
+      const key = (userId || email || name).toLowerCase()
+      if (!key) return
+
+      merged.set(key, {
+        userId: userId || undefined,
+        name,
+        email: email || undefined,
+        dueDate: entry.dueDate ? String(entry.dueDate) : undefined,
+        assignedAt: entry.assignedAt ? String(entry.assignedAt) : undefined,
+      })
+    })
+
+    permissionsHistory.forEach((entry: any, idx: number) => {
+      const userId = String(entry?.userId || "").trim()
+      const email = String(entry?.userEmail || "").trim()
+      const name = String(entry?.roleOrUser || email || `Assignee ${idx + 1}`).trim()
+      const key = (userId || email || name).toLowerCase()
+      if (!key) return
+
+      const existing = merged.get(key)
+      merged.set(key, {
+        userId: existing?.userId || userId || undefined,
+        name: existing?.name || name,
+        email: existing?.email || email || undefined,
+        dueDate: existing?.dueDate,
+        assignedAt: existing?.assignedAt || entry?.effectiveDate || entry?.createdAt || undefined,
+        accessLevel: existing?.accessLevel || (entry?.accessLevel ? String(entry.accessLevel) : undefined),
+      })
+    })
+
+    return Array.from(merged.values())
+  }, [permissionsHistory, taskAssigneesList])
+
   const audits = useMemo(() => {
     if (!Array.isArray(item?.audits)) return []
     return [...item.audits].sort((a: any, b: any) => {
@@ -352,6 +466,41 @@ export default function UniversalTaskDetailPage() {
       return bTime - aTime
     })
   }, [item])
+
+  const reviewSummary = useMemo(() => {
+    const overdue = reviews.filter((review: any) => getReviewRealtimeState(review?.nextReviewDate).label === "Overdue").length
+    const upcoming = reviews.filter((review: any) => {
+      const state = getReviewRealtimeState(review?.nextReviewDate).label
+      return state === "Upcoming" || state === "Due today"
+    }).length
+    return {
+      total: reviews.length,
+      overdue,
+      upcoming,
+    }
+  }, [reviews])
+
+  const permissionSummary = useMemo(() => {
+    const elevated = permissionsHistory.filter((entry: any) => {
+      const level = String(entry?.accessLevel || "").toLowerCase()
+      return level === "write" || level === "approve" || level === "admin"
+    }).length
+    return {
+      total: permissionsHistory.length,
+      elevated,
+      latest: permissionsHistory[0]?.effectiveDate || permissionsHistory[0]?.createdAt || null,
+    }
+  }, [permissionsHistory])
+
+  const auditSummary = useMemo(() => {
+    const open = audits.filter((audit: any) => String(audit?.status || "").toLowerCase() === "open").length
+    const inProgress = audits.filter((audit: any) => String(audit?.status || "").toLowerCase() === "in progress").length
+    return {
+      total: audits.length,
+      open,
+      inProgress,
+    }
+  }, [audits])
 
   const versionHistory = useMemo(() => {
     const existingRaw = Array.isArray(item?.versionHistory) ? item.versionHistory : []
@@ -674,15 +823,23 @@ export default function UniversalTaskDetailPage() {
         </div>
 
         <div className="rounded-xl p-5 mb-4" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
-          <h1 className="text-3xl font-bold mb-2" style={{ color: COLORS.textPrimary }}>{title}</h1>
-          <div className="p-2 text-sm rounded-lg" style={{ background: "#FEF9C3", color: COLORS.textSecondary }}>
-            Last viewed: {new Date().toLocaleString()} (Current User)
+          <h1 className="text-3xl font-bold mb-1" style={{ color: COLORS.textPrimary }}>{title}</h1>
+          <div className="p-2 text-sm rounded-lg mt-2" style={{ background: "#FEF9C3", color: COLORS.textSecondary }}>
+            {isEmployee ? (
+              <>
+                {user?.name || currentUserName}
+                {categoryLabel ? ` · ${categoryLabel}` : ""}
+                {` · ${toTitle(moduleSlug).replace(/s$/, "")} record`}
+              </>
+            ) : (
+              <>Last viewed: {new Date().toLocaleString()} ({currentUserName})</>
+            )}
           </div>
         </div>
 
         <div className="rounded-xl p-4" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
           <div className="flex items-center gap-2 mb-4 border-b pb-2" style={{ borderColor: COLORS.border }}>
-            {TABS.map((tab) => (
+            {visibleTabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -697,17 +854,18 @@ export default function UniversalTaskDetailPage() {
               </button>
             ))}
             <button
+              type="button"
               onClick={handleDownloadFile}
-              className="ml-auto inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm"
-              style={{ color: COLORS.textSecondary }}
+              className="ml-auto px-3 py-1.5 rounded text-sm font-medium"
+              style={{ color: COLORS.primary, border: `1px solid ${COLORS.border}` }}
             >
-              <Download className="w-4 h-4" /> Download
+              <Download className="w-4 h-4 inline mr-1 align-text-bottom" /> Download
             </button>
           </div>
 
           {activeTab === "Details" && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {categoryLabel ? (
+              {!isEmployee && categoryLabel ? (
                 <div>
                   <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>
                     Category
@@ -718,8 +876,11 @@ export default function UniversalTaskDetailPage() {
                 </div>
               ) : null}
 
-              {item?.workflowStatus !== undefined && item?.workflowStatus !== null && String(item.workflowStatus).trim() !== "" ? (
-                <div className="md:col-span-2">
+              {!isEmployee &&
+              item?.workflowStatus !== undefined &&
+              item?.workflowStatus !== null &&
+              String(item.workflowStatus).trim() !== "" ? (
+                <div>
                   <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>
                     Workflow status
                   </p>
@@ -729,13 +890,40 @@ export default function UniversalTaskDetailPage() {
                 </div>
               ) : null}
 
-              {taskAssigneesList.length > 0 ? (
+              {!isEmployee &&
+              item?.status !== undefined &&
+              item?.status !== null &&
+              String(item.status).trim() !== "" ? (
+                <div>
+                  <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>
+                    Status
+                  </p>
+                  <div className="inline-flex items-center px-3 py-1.5 rounded-lg border text-sm font-semibold" style={workflowStatusStyle(String(item.status))}>
+                    {humanizeWorkflowStatus(item.status)}
+                  </div>
+                </div>
+              ) : null}
+
+              {!isEmployee && assignedPeople.length > 0 ? (
                 <div className="md:col-span-2">
                   <p className="text-sm font-medium mb-2" style={{ color: COLORS.textSecondary }}>
-                    Assigned to
+                    Assigned ({assignedPeople.length})
                   </p>
+                  <div
+                    className="mb-3 rounded-lg border px-4 py-3"
+                    style={{ borderColor: COLORS.border, background: COLORS.bgGray }}
+                  >
+                    <p className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+                      {assignedPeople.length} {assignedPeople.length === 1 ? "person" : "people"} assigned
+                    </p>
+                    <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                      {assignedPeople
+                        .map((a: Record<string, unknown>) => String(a.name || a.email || "Assignee"))
+                        .join(", ")}
+                    </p>
+                  </div>
                   <div className="flex flex-wrap gap-3">
-                    {taskAssigneesList.map((a: Record<string, unknown>, idx: number) => (
+                    {assignedPeople.map((a: Record<string, unknown>, idx: number) => (
                       <div
                         key={`${String(a.userId ?? idx)}-${idx}`}
                         className="flex-1 min-w-[200px] max-w-md px-4 py-3 rounded-lg border"
@@ -752,73 +940,11 @@ export default function UniversalTaskDetailPage() {
                         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: COLORS.textSecondary }}>
                           {a.dueDate ? <span>Due: {formatDate(String(a.dueDate))}</span> : null}
                           {a.assignedAt ? <span>Assigned: {formatDateTime(String(a.assignedAt))}</span> : null}
+                          {a.accessLevel ? <span>Access: {String(a.accessLevel)}</span> : null}
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              ) : null}
-
-              {workflowHistorySorted.length > 0 ? (
-                <div className="md:col-span-2">
-                  <p className="text-sm font-medium mb-3" style={{ color: COLORS.textSecondary }}>
-                    Activity &amp; workflow history
-                  </p>
-                  <ul className="space-y-0 border-l-2 pl-4 ml-1" style={{ borderColor: COLORS.border }}>
-                    {workflowHistorySorted.map((entry: Record<string, unknown>, idx: number) => {
-                      const type = String(entry.type || "event")
-                      const byName = String(entry.byName || "")
-                      const byRole = String(entry.byRole || "")
-                      const targetName = String(entry.targetUserName || "")
-                      const comment = String(entry.comment || "").trim()
-                      const statusTo =
-                        entry.statusTo != null
-                          ? String(entry.statusTo)
-                          : entry.status != null
-                            ? String(entry.status)
-                            : ""
-                      const createdAt = String(entry.createdAt || "")
-                      return (
-                        <li key={idx} className="relative pb-6 last:pb-0">
-                          <span
-                            className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white"
-                            style={{ background: COLORS.primary }}
-                          />
-                          <div className="rounded-lg border px-3 py-2.5" style={{ borderColor: COLORS.border, background: COLORS.bgWhite }}>
-                            <div className="flex flex-wrap items-baseline justify-between gap-2">
-                              <span className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
-                                {workflowEventLabel(type)}
-                              </span>
-                              <span className="text-xs" style={{ color: COLORS.textSecondary }}>
-                                {formatDateTime(createdAt)}
-                              </span>
-                            </div>
-                            <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
-                              {type.toLowerCase() === "status" && statusTo ? (
-                                <>
-                                  <span style={{ color: COLORS.textPrimary }}>{byName || "Someone"}</span>
-                                  {byRole ? ` · ${humanizeWorkflowStatus(byRole)}` : ""}
-                                  {" — "}status: <strong style={{ color: COLORS.textPrimary }}>{humanizeWorkflowStatus(statusTo)}</strong>
-                                </>
-                              ) : (
-                                <>
-                                  {byName || "Someone"}
-                                  {byRole ? ` · ${humanizeWorkflowStatus(byRole)}` : ""}
-                                  {targetName ? ` → ${targetName}` : ""}
-                                  {statusTo && type.toLowerCase() !== "status" ? ` · ${humanizeWorkflowStatus(statusTo)}` : ""}
-                                </>
-                              )}
-                            </p>
-                            {comment ? (
-                              <p className="text-sm mt-2 p-2 rounded" style={{ background: COLORS.bgGray, color: COLORS.textPrimary }}>
-                                {comment}
-                              </p>
-                            ) : null}
-                          </div>
-                        </li>
-                      )
-                    })}
-                  </ul>
                 </div>
               ) : null}
 
@@ -916,13 +1042,30 @@ export default function UniversalTaskDetailPage() {
 
           {activeTab === "Reviews" && (
             <div className="space-y-4">
-              <button
-                onClick={() => setShowReviewModal(true)}
-                className="px-4 py-2 rounded-lg font-medium"
-                style={{ background: COLORS.blue900, color: COLORS.textWhite }}
-              >
-                Add Review
-              </button>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: COLORS.bgGray }}>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>Total reviews</p>
+                  <p className="text-2xl font-semibold" style={{ color: COLORS.textPrimary }}>{reviewSummary.total}</p>
+                </div>
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: "#fef2f2" }}>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>Overdue</p>
+                  <p className="text-2xl font-semibold" style={{ color: "#991b1b" }}>{reviewSummary.overdue}</p>
+                </div>
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: "#eff6ff" }}>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>Upcoming</p>
+                  <p className="text-2xl font-semibold" style={{ color: "#1d4ed8" }}>{reviewSummary.upcoming}</p>
+                </div>
+              </div>
+
+              {!isEmployee ? (
+                <button
+                  onClick={() => setShowReviewModal(true)}
+                  className="px-4 py-2 rounded-lg font-medium"
+                  style={{ background: COLORS.blue900, color: COLORS.textWhite }}
+                >
+                  Add Review
+                </button>
+              ) : null}
 
               {reviews.length === 0 ? (
                 <div className="py-10 text-center" style={{ color: COLORS.textSecondary }}>
@@ -931,11 +1074,35 @@ export default function UniversalTaskDetailPage() {
               ) : (
                 <div className="space-y-3">
                   {reviews.map((review: any, idx: number) => (
-                    <div key={idx} className="p-4 rounded-lg border" style={{ borderColor: COLORS.border }}>
-                      <p style={{ color: COLORS.textPrimary }}><strong>Reviewer:</strong> {review.reviewerName}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Review Date:</strong> {formatDate(review.reviewDate)}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Next Review Date:</strong> {review.nextReviewDate ? formatDate(review.nextReviewDate) : "N/A"}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Details:</strong> {review.reviewDetails || "-"}</p>
+                    <div key={idx} className="p-4 rounded-xl border" style={{ borderColor: COLORS.border, background: COLORS.bgWhite }}>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold" style={{ color: COLORS.textPrimary }}>{review.reviewerName || "Reviewer"}</p>
+                          <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                            Reviewed on {formatDate(review.reviewDate)}
+                          </p>
+                        </div>
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" style={getReviewRealtimeState(review.nextReviewDate).style}>
+                          {getReviewRealtimeState(review.nextReviewDate).label}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                        <div className="rounded-lg border px-3 py-2" style={{ borderColor: COLORS.border }}>
+                          <p className="text-xs uppercase" style={{ color: COLORS.textSecondary }}>Next review</p>
+                          <p className="font-medium" style={{ color: COLORS.textPrimary }}>
+                            {review.nextReviewDate ? formatDate(review.nextReviewDate) : "Not scheduled"}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border px-3 py-2" style={{ borderColor: COLORS.border }}>
+                          <p className="text-xs uppercase" style={{ color: COLORS.textSecondary }}>Created</p>
+                          <p className="font-medium" style={{ color: COLORS.textPrimary }}>
+                            {formatDateTime(review.createdAt || review.reviewDate)}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-sm mt-4" style={{ color: COLORS.textSecondary }}>
+                        {review.reviewDetails || "No review notes added."}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -943,8 +1110,25 @@ export default function UniversalTaskDetailPage() {
             </div>
           )}
 
-          {activeTab === "Permissions" && (
+          {activeTab === "Permissions" && !isEmployee && (
             <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: COLORS.bgGray }}>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>Total permissions</p>
+                  <p className="text-2xl font-semibold" style={{ color: COLORS.textPrimary }}>{permissionSummary.total}</p>
+                </div>
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: "#eff6ff" }}>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>Write or above</p>
+                  <p className="text-2xl font-semibold" style={{ color: "#1d4ed8" }}>{permissionSummary.elevated}</p>
+                </div>
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: "#f9fafb" }}>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>Latest effective date</p>
+                  <p className="text-base font-semibold" style={{ color: COLORS.textPrimary }}>
+                    {permissionSummary.latest ? formatDate(permissionSummary.latest) : "N/A"}
+                  </p>
+                </div>
+              </div>
+
               <button
                 onClick={() => setShowPermissionModal(true)}
                 className="px-4 py-2 rounded-lg font-medium"
@@ -960,12 +1144,35 @@ export default function UniversalTaskDetailPage() {
               ) : (
                 <div className="space-y-3">
                   {permissionsHistory.map((entry: any, idx: number) => (
-                    <div key={idx} className="p-4 rounded-lg border" style={{ borderColor: COLORS.border }}>
-                      <p style={{ color: COLORS.textPrimary }}><strong>Role/User:</strong> {entry.roleOrUser || "-"}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Access Level:</strong> {entry.accessLevel || "-"}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Effective Date:</strong> {formatDate(entry.effectiveDate || entry.createdAt)}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Details:</strong> {entry.permissionDetails || "-"}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Updated By:</strong> {entry.updatedBy || "Current User"}</p>
+                    <div key={idx} className="p-4 rounded-xl border" style={{ borderColor: COLORS.border, background: COLORS.bgWhite }}>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold" style={{ color: COLORS.textPrimary }}>{entry.roleOrUser || "-"}</p>
+                          <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                            Effective {formatDate(entry.effectiveDate || entry.createdAt)}
+                          </p>
+                        </div>
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" style={accessLevelStyle(String(entry.accessLevel || "Read"))}>
+                          {entry.accessLevel || "Read"}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                        <div className="rounded-lg border px-3 py-2" style={{ borderColor: COLORS.border }}>
+                          <p className="text-xs uppercase" style={{ color: COLORS.textSecondary }}>Updated by</p>
+                          <p className="font-medium" style={{ color: COLORS.textPrimary }}>
+                            {entry.updatedBy || "Current User"}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border px-3 py-2" style={{ borderColor: COLORS.border }}>
+                          <p className="text-xs uppercase" style={{ color: COLORS.textSecondary }}>Employee email</p>
+                          <p className="font-medium" style={{ color: COLORS.textPrimary }}>
+                            {entry.userEmail || "Not linked"}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-sm mt-4" style={{ color: COLORS.textSecondary }}>
+                        {entry.permissionDetails || "No permission notes added."}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -975,13 +1182,30 @@ export default function UniversalTaskDetailPage() {
 
           {activeTab === "Audits" && (
             <div className="space-y-4">
-              <button
-                onClick={() => setShowAuditModal(true)}
-                className="px-4 py-2 rounded-lg font-medium"
-                style={{ background: COLORS.blue900, color: COLORS.textWhite }}
-              >
-                Add Audit
-              </button>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: COLORS.bgGray }}>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>Total audits</p>
+                  <p className="text-2xl font-semibold" style={{ color: COLORS.textPrimary }}>{auditSummary.total}</p>
+                </div>
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: "#fef2f2" }}>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>Open</p>
+                  <p className="text-2xl font-semibold" style={{ color: "#991b1b" }}>{auditSummary.open}</p>
+                </div>
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: "#eff6ff" }}>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>In progress</p>
+                  <p className="text-2xl font-semibold" style={{ color: "#1d4ed8" }}>{auditSummary.inProgress}</p>
+                </div>
+              </div>
+
+              {!isEmployee ? (
+                <button
+                  onClick={() => setShowAuditModal(true)}
+                  className="px-4 py-2 rounded-lg font-medium"
+                  style={{ background: COLORS.blue900, color: COLORS.textWhite }}
+                >
+                  Add Audit
+                </button>
+              ) : null}
 
               {audits.length === 0 ? (
                 <div className="py-10 text-center" style={{ color: COLORS.textSecondary }}>
@@ -990,13 +1214,40 @@ export default function UniversalTaskDetailPage() {
               ) : (
                 <div className="space-y-3">
                   {audits.map((audit: any, idx: number) => (
-                    <div key={idx} className="p-4 rounded-lg border" style={{ borderColor: COLORS.border }}>
-                      <p style={{ color: COLORS.textPrimary }}><strong>Audit Type:</strong> {audit.auditType || "-"}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Audit Date:</strong> {formatDate(audit.auditDate || audit.createdAt)}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Auditor:</strong> {audit.auditor || "-"}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Status:</strong> {audit.status || "-"}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Findings:</strong> {audit.findings || "-"}</p>
-                      <p style={{ color: COLORS.textSecondary }}><strong>Updated By:</strong> {audit.updatedBy || "Current User"}</p>
+                    <div key={idx} className="p-4 rounded-xl border" style={{ borderColor: COLORS.border, background: COLORS.bgWhite }}>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold" style={{ color: COLORS.textPrimary }}>{audit.auditor || "Auditor not set"}</p>
+                          <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                            Audit date {formatDate(audit.auditDate || audit.createdAt)}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" style={auditTypeStyle(String(audit.auditType || "Internal"))}>
+                            {audit.auditType || "Internal"}
+                          </span>
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" style={workflowStatusStyle(String(audit.status || "Open"))}>
+                            {audit.status || "Open"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                        <div className="rounded-lg border px-3 py-2" style={{ borderColor: COLORS.border }}>
+                          <p className="text-xs uppercase" style={{ color: COLORS.textSecondary }}>Updated by</p>
+                          <p className="font-medium" style={{ color: COLORS.textPrimary }}>
+                            {audit.updatedBy || "Current User"}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border px-3 py-2" style={{ borderColor: COLORS.border }}>
+                          <p className="text-xs uppercase" style={{ color: COLORS.textSecondary }}>Created</p>
+                          <p className="font-medium" style={{ color: COLORS.textPrimary }}>
+                            {formatDateTime(audit.createdAt || audit.auditDate)}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-sm mt-4" style={{ color: COLORS.textSecondary }}>
+                        {audit.findings || "No findings recorded."}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -1011,7 +1262,7 @@ export default function UniversalTaskDetailPage() {
           )}
         </div>
 
-        {showReviewModal && (
+        {showReviewModal && !isEmployee && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.5)" }}>
             <div className="w-full max-w-xl rounded-2xl p-6" style={{ background: COLORS.bgWhite }}>
               <div className="flex items-center justify-between mb-4">
@@ -1059,6 +1310,22 @@ export default function UniversalTaskDetailPage() {
                     className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
                     style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                   />
+                </div>
+
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: COLORS.bgGray }}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold" style={{ color: COLORS.textPrimary }}>
+                        {reviewForm.reviewerName.trim() || "Reviewer preview"}
+                      </p>
+                      <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                        Review date: {reviewForm.reviewDate ? formatDate(reviewForm.reviewDate) : "Not selected"}
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" style={getReviewRealtimeState(reviewForm.nextReviewDate || null).style}>
+                      {getReviewRealtimeState(reviewForm.nextReviewDate || null).label}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -1145,7 +1412,7 @@ export default function UniversalTaskDetailPage() {
           </div>
         )}
 
-        {showPermissionModal && (
+        {showPermissionModal && !isEmployee && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.5)" }}>
             <div className="w-full max-w-xl rounded-2xl p-6" style={{ background: COLORS.bgWhite }}>
               <div className="flex items-center justify-between mb-4">
@@ -1227,6 +1494,22 @@ export default function UniversalTaskDetailPage() {
                     style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                   />
                 </div>
+
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: COLORS.bgGray }}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold" style={{ color: COLORS.textPrimary }}>
+                        {permissionForm.roleOrUser || "Permission preview"}
+                      </p>
+                      <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                        Effective: {permissionForm.effectiveDate ? formatDate(permissionForm.effectiveDate) : "Not selected"}
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" style={accessLevelStyle(permissionForm.accessLevel)}>
+                      {permissionForm.accessLevel}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 mt-5">
@@ -1253,7 +1536,7 @@ export default function UniversalTaskDetailPage() {
           </div>
         )}
 
-        {showAuditModal && (
+        {showAuditModal && !isEmployee && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.5)" }}>
             <div className="w-full max-w-xl rounded-2xl p-6" style={{ background: COLORS.bgWhite }}>
               <div className="flex items-center justify-between mb-4">
@@ -1331,6 +1614,27 @@ export default function UniversalTaskDetailPage() {
                     className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
                     style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                   />
+                </div>
+
+                <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: COLORS.bgGray }}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold" style={{ color: COLORS.textPrimary }}>
+                        {auditForm.auditor || "Audit preview"}
+                      </p>
+                      <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                        Audit date: {auditForm.auditDate ? formatDate(auditForm.auditDate) : "Not selected"}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" style={auditTypeStyle(auditForm.auditType)}>
+                        {auditForm.auditType}
+                      </span>
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" style={workflowStatusStyle(auditForm.status)}>
+                        {auditForm.status}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
