@@ -725,6 +725,7 @@ export default function UniversalTaskDetailPage() {
           ) : (
             <p className="text-sm mt-2" style={{ color: COLORS.textSecondary }}>
               {user?.name ? `${user.name} · ` : ""}
+              {categoryLabel ? `${categoryLabel} · ` : ""}
               {toTitle(moduleSlug).replace(/s$/, "")} record
             </p>
           )}
