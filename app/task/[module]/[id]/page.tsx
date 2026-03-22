@@ -337,6 +337,56 @@ export default function UniversalTaskDetailPage() {
     })
   }, [item])
 
+  const assignedPeople = useMemo(() => {
+    const merged = new Map<
+      string,
+      {
+        userId?: string
+        name: string
+        email?: string
+        dueDate?: string
+        assignedAt?: string
+        accessLevel?: string
+      }
+    >()
+
+    taskAssigneesList.forEach((entry: Record<string, unknown>, idx: number) => {
+      const userId = String(entry.userId || "").trim()
+      const email = String(entry.email || "").trim()
+      const name = String(entry.name || email || `Assignee ${idx + 1}`).trim()
+      const key = (userId || email || name).toLowerCase()
+      if (!key) return
+
+      merged.set(key, {
+        userId: userId || undefined,
+        name,
+        email: email || undefined,
+        dueDate: entry.dueDate ? String(entry.dueDate) : undefined,
+        assignedAt: entry.assignedAt ? String(entry.assignedAt) : undefined,
+      })
+    })
+
+    permissionsHistory.forEach((entry: any, idx: number) => {
+      const userId = String(entry?.userId || "").trim()
+      const email = String(entry?.userEmail || "").trim()
+      const name = String(entry?.roleOrUser || email || `Assignee ${idx + 1}`).trim()
+      const key = (userId || email || name).toLowerCase()
+      if (!key) return
+
+      const existing = merged.get(key)
+      merged.set(key, {
+        userId: existing?.userId || userId || undefined,
+        name: existing?.name || name,
+        email: existing?.email || email || undefined,
+        dueDate: existing?.dueDate,
+        assignedAt: existing?.assignedAt || entry?.effectiveDate || entry?.createdAt || undefined,
+        accessLevel: existing?.accessLevel || (entry?.accessLevel ? String(entry.accessLevel) : undefined),
+      })
+    })
+
+    return Array.from(merged.values())
+  }, [permissionsHistory, taskAssigneesList])
+
   const audits = useMemo(() => {
     if (!Array.isArray(item?.audits)) return []
     return [...item.audits].sort((a: any, b: any) => {
@@ -712,7 +762,7 @@ export default function UniversalTaskDetailPage() {
 
           {activeTab === "Details" && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {categoryLabel ? (
+              {!isEmployee && categoryLabel ? (
                 <div>
                   <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>
                     Category
@@ -723,7 +773,10 @@ export default function UniversalTaskDetailPage() {
                 </div>
               ) : null}
 
-              {item?.workflowStatus !== undefined && item?.workflowStatus !== null && String(item.workflowStatus).trim() !== "" ? (
+              {!isEmployee &&
+              item?.workflowStatus !== undefined &&
+              item?.workflowStatus !== null &&
+              String(item.workflowStatus).trim() !== "" ? (
                 <div className="md:col-span-2">
                   <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>
                     Workflow status
@@ -734,26 +787,26 @@ export default function UniversalTaskDetailPage() {
                 </div>
               ) : null}
 
-              {taskAssigneesList.length > 0 ? (
+              {!isEmployee && assignedPeople.length > 0 ? (
                 <div className="md:col-span-2">
                   <p className="text-sm font-medium mb-2" style={{ color: COLORS.textSecondary }}>
-                    Assigned ({taskAssigneesList.length})
+                    Assigned ({assignedPeople.length})
                   </p>
                   <div
                     className="mb-3 rounded-lg border px-4 py-3"
                     style={{ borderColor: COLORS.border, background: COLORS.bgGray }}
                   >
                     <p className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
-                      {taskAssigneesList.length} {taskAssigneesList.length === 1 ? "person" : "people"} assigned
+                      {assignedPeople.length} {assignedPeople.length === 1 ? "person" : "people"} assigned
                     </p>
                     <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
-                      {taskAssigneesList
+                      {assignedPeople
                         .map((a: Record<string, unknown>) => String(a.name || a.email || "Assignee"))
                         .join(", ")}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-3">
-                    {taskAssigneesList.map((a: Record<string, unknown>, idx: number) => (
+                    {assignedPeople.map((a: Record<string, unknown>, idx: number) => (
                       <div
                         key={`${String(a.userId ?? idx)}-${idx}`}
                         className="flex-1 min-w-[200px] max-w-md px-4 py-3 rounded-lg border"
@@ -770,6 +823,7 @@ export default function UniversalTaskDetailPage() {
                         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: COLORS.textSecondary }}>
                           {a.dueDate ? <span>Due: {formatDate(String(a.dueDate))}</span> : null}
                           {a.assignedAt ? <span>Assigned: {formatDateTime(String(a.assignedAt))}</span> : null}
+                          {a.accessLevel ? <span>Access: {String(a.accessLevel)}</span> : null}
                         </div>
                       </div>
                     ))}
