@@ -8,7 +8,7 @@ import { COLORS } from "@/constant/colors"
 import { useAuth } from "@/contexts/auth-context"
 
 const FULL_TABS = ["Details", "Document", "Version history", "Reviews", "Permissions", "Audits"] as const
-const EMPLOYEE_TABS = ["Details", "Document", "Version history"] as const
+const EMPLOYEE_TABS = ["Details", "Document", "Version history", "Reviews", "Audits"] as const
 
 function toTitle(moduleSlug: string) {
   if (!moduleSlug) return "Task"
@@ -1040,7 +1040,7 @@ export default function UniversalTaskDetailPage() {
             </div>
           )}
 
-          {activeTab === "Reviews" && !isEmployee && (
+          {activeTab === "Reviews" && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: COLORS.bgGray }}>
@@ -1057,13 +1057,15 @@ export default function UniversalTaskDetailPage() {
                 </div>
               </div>
 
-              <button
-                onClick={() => setShowReviewModal(true)}
-                className="px-4 py-2 rounded-lg font-medium"
-                style={{ background: COLORS.blue900, color: COLORS.textWhite }}
-              >
-                Add Review
-              </button>
+              {!isEmployee ? (
+                <button
+                  onClick={() => setShowReviewModal(true)}
+                  className="px-4 py-2 rounded-lg font-medium"
+                  style={{ background: COLORS.blue900, color: COLORS.textWhite }}
+                >
+                  Add Review
+                </button>
+              ) : null}
 
               {reviews.length === 0 ? (
                 <div className="py-10 text-center" style={{ color: COLORS.textSecondary }}>
@@ -1178,7 +1180,7 @@ export default function UniversalTaskDetailPage() {
             </div>
           )}
 
-          {activeTab === "Audits" && !isEmployee && (
+          {activeTab === "Audits" && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="rounded-xl border p-4" style={{ borderColor: COLORS.border, background: COLORS.bgGray }}>
@@ -1195,13 +1197,15 @@ export default function UniversalTaskDetailPage() {
                 </div>
               </div>
 
-              <button
-                onClick={() => setShowAuditModal(true)}
-                className="px-4 py-2 rounded-lg font-medium"
-                style={{ background: COLORS.blue900, color: COLORS.textWhite }}
-              >
-                Add Audit
-              </button>
+              {!isEmployee ? (
+                <button
+                  onClick={() => setShowAuditModal(true)}
+                  className="px-4 py-2 rounded-lg font-medium"
+                  style={{ background: COLORS.blue900, color: COLORS.textWhite }}
+                >
+                  Add Audit
+                </button>
+              ) : null}
 
               {audits.length === 0 ? (
                 <div className="py-10 text-center" style={{ color: COLORS.textSecondary }}>
