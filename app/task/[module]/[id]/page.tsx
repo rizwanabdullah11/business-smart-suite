@@ -74,16 +74,6 @@ function workflowStatusStyle(status: string): CSSProperties {
   }
 }
 
-function workflowEventLabel(type: string) {
-  const t = type.toLowerCase()
-  if (t === "assigned") return "Assignment"
-  if (t === "status") return "Status update"
-  if (t === "comment") return "Comment"
-  if (t === "review") return "Review"
-  if (t === "submitted") return "Submitted for review"
-  return humanizeWorkflowStatus(type)
-}
-
 /** Turn schema keys into readable labels (Issue date, not issueDate). */
 function humanizeFieldKey(key: string): string {
   const fixed: Record<string, string> = {
@@ -321,15 +311,6 @@ export default function UniversalTaskDetailPage() {
   }, [item])
 
   const taskAssigneesList = useMemo(() => parseJsonArray(item?.taskAssignees), [item])
-
-  const workflowHistorySorted = useMemo(() => {
-    const list = parseJsonArray<Record<string, unknown>>(item?.workflowHistory)
-    return [...list].sort((a, b) => {
-      const ta = new Date(String((a as { createdAt?: string })?.createdAt || 0)).getTime()
-      const tb = new Date(String((b as { createdAt?: string })?.createdAt || 0)).getTime()
-      return tb - ta
-    })
-  }, [item])
 
   const categoryLabel = useMemo(() => {
     if (!item) return ""
@@ -756,8 +737,21 @@ export default function UniversalTaskDetailPage() {
               {taskAssigneesList.length > 0 ? (
                 <div className="md:col-span-2">
                   <p className="text-sm font-medium mb-2" style={{ color: COLORS.textSecondary }}>
-                    Assigned to
+                    Assigned ({taskAssigneesList.length})
                   </p>
+                  <div
+                    className="mb-3 rounded-lg border px-4 py-3"
+                    style={{ borderColor: COLORS.border, background: COLORS.bgGray }}
+                  >
+                    <p className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+                      {taskAssigneesList.length} {taskAssigneesList.length === 1 ? "person" : "people"} assigned
+                    </p>
+                    <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                      {taskAssigneesList
+                        .map((a: Record<string, unknown>) => String(a.name || a.email || "Assignee"))
+                        .join(", ")}
+                    </p>
+                  </div>
                   <div className="flex flex-wrap gap-3">
                     {taskAssigneesList.map((a: Record<string, unknown>, idx: number) => (
                       <div
@@ -780,69 +774,6 @@ export default function UniversalTaskDetailPage() {
                       </div>
                     ))}
                   </div>
-                </div>
-              ) : null}
-
-              {workflowHistorySorted.length > 0 ? (
-                <div className="md:col-span-2">
-                  <p className="text-sm font-medium mb-3" style={{ color: COLORS.textSecondary }}>
-                    Activity &amp; workflow history
-                  </p>
-                  <ul className="space-y-0 border-l-2 pl-4 ml-1" style={{ borderColor: COLORS.border }}>
-                    {workflowHistorySorted.map((entry: Record<string, unknown>, idx: number) => {
-                      const type = String(entry.type || "event")
-                      const byName = String(entry.byName || "")
-                      const byRole = String(entry.byRole || "")
-                      const targetName = String(entry.targetUserName || "")
-                      const comment = String(entry.comment || "").trim()
-                      const statusTo =
-                        entry.statusTo != null
-                          ? String(entry.statusTo)
-                          : entry.status != null
-                            ? String(entry.status)
-                            : ""
-                      const createdAt = String(entry.createdAt || "")
-                      return (
-                        <li key={idx} className="relative pb-6 last:pb-0">
-                          <span
-                            className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white"
-                            style={{ background: COLORS.primary }}
-                          />
-                          <div className="rounded-lg border px-3 py-2.5" style={{ borderColor: COLORS.border, background: COLORS.bgWhite }}>
-                            <div className="flex flex-wrap items-baseline justify-between gap-2">
-                              <span className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
-                                {workflowEventLabel(type)}
-                              </span>
-                              <span className="text-xs" style={{ color: COLORS.textSecondary }}>
-                                {formatDateTime(createdAt)}
-                              </span>
-                            </div>
-                            <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
-                              {type.toLowerCase() === "status" && statusTo ? (
-                                <>
-                                  <span style={{ color: COLORS.textPrimary }}>{byName || "Someone"}</span>
-                                  {byRole ? ` · ${humanizeWorkflowStatus(byRole)}` : ""}
-                                  {" — "}status: <strong style={{ color: COLORS.textPrimary }}>{humanizeWorkflowStatus(statusTo)}</strong>
-                                </>
-                              ) : (
-                                <>
-                                  {byName || "Someone"}
-                                  {byRole ? ` · ${humanizeWorkflowStatus(byRole)}` : ""}
-                                  {targetName ? ` → ${targetName}` : ""}
-                                  {statusTo && type.toLowerCase() !== "status" ? ` · ${humanizeWorkflowStatus(statusTo)}` : ""}
-                                </>
-                              )}
-                            </p>
-                            {comment ? (
-                              <p className="text-sm mt-2 p-2 rounded" style={{ background: COLORS.bgGray, color: COLORS.textPrimary }}>
-                                {comment}
-                              </p>
-                            ) : null}
-                          </div>
-                        </li>
-                      )
-                    })}
-                  </ul>
                 </div>
               ) : null}
 
