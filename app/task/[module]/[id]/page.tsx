@@ -718,17 +718,17 @@ export default function UniversalTaskDetailPage() {
 
         <div className="rounded-xl p-5 mb-4" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
           <h1 className="text-3xl font-bold mb-1" style={{ color: COLORS.textPrimary }}>{title}</h1>
-          {!isEmployee ? (
-            <div className="p-2 text-sm rounded-lg mt-2" style={{ background: "#FEF9C3", color: COLORS.textSecondary }}>
-              Last viewed: {new Date().toLocaleString()} ({currentUserName})
-            </div>
-          ) : (
-            <p className="text-sm mt-2" style={{ color: COLORS.textSecondary }}>
-              {user?.name ? `${user.name} · ` : ""}
-              {categoryLabel ? `${categoryLabel} · ` : ""}
-              {toTitle(moduleSlug).replace(/s$/, "")} record
-            </p>
-          )}
+          <div className="p-2 text-sm rounded-lg mt-2" style={{ background: "#FEF9C3", color: COLORS.textSecondary }}>
+            {isEmployee ? (
+              <>
+                {user?.name || currentUserName}
+                {categoryLabel ? ` · ${categoryLabel}` : ""}
+                {` · ${toTitle(moduleSlug).replace(/s$/, "")} record`}
+              </>
+            ) : (
+              <>Last viewed: {new Date().toLocaleString()} ({currentUserName})</>
+            )}
+          </div>
         </div>
 
         <div className="rounded-xl p-4" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
@@ -753,11 +753,7 @@ export default function UniversalTaskDetailPage() {
               className="ml-auto px-3 py-1.5 rounded text-sm font-medium"
               style={{ color: COLORS.primary, border: `1px solid ${COLORS.border}` }}
             >
-              {isEmployee ? "Download file" : (
-                <>
-                  <Download className="w-4 h-4 inline mr-1 align-text-bottom" /> Download
-                </>
-              )}
+              <Download className="w-4 h-4 inline mr-1 align-text-bottom" /> Download
             </button>
           </div>
 

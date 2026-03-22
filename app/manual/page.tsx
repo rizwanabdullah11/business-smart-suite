@@ -788,17 +788,15 @@ export default function ManualPage() {
                 <ArrowLeft className="w-5 h-5" />
               </button>
             </Link>
-            {!isEmployee ? (
-              <div
-                className="flex items-center justify-center w-12 h-12 rounded-xl"
-                style={{
-                  backgroundColor: `${COLORS.primary}15`,
-                  color: COLORS.primary,
-                }}
-              >
-                <FileText className="w-6 h-6" />
-              </div>
-            ) : null}
+            <div
+              className="flex items-center justify-center w-12 h-12 rounded-xl"
+              style={{
+                backgroundColor: `${COLORS.primary}15`,
+                color: COLORS.primary,
+              }}
+            >
+              <FileText className="w-6 h-6" />
+            </div>
             <div>
               <h1 className="text-3xl font-bold" style={{ color: COLORS.textPrimary }}>
                 Manuals
@@ -1401,11 +1399,9 @@ export default function ManualPage() {
                               border: `1px solid ${COLORS.border}`,
                             }}
                           >
-                            {!isEmployee ? (
-                              <button type="button" className="cursor-move hover:bg-gray-100 p-1 rounded">
-                                <GripVertical className="w-4 h-4" style={{ color: COLORS.textSecondary }} />
-                              </button>
-                            ) : null}
+                            <button type="button" className="cursor-move hover:bg-gray-100 p-1 rounded">
+                              <GripVertical className="w-4 h-4" style={{ color: COLORS.textSecondary }} />
+                            </button>
                             <div className="flex-1 min-w-0">
                               <Link
                                 href={`/task/manuals/${manual.id}?back=${encodeURIComponent("/manual")}`}
@@ -1419,14 +1415,10 @@ export default function ManualPage() {
                                   <span className="font-semibold text-gray-400">Version:</span> {manual.version}
                                 </span>
                                 <span className="flex items-center gap-1.5">
-                                  {isEmployee ? (
-                                    <span>Date: {manual.issueDate}</span>
-                                  ) : (
-                                    <>
-                                      <Calendar className="w-4 h-4 text-primary" style={{ color: COLORS.primary }} />
-                                      {manual.issueDate}
-                                    </>
-                                  )}
+                                  <>
+                                    <Calendar className="w-4 h-4 text-primary" style={{ color: COLORS.primary }} />
+                                    {manual.issueDate}
+                                  </>
                                 </span>
                                 <span className="flex items-center gap-1.5">
                                   <span className="font-semibold text-gray-400">Location:</span> {manual.location}
@@ -1435,31 +1427,47 @@ export default function ManualPage() {
                             </div>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
                               {isEmployee ? (
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleApprove(category.id, manual.id, manual.approved)}
-                                    disabled={loadingAction === `approve-${manual.id}`}
-                                    className="px-3 py-1.5 rounded text-sm font-medium border"
-                                    style={{ borderColor: COLORS.border, color: manual.approved ? COLORS.green500 : COLORS.textSecondary }}
-                                  >
-                                    {manual.approved ? "Reopen" : "Mark done"}
-                                  </button>
-                                  <Link href={`/manual/${manual.id}/edit`}>
-                                    <span className="px-3 py-1.5 rounded text-sm font-medium border inline-block" style={{ borderColor: COLORS.border, color: COLORS.primary }}>
-                                      Edit
-                                    </span>
-                                  </Link>
-                                  <button
-                                    type="button"
-                                    onClick={() => downloadManual(manual)}
-                                    disabled={loadingAction === `download-${manual.id}`}
-                                    className="px-3 py-1.5 rounded text-sm font-medium border"
-                                    style={{ borderColor: COLORS.border, color: COLORS.primary, opacity: loadingAction === `download-${manual.id}` ? 0.6 : 1 }}
-                                  >
-                                    Download
-                                  </button>
-                                </div>
+                                <>
+                                  <div className="flex items-center gap-1 mr-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleApprove(category.id, manual.id, manual.approved)}
+                                      disabled={loadingAction === `approve-${manual.id}`}
+                                      className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `approve-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                                      style={{
+                                        background: COLORS.bgWhite,
+                                        color: manual.approved ? "#22c55e" : "#94a3b8",
+                                        borderColor: manual.approved ? "#bbf7d0" : "#e2e8f0",
+                                      }}
+                                      title={manual.approved ? "Reopen" : "Mark done"}
+                                    >
+                                      <Check className="w-5 h-5" />
+                                    </button>
+                                  </div>
+                                  <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                                  <div className="flex items-center gap-1">
+                                    <Link href={`/manual/${manual.id}/edit`}>
+                                      <button type="button" className="p-3 rounded-lg bg-white border border-gray-200 hover:scale-110 transition-all shadow-sm" style={{ color: "#3b82f6" }} title="Edit">
+                                        <Edit className="w-5 h-5" />
+                                      </button>
+                                    </Link>
+                                    <button
+                                      type="button"
+                                      onClick={() => downloadManual(manual)}
+                                      disabled={loadingAction === `download-${manual.id}`}
+                                      className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `download-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                                      style={{
+                                        background: COLORS.bgWhite,
+                                        color: "#3b82f6",
+                                        borderColor: "#e2e8f0",
+                                        opacity: loadingAction === `download-${manual.id}` ? 0.6 : 1,
+                                      }}
+                                      title="Download"
+                                    >
+                                      <Download className="w-5 h-5" />
+                                    </button>
+                                  </div>
+                                </>
                               ) : (
                                 <>
                               {/* Primary Actions */}

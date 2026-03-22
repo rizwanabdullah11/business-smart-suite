@@ -640,11 +640,9 @@ export default function DynamicModulePage({
                 <ArrowLeft className="w-5 h-5" />
               </button>
             </Link>
-            {!isEmployee ? (
-              <div className="flex items-center justify-center w-12 h-12 rounded-xl" style={{ backgroundColor: `${COLORS.primary}15`, color: COLORS.primary }}>
-                <Icon className="w-6 h-6" />
-              </div>
-            ) : null}
+            <div className="flex items-center justify-center w-12 h-12 rounded-xl" style={{ backgroundColor: `${COLORS.primary}15`, color: COLORS.primary }}>
+              <Icon className="w-6 h-6" />
+            </div>
             <div>
               <h1 className="text-3xl font-bold" style={{ color: COLORS.textPrimary }}>{title}</h1>
               <p className="text-sm" style={{ color: COLORS.textSecondary }}>{description}</p>
@@ -799,9 +797,7 @@ export default function DynamicModulePage({
                       <div className="space-y-3">
                         {sortedItems.map((item: any) => (
                           <div key={item.id} className="flex items-center gap-3 p-4 rounded-lg hover:shadow-md transition-all" style={{ background: item.paused ? `${COLORS.warning}05` : item.highlighted ? `${COLORS.primary}05` : COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
-                            {!isEmployee ? (
-                              <button type="button" className="cursor-move hover:bg-gray-50 h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200"><GripVertical className="w-5 h-5" style={{ color: "#9CA3AF" }} /></button>
-                            ) : null}
+                            <button type="button" className="cursor-move hover:bg-gray-50 h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200"><GripVertical className="w-5 h-5" style={{ color: "#9CA3AF" }} /></button>
                             <div className="flex-1 min-w-0">
                               <Link href={`/task/${moduleSlug}/${item.id}?back=${encodeURIComponent(itemHrefPrefix)}`} className="font-semibold hover:underline text-lg" style={{ color: COLORS.textPrimary }}>{getItemTitle(item)}</Link>
                               <div className="flex gap-4 text-sm mt-1.5 flex-wrap" style={{ color: COLORS.textSecondary }}>
@@ -814,17 +810,24 @@ export default function DynamicModulePage({
                             </div>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
                               {isEmployee ? (
-                                <div className="flex items-center gap-2">
-                                  <button type="button" onClick={() => updateItem(item.id, { approved: !item.approved }, "approve")} className="px-3 py-1.5 rounded text-sm font-medium border" style={{ borderColor: COLORS.border, color: item.approved ? COLORS.green500 : COLORS.textSecondary }}>
-                                    {item.approved ? "Reopen" : "Mark done"}
-                                  </button>
-                                  <Link href={`${itemHrefPrefix}/${item.id}/edit`}>
-                                    <span className="px-3 py-1.5 rounded text-sm font-medium border inline-block" style={{ borderColor: COLORS.border, color: COLORS.primary }}>Edit</span>
-                                  </Link>
-                                  <button type="button" onClick={() => downloadItem(item)} disabled={loadingAction === `download-${item.id}`} className="px-3 py-1.5 rounded text-sm font-medium border" style={{ borderColor: COLORS.border, color: COLORS.primary, opacity: loadingAction === `download-${item.id}` ? 0.6 : 1 }}>
-                                    Download
-                                  </button>
-                                </div>
+                                <>
+                                  <div className="flex items-center gap-1 mr-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => updateItem(item.id, { approved: !item.approved }, "approve")}
+                                      className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200"
+                                      style={{ color: item.approved ? "#22C55E" : "#D1D5DB" }}
+                                      title={item.approved ? "Reopen" : "Mark done"}
+                                    >
+                                      <Check className="w-5 h-5" />
+                                    </button>
+                                  </div>
+                                  <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                                  <div className="flex items-center gap-1">
+                                    <Link href={`${itemHrefPrefix}/${item.id}/edit`}><button type="button" className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#3B82F6" }} title="Edit"><Edit className="w-5 h-5" /></button></Link>
+                                    <button type="button" onClick={() => downloadItem(item)} disabled={loadingAction === `download-${item.id}`} className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#3B82F6", opacity: loadingAction === `download-${item.id}` ? 0.6 : 1 }} title="Download"><Download className="w-5 h-5" /></button>
+                                  </div>
+                                </>
                               ) : (
                                 <>
                                   <div className="flex items-center gap-1 mr-2">

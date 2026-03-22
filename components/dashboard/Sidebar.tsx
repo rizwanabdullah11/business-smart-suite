@@ -265,7 +265,7 @@ export function Sidebar({}: SidebarProps = {}) {
                             color: isActive('/dashboard') ? COLORS.primary : COLORS.textSecondary
                         }}
                     >
-                        {!isEmployee ? <LayoutDashboard className="w-6 h-6 flex-shrink-0" /> : null}
+                        <LayoutDashboard className="w-6 h-6 flex-shrink-0" />
                         <span className="text-base">Dashboard</span>
                     </div>
                 </Link>
@@ -295,7 +295,7 @@ export function Sidebar({}: SidebarProps = {}) {
                                 }}
                             >
                                 <div className="flex items-center gap-3">
-                                    {!isEmployee ? <SectionIcon className="w-6 h-6 flex-shrink-0" /> : null}
+                                    <SectionIcon className="w-6 h-6 flex-shrink-0" />
                                     <span className="text-base font-bold">{section.title}</span>
                                 </div>
                                 <ChevronRight
@@ -324,7 +324,7 @@ export function Sidebar({}: SidebarProps = {}) {
                                                             : COLORS.textSecondary
                                                     }}
                                                 >
-                                                    {!isEmployee ? <ItemIcon className="w-5 h-5 flex-shrink-0" /> : null}
+                                                    <ItemIcon className="w-5 h-5 flex-shrink-0" />
                                                     <span className="text-base">{item.label}</span>
                                                     {item.badge && (
                                                         <span
