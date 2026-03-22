@@ -298,6 +298,7 @@ export default function UniversalTaskDetailPage() {
       "taskAssignees",
       "workflowHistory",
       "workflowStatus",
+      "status",
       "title",
       "name",
       "organizationId",
@@ -774,12 +775,26 @@ export default function UniversalTaskDetailPage() {
               item?.workflowStatus !== undefined &&
               item?.workflowStatus !== null &&
               String(item.workflowStatus).trim() !== "" ? (
-                <div className="md:col-span-2">
+                <div>
                   <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>
                     Workflow status
                   </p>
                   <div className="inline-flex items-center px-3 py-1.5 rounded-lg border text-sm font-semibold" style={workflowStatusStyle(String(item.workflowStatus))}>
                     {humanizeWorkflowStatus(item.workflowStatus)}
+                  </div>
+                </div>
+              ) : null}
+
+              {!isEmployee &&
+              item?.status !== undefined &&
+              item?.status !== null &&
+              String(item.status).trim() !== "" ? (
+                <div>
+                  <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>
+                    Status
+                  </p>
+                  <div className="inline-flex items-center px-3 py-1.5 rounded-lg border text-sm font-semibold" style={workflowStatusStyle(String(item.status))}>
+                    {humanizeWorkflowStatus(item.status)}
                   </div>
                 </div>
               ) : null}
