@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { TrendingUp, TrendingDown, FileText, Users, AlertCircle, CheckCircle } from "lucide-react"
+import { TrendingUp, TrendingDown, FileText, Users, AlertCircle, CheckCircle, FileDown, Loader2 } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 import { useAuth } from "@/contexts/auth-context"
 
@@ -20,6 +20,7 @@ type ActivityItem = {
   item: string
   time: string
   user: string
+  dateValue?: string
 }
 
 type AnyDoc = {
@@ -38,6 +39,7 @@ const DASHBOARD_CACHE_TTL_MS = 2 * 60 * 1000
 type DashboardCachePayload = {
   stats: Omit<DashboardStat, "icon">[]
   recentActivities: ActivityItem[]
+  docs: AnyDoc[]
   cachedAt: number
 }
 
@@ -102,7 +104,7 @@ function formatTimeAgo(dateValue?: string) {
 }
 
 export function DashboardContent() {
-  const { isAuthenticated, loading: authLoading } = useAuth()
+  const { user, isAuthenticated, isAdmin, isEmployee, isOrganization, loading: authLoading } = useAuth()
   const [stats, setStats] = useState<DashboardStat[]>([
     { title: "Total Documents", value: "-", change: "0%", trend: "up", icon: FileText, color: COLORS.blue500, subtitle: "live data" },
     { title: "Active Users", value: "-", change: "0%", trend: "up", icon: Users, color: COLORS.emerald500, subtitle: "live data" },
@@ -110,8 +112,12 @@ export function DashboardContent() {
     { title: "Completed Tasks", value: "-", change: "0%", trend: "up", icon: CheckCircle, color: COLORS.green500, subtitle: "live data" },
   ])
   const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([])
+  const [dashboardDocs, setDashboardDocs] = useState<AnyDoc[]>([])
   const [showAllActivities, setShowAllActivities] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [exportingPdf, setExportingPdf] = useState(false)
+  const [exportStartDate, setExportStartDate] = useState("")
+  const [exportEndDate, setExportEndDate] = useState("")
 
   useEffect(() => {
     if (authLoading || !isAuthenticated) return
@@ -135,10 +141,11 @@ export function DashboardContent() {
         const parsed = JSON.parse(raw) as DashboardCachePayload
         if (!parsed?.cachedAt) return false
         if (Date.now() - parsed.cachedAt > DASHBOARD_CACHE_TTL_MS) return false
-        if (!Array.isArray(parsed.stats) || !Array.isArray(parsed.recentActivities)) return false
+        if (!Array.isArray(parsed.stats) || !Array.isArray(parsed.recentActivities) || !Array.isArray(parsed.docs)) return false
         if (cancelled) return true
         setStats(hydrateCachedStats(parsed.stats))
         setRecentActivities(parsed.recentActivities)
+        setDashboardDocs(parsed.docs)
         setLoading(false)
         return true
       } catch {
@@ -220,6 +227,7 @@ export function DashboardContent() {
         ]
         if (cancelled) return
         setStats(nextStats)
+        setDashboardDocs(activeDocs)
 
         const activities: ActivityItem[] = activeDocs
           .map((doc) => {
@@ -235,6 +243,7 @@ export function DashboardContent() {
               item: doc.title || "Untitled Document",
               time: formatTimeAgo(doc.updatedAt || doc.createdAt),
               user: "System",
+              dateValue: doc.updatedAt || doc.createdAt,
               sortTime: updatedAt || createdAt,
             }
           })
@@ -247,6 +256,7 @@ export function DashboardContent() {
           const payload: DashboardCachePayload = {
             stats: toSerializableStats(nextStats),
             recentActivities: activities,
+            docs: activeDocs,
             cachedAt: Date.now(),
           }
           sessionStorage.setItem(cacheKey, JSON.stringify(payload))
@@ -290,9 +300,239 @@ export function DashboardContent() {
     []
   )
   const visibleActivities = showAllActivities ? recentActivities : recentActivities.slice(0, 6)
+  const isExportRangeValid =
+    Boolean(exportStartDate) &&
+    Boolean(exportEndDate) &&
+    new Date(exportStartDate).getTime() <= new Date(exportEndDate).getTime()
+  const dashboardScopeLabel = useMemo(() => {
+    if (isEmployee) return "Employee Dashboard"
+    if (isOrganization) return "Organization Dashboard"
+    if (isAdmin) return "Admin Dashboard"
+    return "Dashboard"
+  }, [isAdmin, isEmployee, isOrganization])
+
+  const handleExportPdf = async () => {
+    if (!exportStartDate || !exportEndDate) {
+      alert("Please select a start date and end date first.")
+      return
+    }
+    if (new Date(exportStartDate).getTime() > new Date(exportEndDate).getTime()) {
+      alert("End date must be after start date.")
+      return
+    }
+
+    setExportingPdf(true)
+    try {
+      const { jsPDF } = await import("jspdf")
+      const doc = new jsPDF({ unit: "pt", format: "a4" })
+      const pageWidth = doc.internal.pageSize.getWidth()
+      const pageHeight = doc.internal.pageSize.getHeight()
+      const margin = 40
+      const contentWidth = pageWidth - margin * 2
+      const lineHeight = 16
+      let y = margin
+      const startDate = new Date(`${exportStartDate}T00:00:00`)
+      const endDate = new Date(`${exportEndDate}T23:59:59.999`)
+      const filteredDocs = dashboardDocs.filter((doc) => {
+        const rawDate = doc.updatedAt || doc.createdAt
+        if (!rawDate) return false
+        const date = new Date(rawDate)
+        if (Number.isNaN(date.getTime())) return false
+        return date >= startDate && date <= endDate
+      })
+      const filteredActivities = recentActivities.filter((activity) => {
+        if (!activity.dateValue) return false
+        const date = new Date(activity.dateValue)
+        if (Number.isNaN(date.getTime())) return false
+        return date >= startDate && date <= endDate
+      })
+      const filteredStats = [
+        {
+          title: "Total Documents",
+          value: String(filteredDocs.length),
+          subtitle: "within selected date range",
+          change: "filtered",
+        },
+        {
+          title: "Active Users",
+          value: stats.find((stat) => stat.title === "Active Users")?.value || "-",
+          subtitle: "current scoped users",
+          change: "live",
+        },
+        {
+          title: "Pending Reviews",
+          value: String(filteredDocs.filter((doc) => !doc.approved).length),
+          subtitle: "within selected date range",
+          change: "filtered",
+        },
+        {
+          title: "Completed Tasks",
+          value: String(filteredDocs.filter((doc) => Boolean(doc.approved)).length),
+          subtitle: "within selected date range",
+          change: "filtered",
+        },
+      ]
+
+      const ensurePageSpace = (heightNeeded = 24) => {
+        if (y + heightNeeded <= pageHeight - margin) return
+        doc.addPage()
+        y = margin
+      }
+
+      const writeWrappedText = (text: string, size = 11, color: string = COLORS.textSecondary) => {
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(size)
+        doc.setTextColor(color)
+        const lines = doc.splitTextToSize(text, contentWidth)
+        ensurePageSpace(lines.length * lineHeight)
+        doc.text(lines, margin, y)
+        y += lines.length * lineHeight
+      }
+
+      const writeSectionTitle = (text: string) => {
+        ensurePageSpace(30)
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(16)
+        doc.setTextColor(COLORS.textPrimary)
+        doc.text(text, margin, y)
+        y += 24
+      }
+
+      const writeItemTitle = (text: string) => {
+        ensurePageSpace(20)
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(12)
+        doc.setTextColor(COLORS.textPrimary)
+        doc.text(text, margin, y)
+        y += 16
+      }
+
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(22)
+      doc.setTextColor(COLORS.textPrimary)
+      doc.text("Business Smart Suite Dashboard Report", margin, y)
+      y += 28
+
+      writeWrappedText(`Scope: ${dashboardScopeLabel}`, 12, COLORS.primary)
+      writeWrappedText(`User: ${user?.name || "Unknown User"} (${user?.role || "unknown"})`)
+      writeWrappedText(`Generated: ${new Date().toLocaleString()}`)
+      writeWrappedText(`Date range: ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`)
+
+      const activeOrganizationId =
+        typeof window !== "undefined" ? localStorage.getItem("activeOrganizationId") || "" : ""
+      if (activeOrganizationId) {
+        writeWrappedText(`Organization Scope ID: ${activeOrganizationId}`)
+      }
+
+      y += 8
+      writeSectionTitle("Summary")
+      filteredStats.forEach((stat) => {
+        writeItemTitle(`${stat.title}: ${stat.value}`)
+        writeWrappedText(`${stat.subtitle} | Change: ${stat.change}`)
+        y += 6
+      })
+
+      y += 6
+      writeSectionTitle("Recent Activity")
+      if (filteredActivities.length === 0) {
+        writeWrappedText(loading ? "Dashboard data is still loading." : "No recent activity found in the selected date range.")
+      } else {
+        filteredActivities.forEach((activity, index) => {
+          writeItemTitle(`${index + 1}. ${activity.action}`)
+          writeWrappedText(`Item: ${activity.item}`)
+          writeWrappedText(`By: ${activity.user} | Time: ${activity.time}`)
+          y += 8
+        })
+      }
+
+      const safeScope = dashboardScopeLabel.toLowerCase().replace(/\s+/g, "-")
+      const safeDate = new Date().toISOString().slice(0, 10)
+      doc.save(`${safeScope}-${safeDate}.pdf`)
+    } catch (error) {
+      console.error("Failed to export dashboard PDF:", error)
+      alert("Failed to export dashboard PDF")
+    } finally {
+      setExportingPdf(false)
+    }
+  }
 
   return (
     <div className="space-y-8">
+            <div
+                className="p-6 rounded-xl border space-y-4"
+                style={{
+                    background: COLORS.bgWhite,
+                    borderColor: COLORS.border
+                }}
+            >
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <h2 className="text-2xl font-bold" style={{ color: COLORS.textPrimary }}>
+                            {dashboardScopeLabel}
+                        </h2>
+                        <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                            Select a start and end date, then export the scoped dashboard data as PDF.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handleExportPdf}
+                        disabled={exportingPdf || loading || !isExportRangeValid}
+                        className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg font-bold transition-all duration-200"
+                        style={{
+                            background: COLORS.gradientIndigo,
+                            color: COLORS.textWhite,
+                            boxShadow: COLORS.shadowPurple,
+                            opacity: exportingPdf || loading || !isExportRangeValid ? 0.7 : 1
+                        }}
+                    >
+                        {exportingPdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileDown className="w-5 h-5" />}
+                        {exportingPdf ? "Generating PDF..." : "Download PDF"}
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-semibold mb-2" style={{ color: COLORS.textPrimary }}>
+                            Start date
+                        </label>
+                        <input
+                            type="date"
+                            value={exportStartDate}
+                            onChange={(e) => setExportStartDate(e.target.value)}
+                            className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            style={{
+                                borderColor: COLORS.border,
+                                background: COLORS.bgWhite,
+                                color: COLORS.textPrimary,
+                            }}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold mb-2" style={{ color: COLORS.textPrimary }}>
+                            End date
+                        </label>
+                        <input
+                            type="date"
+                            value={exportEndDate}
+                            onChange={(e) => setExportEndDate(e.target.value)}
+                            className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            style={{
+                                borderColor: COLORS.border,
+                                background: COLORS.bgWhite,
+                                color: COLORS.textPrimary,
+                            }}
+                        />
+                    </div>
+                </div>
+
+                {!isExportRangeValid ? (
+                    <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                        Select a valid start date and end date to enable PDF download.
+                    </p>
+                ) : null}
+            </div>
+
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {stats.map((stat, index) => {
