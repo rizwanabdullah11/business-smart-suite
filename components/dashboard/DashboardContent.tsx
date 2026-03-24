@@ -62,31 +62,11 @@ function hydrateCachedStats(stats: Omit<DashboardStat, "icon">[]): DashboardStat
   }))
 }
 
-const MODULE_ENDPOINTS = [
-  "policies",
-  "procedures",
-  "forms",
-  "certificates",
-  "business-continuity",
-  "management-reviews",
-  "job-descriptions",
-  "work-instructions",
-  "risk-assessments",
-  "coshh",
-  "technical-file",
-  "ims-aspects-impacts",
-  "audit-schedule",
-  "interested-parties",
-  "organisational-context",
-  "objectives",
-  "maintenance",
-  "improvement-register",
-  "statement-of-applicability",
-  "legal-register",
-  "suppliers",
-  "training",
-  "energy-consumption",
-]
+type DashboardApiResponse = {
+  stats?: Omit<DashboardStat, "icon">[]
+  recentActivities?: ActivityItem[]
+  docs?: AnyDoc[]
+}
 
 function formatTimeAgo(dateValue?: string) {
   if (!dateValue) return "Unknown time"
@@ -153,7 +133,7 @@ export function DashboardContent() {
       }
     }
 
-    const loadDashboardData = async (allowRetry = true, forceRefresh = false) => {
+    const loadDashboardData = async (_allowRetry = true, forceRefresh = false) => {
       if (!forceRefresh && applyCached()) {
         return
       }
@@ -161,115 +141,33 @@ export function DashboardContent() {
       try {
         const token = localStorage.getItem("token")
         const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
-        const fetchJson = async (url: string) => {
-          const res = await fetch(url, { headers })
-          if (!res.ok) return null
-          return res.json()
+        const response = await fetch("/api/auth/dashboard", {
+          headers,
+          credentials: "include",
+        })
+        if (!response.ok) {
+          throw new Error("Failed to load dashboard data")
         }
 
-        const manualPromise = fetchJson("/api/manuals")
-        const modulePromises = MODULE_ENDPOINTS.map((module) => fetchJson(`/api/${module}`))
-        const usersPromise = fetchJson("/api/users")
+        const payload = (await response.json()) as DashboardApiResponse
+        const nextStats = hydrateCachedStats(Array.isArray(payload.stats) ? payload.stats : [])
+        const docs = Array.isArray(payload.docs) ? payload.docs : []
+        const activities = Array.isArray(payload.recentActivities) ? payload.recentActivities : []
 
-        const [manualsRaw, usersRaw, ...moduleRaw] = await Promise.all([
-          manualPromise,
-          usersPromise,
-          ...modulePromises,
-        ])
-
-        const manuals = Array.isArray(manualsRaw) ? manualsRaw : []
-        const moduleDocs = moduleRaw.flatMap((chunk) => (Array.isArray(chunk) ? chunk : []))
-        const allDocs: AnyDoc[] = [...manuals, ...moduleDocs]
-
-        const activeDocs = allDocs.filter((doc) => !doc.archived && !doc.isArchived)
-        const completedCount = activeDocs.filter((doc) => Boolean(doc.approved)).length
-        const pendingCount = activeDocs.filter((doc) => !doc.approved).length
-        const hasUsersAccess = Array.isArray(usersRaw)
-        const userCount = hasUsersAccess ? usersRaw.length : null
-
-        const nextStats: DashboardStat[] = [
-          {
-            title: "Total Documents",
-            value: String(activeDocs.length),
-            change: "live",
-            trend: "up",
-            icon: FileText,
-            color: COLORS.blue500,
-            subtitle: "current total",
-          },
-          {
-            title: "Active Users",
-            value: userCount === null ? "-" : String(userCount),
-            change: "live",
-            trend: "up",
-            icon: Users,
-            color: COLORS.emerald500,
-            subtitle: hasUsersAccess ? "users in system" : "permission required",
-          },
-          {
-            title: "Pending Reviews",
-            value: String(pendingCount),
-            change: "live",
-            trend: "down",
-            icon: AlertCircle,
-            color: COLORS.orange500,
-            subtitle: "not completed yet",
-          },
-          {
-            title: "Completed Tasks",
-            value: String(completedCount),
-            change: "live",
-            trend: "up",
-            icon: CheckCircle,
-            color: COLORS.green500,
-            subtitle: "approved/completed",
-          },
-        ]
         if (cancelled) return
         setStats(nextStats)
-        setDashboardDocs(activeDocs)
-
-        const activities: ActivityItem[] = activeDocs
-          .map((doc) => {
-            const createdAt = doc.createdAt ? new Date(doc.createdAt).getTime() : 0
-            const updatedAt = doc.updatedAt ? new Date(doc.updatedAt).getTime() : 0
-            const action = doc.approved
-              ? "Document Approved"
-              : updatedAt > createdAt
-                ? "Document Updated"
-                : "Document Created"
-            return {
-              action,
-              item: doc.title || "Untitled Document",
-              time: formatTimeAgo(doc.updatedAt || doc.createdAt),
-              user: "System",
-              dateValue: doc.updatedAt || doc.createdAt,
-              sortTime: updatedAt || createdAt,
-            }
-          })
-          .sort((a: any, b: any) => b.sortTime - a.sortTime)
-          .map(({ sortTime, ...rest }: any) => rest)
-
-        if (cancelled) return
+        setDashboardDocs(docs)
         setRecentActivities(activities)
         try {
           const payload: DashboardCachePayload = {
             stats: toSerializableStats(nextStats),
             recentActivities: activities,
-            docs: activeDocs,
+            docs,
             cachedAt: Date.now(),
           }
           sessionStorage.setItem(cacheKey, JSON.stringify(payload))
         } catch {
           // Ignore cache write failures.
-        }
-
-        // On first login redirect there can be a brief token/cookie race on some hosts.
-        // If everything comes back empty, retry once shortly after.
-        if (allowRetry && activeDocs.length === 0) {
-          window.setTimeout(() => {
-            if (!cancelled) loadDashboardData(false, true)
-          }, 900)
         }
       } catch (error) {
         console.error("Failed to load dashboard data:", error)

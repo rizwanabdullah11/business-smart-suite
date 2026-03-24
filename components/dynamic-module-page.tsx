@@ -25,6 +25,7 @@ import {
 } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 import { useAuth } from "@/contexts/auth-context"
+import { readModulePageCache, writeModulePageCache } from "@/lib/client/module-page-cache"
 
 type SortType = "name" | "date"
 type FieldType = "text" | "number" | "date" | "textarea" | "select" | "checkbox"
@@ -111,6 +112,7 @@ export default function DynamicModulePage({
   const [aiReply, setAiReply] = useState("")
   const [aiLoading, setAiLoading] = useState(false)
   const effectiveCategoryType = categoryType || moduleSlug
+  const cacheKey = `${moduleSlug}:${effectiveCategoryType}`
 
   const defaultNewItemData = useMemo(() => {
     const base: Record<string, any> = {}
@@ -126,9 +128,16 @@ export default function DynamicModulePage({
   }, [defaultNewItemData])
 
   useEffect(() => {
+    const cached = readModulePageCache(cacheKey)
+    if (cached) {
+      setCategories(cached.categories)
+      setArchivedCategories(cached.archivedCategories)
+      setCategoryItemView(cached.categoryItemView)
+      setExpandedCategories(cached.expandedCategories || [])
+    }
     loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when role resolves
-  }, [isEmployee, moduleSlug, effectiveCategoryType])
+  }, [cacheKey, isEmployee, moduleSlug, effectiveCategoryType])
 
   const getItemCategoryId = (item: any) => {
     const raw = item?.category?._id || item?.categoryId || item?.category || null
@@ -147,22 +156,38 @@ export default function DynamicModulePage({
     try {
       const token = localStorage.getItem("token")
 
-      const catRes = await fetch(`/api/categories?type=${effectiveCategoryType}`, {
-        credentials: "include",
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const categoriesData = await catRes.json()
-      const itemsRes = await fetch(`/api/${moduleSlug}`, {
-        credentials: "include",
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const itemsData = await itemsRes.json()
-      const archivedRes =
-        !isEmployee &&
-        (await fetch(`/api/${moduleSlug}/archived/all`, {
+      const [catRes, archivedCatRes, itemsRes, archivedRes] = await Promise.all([
+        fetch(`/api/categories?type=${effectiveCategoryType}`, {
           credentials: "include",
           headers: { Authorization: `Bearer ${token}` },
-        }))
+        }),
+        !isEmployee
+          ? fetch(`/api/categories?type=${effectiveCategoryType}&archived=true`, {
+              credentials: "include",
+              headers: { Authorization: `Bearer ${token}` },
+            })
+          : Promise.resolve(null),
+        fetch(`/api/${moduleSlug}`, {
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        !isEmployee
+          ? fetch(`/api/${moduleSlug}/archived/all`, {
+              credentials: "include",
+              headers: { Authorization: `Bearer ${token}` },
+            })
+          : Promise.resolve(null),
+      ])
+      const activeCategoriesData = await catRes.json()
+      const archivedCategoriesData = archivedCatRes && archivedCatRes.ok ? await archivedCatRes.json() : []
+      const categoryMap = new Map<string, any>()
+      ;[...(Array.isArray(activeCategoriesData) ? activeCategoriesData : []), ...(Array.isArray(archivedCategoriesData) ? archivedCategoriesData : [])]
+        .forEach((cat: any) => {
+          if (cat?._id) categoryMap.set(String(cat._id), cat)
+        })
+      const categoriesData = Array.from(categoryMap.values())
+
+      const itemsData = await itemsRes.json()
       const archivedData = !isEmployee && archivedRes && archivedRes.ok ? await archivedRes.json() : []
 
       const archivedById = new Map<string, any>()
@@ -202,11 +227,27 @@ export default function DynamicModulePage({
 
       setCategories(merged)
       setArchivedCategories(mergedArchived)
-      setExpandedCategories((prev) => (prev.length ? prev : merged.length ? [merged[0].id] : []))
+      setExpandedCategories((prev) => {
+        const firstCategoryId = merged[0]?.id
+        const nextExpanded = prev.length ? prev : firstCategoryId ? [String(firstCategoryId)] : []
+        writeModulePageCache(cacheKey, {
+          categories: merged,
+          archivedCategories: mergedArchived,
+          categoryItemView,
+          expandedCategories: nextExpanded,
+        })
+        return nextExpanded
+      })
       setCategoryItemView((prev) => {
         const next = { ...prev }
         allCategories.forEach((cat: any) => {
           if (!next[cat.id]) next[cat.id] = "active"
+        })
+        writeModulePageCache(cacheKey, {
+          categories: merged,
+          archivedCategories: mergedArchived,
+          categoryItemView: next,
+          expandedCategories,
         })
         return next
       })
@@ -214,6 +255,15 @@ export default function DynamicModulePage({
       console.error("Error loading module data:", err)
     }
   }
+
+  useEffect(() => {
+    writeModulePageCache(cacheKey, {
+      categories,
+      archivedCategories,
+      categoryItemView,
+      expandedCategories,
+    })
+  }, [archivedCategories, cacheKey, categories, categoryItemView, expandedCategories])
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories((prev) => (prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId]))
@@ -712,7 +762,7 @@ export default function DynamicModulePage({
 
         <div className="space-y-4">
           {(showArchived ? archivedCategories : categories).map((category) => {
-            const currentItemView = categoryItemView[category.id] ?? (showArchived ? "archived" : "active")
+            const currentItemView = categoryItemView[category.id] ?? "active"
             const currentItems = currentItemView === "archived" ? (category.archivedItems || []) : currentItemView === "completed" ? (category.completedItems || []) : currentItemView === "highlighted" ? (category.highlightedItems || []) : (category.items || [])
             const sortedItems = sortItems(currentItems)
             const isViewingArchivedItems = currentItemView === "archived"

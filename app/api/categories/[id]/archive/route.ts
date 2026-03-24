@@ -3,7 +3,6 @@ import { withAuth } from "@/lib/middleware/auth-middleware"
 import { Permission } from "@/lib/types/permissions"
 import { connectToDatabase } from "@/lib/server/db"
 import Category from "@/lib/server/models/Category"
-import Manual from "@/lib/server/models/Manual"
 import mongoose from "mongoose"
 
 const TYPE_ALIASES: Record<string, string> = {
@@ -54,11 +53,6 @@ export const POST = withAuth(
       if (!updated) {
         return NextResponse.json({ error: "Category not found" }, { status: 404 })
       }
-
-      await Manual.updateMany(
-        { $or: [{ category: id }, { categoryId: id }] },
-        { $set: { archived: true, isArchived: true } }
-      )
 
       return NextResponse.json({ success: true, category: updated })
     } catch (error) {
