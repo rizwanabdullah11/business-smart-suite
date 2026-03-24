@@ -790,6 +790,79 @@ export function DashboardContent() {
         y += boxHeight + 12
       }
 
+      const drawGroupedBarChart = (
+        title: string,
+        subtitle: string,
+        points: Array<{ name: string; first: number; second: number }>,
+        firstLabel: string,
+        secondLabel: string,
+        firstColor: readonly [number, number, number],
+        secondColor: readonly [number, number, number]
+      ) => {
+        const boxHeight = 220
+        ensurePageSpace(boxHeight + 12, title)
+        setFill(palette.panel)
+        setStroke(palette.border)
+        doc.roundedRect(margin, y, contentWidth, boxHeight, 12, 12, "FD")
+
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(13)
+        setText(palette.ink)
+        doc.text(title, margin + 16, y + 22)
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(9)
+        setText(palette.muted)
+        doc.text(subtitle, margin + 16, y + 38)
+
+        const chartTop = y + 58
+        const chartHeight = 96
+        const chartBottom = chartTop + chartHeight
+        const chartLeft = margin + 16
+        const chartWidth = contentWidth - 32
+        const chartRight = chartLeft + chartWidth
+        const safePoints = points.length > 0 ? points : [{ name: "No Data", first: 0, second: 0 }]
+        const maxValue = Math.max(...safePoints.flatMap((point) => [point.first, point.second]), 1)
+        const groupGap = 10
+        const groupWidth = Math.max((chartWidth - groupGap * (safePoints.length - 1)) / safePoints.length, 18)
+        const singleBarWidth = Math.max((groupWidth - 6) / 2, 7)
+
+        setStroke(palette.border)
+        doc.line(chartLeft, chartBottom, chartRight, chartBottom)
+        doc.line(chartLeft, chartTop, chartLeft, chartBottom)
+
+        safePoints.forEach((point, index) => {
+          const groupX = chartLeft + index * (groupWidth + groupGap)
+          const firstBarHeight = maxValue === 0 ? 0 : (point.first / maxValue) * (chartHeight - 10)
+          const secondBarHeight = maxValue === 0 ? 0 : (point.second / maxValue) * (chartHeight - 10)
+          const firstX = groupX
+          const secondX = groupX + singleBarWidth + 6
+
+          setFill(firstColor)
+          doc.roundedRect(firstX, chartBottom - firstBarHeight, singleBarWidth, Math.max(firstBarHeight, 3), 3, 3, "F")
+          setFill(secondColor)
+          doc.roundedRect(secondX, chartBottom - secondBarHeight, singleBarWidth, Math.max(secondBarHeight, 3), 3, 3, "F")
+
+          doc.setFont("helvetica", "normal")
+          doc.setFontSize(8)
+          setText(palette.muted)
+          doc.text(truncateText(point.name, groupWidth + 8, 8), groupX + groupWidth / 2, chartBottom + 12, { align: "center" })
+        })
+
+        const legendY = y + boxHeight - 22
+        setFill(firstColor)
+        doc.roundedRect(margin + 16, legendY - 7, 10, 10, 2, 2, "F")
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(9)
+        setText(palette.muted)
+        doc.text(firstLabel, margin + 32, legendY + 1)
+
+        setFill(secondColor)
+        doc.roundedRect(margin + 110, legendY - 7, 10, 10, 2, 2, "F")
+        doc.text(secondLabel, margin + 126, legendY + 1)
+
+        y += boxHeight + 12
+      }
+
       const drawAnalyticsDashboard = () => {
         writeSectionTitle("Analytics Dashboard", "Same analytics view used in the analytics page for the selected date range.")
 
@@ -827,52 +900,31 @@ export function DashboardContent() {
           palette.brand
         )
 
-        writeSectionTitle("Areas and Achievement Rate", "Late versus on-time items by area, matching the analytics page.")
-        if (achievementData.length === 0) {
-          writeWrappedText("No achievement data is available for the selected date range.")
-        } else {
-          const rowHeight = 28
-          const colArea = 250
-          const colLate = 90
-          const colOnTime = contentWidth - colArea - colLate
+        drawGroupedBarChart(
+          "Areas and Achievement Rate",
+          "Late versus on-time items by area, matching the analytics page.",
+          achievementData.map((entry) => ({
+            name: entry.name,
+            first: entry.late,
+            second: entry.onTime,
+          })),
+          "Late",
+          "On Time",
+          palette.danger,
+          palette.brand
+        )
 
-          const drawHeaderRow = () => {
-            ensurePageSpace(36, "Areas and Achievement Rate")
-            setFill(palette.panelAlt)
-            doc.roundedRect(margin, y, contentWidth, rowHeight, 8, 8, "F")
-            doc.setFont("helvetica", "bold")
-            doc.setFontSize(10)
-            setText(palette.brandDark)
-            doc.text("Area", margin + 8, y + 18)
-            doc.text("Late", margin + colArea + 8, y + 18)
-            doc.text("On Time", margin + colArea + colLate + 8, y + 18)
-            y += rowHeight + 8
-          }
-
-          drawHeaderRow()
-          achievementData.forEach((entry, index) => {
-            ensurePageSpace(rowHeight + 8, "Areas and Achievement Rate")
-            if (y + rowHeight > pageHeight - margin - footerHeight) {
-              doc.addPage()
-              y = margin
-              drawPageHeader("Areas and Achievement Rate")
-              drawHeaderRow()
-            }
-            const rowFill = index % 2 === 0 ? palette.panel : toRgb(COLORS.bgWhite)
-            setFill(rowFill)
-            setStroke(palette.border)
-            doc.roundedRect(margin, y, contentWidth, rowHeight, 8, 8, "FD")
-            doc.setFont("helvetica", "normal")
-            doc.setFontSize(9)
-            setText(palette.ink)
-            doc.text(truncateText(entry.name, colArea - 16, 9), margin + 8, y + 18)
-            setText(palette.danger)
-            doc.text(String(entry.late), margin + colArea + 8, y + 18)
-            setText(palette.success)
-            doc.text(String(entry.onTime), margin + colArea + colLate + 8, y + 18)
-            y += rowHeight + 8
-          })
-        }
+        drawGroupedBarChart(
+          "Completed vs Pending",
+          "Separate graph for completion status in the selected date range.",
+          [
+            { name: "Status", first: analyticsSummary.completed, second: analyticsSummary.pending },
+          ],
+          "Completed",
+          "Pending",
+          palette.success,
+          palette.warning
+        )
 
         y += sectionGap
         drawMiniBarChart(

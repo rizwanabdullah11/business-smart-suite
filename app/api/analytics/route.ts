@@ -32,6 +32,33 @@ const MODULES = [
   "energy-consumption",
 ] as const
 
+const MODULE_LABELS: Record<string, string> = {
+  manuals: "Manual",
+  policies: "Policies",
+  procedures: "Procedures",
+  forms: "Forms",
+  certificates: "Certificates",
+  "business-continuity": "Business Continuity",
+  "management-reviews": "Management Reviews",
+  "job-descriptions": "Job Descriptions",
+  "work-instructions": "Work Instructions",
+  "risk-assessments": "Risk Assessments",
+  coshh: "COSHH",
+  "technical-file": "Technical File",
+  "ims-aspects-impacts": "IMS Aspects & Impacts",
+  "audit-schedule": "Audit Schedule",
+  "interested-parties": "Interested Parties",
+  "organisational-context": "Organisational Context",
+  objectives: "Objectives",
+  maintenance: "Maintenance",
+  "improvement-register": "Improvement Register",
+  "statement-of-applicability": "Statement of Applicability",
+  "legal-register": "Legal Register",
+  suppliers: "Suppliers",
+  training: "Training",
+  "energy-consumption": "Energy Consumption",
+}
+
 type AnalyticsDoc = {
   _id: string
   _module: string
@@ -80,6 +107,11 @@ function monthShort(date: Date) {
   return date.toLocaleString("en", { month: "short" })
 }
 
+function getModuleLabel(moduleKey?: string) {
+  if (!moduleKey) return "Unspecified"
+  return MODULE_LABELS[moduleKey] || moduleKey
+}
+
 function buildMonthlyActivity(rows: AnalyticsDoc[], startDate: string, endDate: string) {
   const result: { name: string; value: number }[] = []
   const monthMap = new Map<string, number>()
@@ -115,8 +147,7 @@ function buildAchievement(rows: AnalyticsDoc[]) {
   const group = new Map<string, { name: string; late: number; onTime: number }>()
 
   rows.forEach((row) => {
-    const categoryName = typeof row.category === "string" ? row.category : row.category?.name
-    const area = row.source || categoryName || row._module || "Unspecified"
+    const area = getModuleLabel(row._module)
     const status = String(row.status || "").toLowerCase()
     const onTime = Boolean(row.approved) || ["closed", "completed", "done", "approved"].some((k) => status.includes(k))
     const entry = group.get(area) || { name: area, late: 0, onTime: 0 }
