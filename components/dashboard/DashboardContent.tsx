@@ -315,6 +315,64 @@ export function DashboardContent() {
             })
       }
 
+      const formatDateKey = (value: Date | string) => {
+        const date = typeof value === "string" ? new Date(value) : value
+        if (Number.isNaN(date.getTime())) return ""
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, "0")
+        const day = String(date.getDate()).padStart(2, "0")
+        return `${year}-${month}-${day}`
+      }
+
+      const dateWiseAnalytics = (() => {
+        const docsByDate = new Map<string, AnyDoc[]>()
+        const activitiesByDate = new Map<string, ActivityItem[]>()
+
+        sortedDocs.forEach((item) => {
+          const rawDate = item.updatedAt || item.createdAt
+          const key = rawDate ? formatDateKey(rawDate) : ""
+          if (!key) return
+          const existing = docsByDate.get(key) || []
+          existing.push(item)
+          docsByDate.set(key, existing)
+        })
+
+        sortedActivities.forEach((item) => {
+          const key = item.dateValue ? formatDateKey(item.dateValue) : ""
+          if (!key) return
+          const existing = activitiesByDate.get(key) || []
+          existing.push(item)
+          activitiesByDate.set(key, existing)
+        })
+
+        const rows: Array<{
+          key: string
+          label: string
+          reports: number
+          approved: number
+          pending: number
+          activities: number
+        }> = []
+
+        const cursor = new Date(startDate)
+        while (cursor <= endDate) {
+          const key = formatDateKey(cursor)
+          const docsForDay = docsByDate.get(key) || []
+          const activitiesForDay = activitiesByDate.get(key) || []
+          rows.push({
+            key,
+            label: formatDate(cursor.toISOString()),
+            reports: docsForDay.length,
+            approved: docsForDay.filter((item) => Boolean(item.approved)).length,
+            pending: docsForDay.filter((item) => !item.approved).length,
+            activities: activitiesForDay.length,
+          })
+          cursor.setDate(cursor.getDate() + 1)
+        }
+
+        return rows
+      })()
+
       const setFill = (rgb: readonly [number, number, number]) => doc.setFillColor(rgb[0], rgb[1], rgb[2])
       const setStroke = (rgb: readonly [number, number, number]) => doc.setDrawColor(rgb[0], rgb[1], rgb[2])
       const setText = (rgb: readonly [number, number, number]) => doc.setTextColor(rgb[0], rgb[1], rgb[2])
@@ -581,6 +639,62 @@ export function DashboardContent() {
         })
       }
 
+      const drawAnalyticsTable = () => {
+        writeSectionTitle("Analytics", "Date-wise dashboard analytics for the selected reporting period.")
+        if (dateWiseAnalytics.length === 0) {
+          writeWrappedText("No analytics data is available for the selected date range.")
+          return
+        }
+
+        const colDate = 108
+        const colReports = 82
+        const colApproved = 82
+        const colPending = 82
+        const colActivities = contentWidth - colDate - colReports - colApproved - colPending
+        const rowHeight = 28
+
+        const drawHeaderRow = () => {
+          ensurePageSpace(34, "Analytics")
+          setFill(palette.panelAlt)
+          doc.roundedRect(margin, y, contentWidth, rowHeight, 8, 8, "F")
+          doc.setFont("helvetica", "bold")
+          doc.setFontSize(10)
+          setText(palette.brandDark)
+          doc.text("Date", margin + 8, y + 18)
+          doc.text("Reports", margin + colDate + 8, y + 18)
+          doc.text("Approved", margin + colDate + colReports + 8, y + 18)
+          doc.text("Pending", margin + colDate + colReports + colApproved + 8, y + 18)
+          doc.text("Activities", margin + colDate + colReports + colApproved + colPending + 8, y + 18)
+          y += rowHeight + 8
+        }
+
+        drawHeaderRow()
+        dateWiseAnalytics.forEach((entry, index) => {
+          ensurePageSpace(rowHeight + 8, "Analytics")
+          if (y + rowHeight > pageHeight - margin - footerHeight) {
+            doc.addPage()
+            y = margin
+            drawPageHeader("Analytics")
+            drawHeaderRow()
+          }
+
+          const rowFill = index % 2 === 0 ? palette.panel : toRgb(COLORS.bgWhite)
+          setFill(rowFill)
+          setStroke(palette.border)
+          doc.roundedRect(margin, y, contentWidth, rowHeight, 8, 8, "FD")
+
+          doc.setFont("helvetica", "normal")
+          doc.setFontSize(9)
+          setText(palette.ink)
+          doc.text(entry.label, margin + 8, y + 18)
+          doc.text(String(entry.reports), margin + colDate + 8, y + 18)
+          doc.text(String(entry.approved), margin + colDate + colReports + 8, y + 18)
+          doc.text(String(entry.pending), margin + colDate + colReports + colApproved + 8, y + 18)
+          doc.text(String(entry.activities), margin + colDate + colReports + colApproved + colPending + 8, y + 18)
+          y += rowHeight + 8
+        })
+      }
+
       const drawActivityTable = () => {
         y += sectionGap
         writeSectionTitle("Activity Log", "Recent dated actions captured within the selected reporting period.")
@@ -653,7 +767,9 @@ export function DashboardContent() {
 
       doc.addPage()
       y = margin
-      drawPageHeader("Document Register")
+      drawPageHeader("Analytics")
+      drawAnalyticsTable()
+      y += sectionGap
       drawDocumentsTable()
       drawActivityTable()
 
