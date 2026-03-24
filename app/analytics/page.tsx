@@ -51,6 +51,15 @@ function formatDateInput(value: Date) {
   return value.toISOString().split("T")[0]
 }
 
+function formatRangeLabel(startDate: string, endDate: string) {
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return "Selected Date Range"
+  }
+  return `${start.toLocaleDateString([], { month: "short", year: "numeric" })} - ${end.toLocaleDateString([], { month: "short", year: "numeric" })}`
+}
+
 export default function AnalyticsPage() {
   const [summary, setSummary] = useState<AnalyticsSummary>({
     totalItems: 0,
@@ -221,7 +230,7 @@ export default function AnalyticsPage() {
 
         <div className="bg-white rounded-xl border p-6 shadow-sm" style={{ borderColor: COLORS.border }}>
           <div className="mb-6">
-            <h3 className="text-sm font-semibold text-black">Cost of Quality (12-Month Period)</h3>
+            <h3 className="text-sm font-semibold text-black">Cost of Quality ({formatRangeLabel(startDate, endDate)})</h3>
             <div className="flex gap-4 mt-2 text-xs text-gray-500">
               <span>Total Cost: <strong className="text-gray-900">£{summary.totalCost.toFixed(2)}</strong></span>
               <span>Total Items: <strong className="text-gray-900">{summary.totalItems}</strong></span>

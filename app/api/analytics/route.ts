@@ -32,6 +32,33 @@ const MODULES = [
   "energy-consumption",
 ] as const
 
+const MODULE_LABELS: Record<string, string> = {
+  manuals: "Manual",
+  policies: "Policies",
+  procedures: "Procedures",
+  forms: "Forms",
+  certificates: "Certificates",
+  "business-continuity": "Business Continuity",
+  "management-reviews": "Management Reviews",
+  "job-descriptions": "Job Descriptions",
+  "work-instructions": "Work Instructions",
+  "risk-assessments": "Risk Assessments",
+  coshh: "COSHH",
+  "technical-file": "Technical File",
+  "ims-aspects-impacts": "IMS Aspects & Impacts",
+  "audit-schedule": "Audit Schedule",
+  "interested-parties": "Interested Parties",
+  "organisational-context": "Organisational Context",
+  objectives: "Objectives",
+  maintenance: "Maintenance",
+  "improvement-register": "Improvement Register",
+  "statement-of-applicability": "Statement of Applicability",
+  "legal-register": "Legal Register",
+  suppliers: "Suppliers",
+  training: "Training",
+  "energy-consumption": "Energy Consumption",
+}
+
 type AnalyticsDoc = {
   _id: string
   _module: string
@@ -80,6 +107,11 @@ function monthShort(date: Date) {
   return date.toLocaleString("en", { month: "short" })
 }
 
+function getModuleLabel(moduleKey?: string) {
+  if (!moduleKey) return "Unspecified"
+  return MODULE_LABELS[moduleKey] || moduleKey
+}
+
 function buildMonthlyActivity(rows: AnalyticsDoc[], startDate: string, endDate: string) {
   const result: { name: string; value: number }[] = []
   const monthMap = new Map<string, number>()
@@ -115,8 +147,7 @@ function buildAchievement(rows: AnalyticsDoc[]) {
   const group = new Map<string, { name: string; late: number; onTime: number }>()
 
   rows.forEach((row) => {
-    const categoryName = typeof row.category === "string" ? row.category : row.category?.name
-    const area = row.source || categoryName || row._module || "Unspecified"
+    const area = getModuleLabel(row._module)
     const status = String(row.status || "").toLowerCase()
     const onTime = Boolean(row.approved) || ["closed", "completed", "done", "approved"].some((k) => status.includes(k))
     const entry = group.get(area) || { name: area, late: 0, onTime: 0 }
@@ -128,14 +159,15 @@ function buildAchievement(rows: AnalyticsDoc[]) {
   return Array.from(group.values()).slice(0, 12)
 }
 
-function buildCostTrend(rows: AnalyticsDoc[]) {
+function buildCostTrend(rows: AnalyticsDoc[], startDate: string, endDate: string) {
   const totals = new Map<string, number>()
   const months: { key: string; name: string }[] = []
-  const d = new Date()
+  const d = new Date(startDate)
   d.setDate(1)
-  d.setMonth(d.getMonth() - 11)
+  const end = new Date(endDate)
+  end.setDate(1)
 
-  for (let i = 0; i < 12; i++) {
+  while (d <= end) {
     const key = `${d.getFullYear()}-${d.getMonth()}`
     totals.set(key, 0)
     months.push({ key, name: monthShort(d) })
@@ -202,19 +234,15 @@ export const GET = withAuth(
       const end = new Date(endDate)
       end.setHours(23, 59, 59, 999)
 
-      let scoped = allRows.filter((row) => {
+      const scoped = allRows.filter((row) => {
         const d = getDateValue(row)
         if (!d) return false
         return d >= start && d <= end
       })
 
-      if (scoped.length === 0 && allRows.length > 0) {
-        scoped = allRows.filter((row) => Boolean(getDateValue(row)))
-      }
-
       const monthlyActivity = buildMonthlyActivity(scoped, startDate, endDate)
       const achievementData = buildAchievement(scoped)
-      const costTrend = buildCostTrend(scoped)
+      const costTrend = buildCostTrend(scoped, startDate, endDate)
       const totalCost = costTrend.reduce((sum, row) => sum + row.cost, 0)
       const totalItems = scoped.length
       const completed = scoped.filter((row) => {
