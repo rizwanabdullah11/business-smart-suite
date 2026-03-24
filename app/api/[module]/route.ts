@@ -17,10 +17,6 @@ export const GET = withAuth(
       const module = params.module
       if (!isSupportedModule(module)) return unsupportedModule(module)
 
-      if (module === "certificates") {
-        await notifyExpiredCertificates()
-      }
-
       await connectToDatabase()
       const Model = getModuleModel(module)
       const { filter: ownershipFilter } = await buildModuleAccessFilter(request, user)
@@ -53,7 +49,7 @@ export const GET = withAuth(
 
       const query = andConditions.length ? { $and: andConditions } : {}
       const rows = await Model.find(query)
-        .populate("category", "_id name archived isArchived")
+        .select("-fileData")
         .sort({ createdAt: -1 })
         .lean()
 

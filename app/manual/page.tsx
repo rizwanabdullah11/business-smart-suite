@@ -27,6 +27,7 @@ import {
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
 import { useAuth } from "@/contexts/auth-context"
+import { readModulePageCache, writeModulePageCache } from "@/lib/client/module-page-cache"
 
 // // Sample data
 // const initialCategories = [
@@ -80,6 +81,7 @@ export default function ManualPage() {
   const [aiReply, setAiReply] = useState("")
   const [aiLoading, setAiLoading] = useState(false)
   const [selectedManualId, setSelectedManualId] = useState("")
+  const cacheKey = `manual:manual`
 
   const toIdString = (value: any) => {
     if (!value) return null
@@ -97,33 +99,46 @@ export default function ManualPage() {
     try {
       const token = localStorage.getItem("token")
 
-      // 1) Get categories
-      const catRes = await fetch("/api/categories?type=manual", {
-        credentials: "include",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      const categoriesData = await catRes.json()
+      const [catRes, archivedCatRes, manRes, archivedRes] = await Promise.all([
+        fetch("/api/categories?type=manual", {
+          credentials: "include",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        !isEmployee
+          ? fetch("/api/categories?type=manual&archived=true", {
+              credentials: "include",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            })
+          : Promise.resolve(null),
+        fetch("/api/manuals", {
+          credentials: "include",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        !isEmployee
+          ? fetch("/api/manuals/archived/all", {
+              credentials: "include",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            })
+          : Promise.resolve(null),
+      ])
+      const activeCategoriesData = await catRes.json()
+      const archivedCategoriesData = archivedCatRes && archivedCatRes.ok ? await archivedCatRes.json() : []
+      const categoryMap = new Map<string, any>()
+      ;[...(Array.isArray(activeCategoriesData) ? activeCategoriesData : []), ...(Array.isArray(archivedCategoriesData) ? archivedCategoriesData : [])]
+        .forEach((cat: any) => {
+          if (cat?._id) categoryMap.set(String(cat._id), cat)
+        })
+      const categoriesData = Array.from(categoryMap.values())
 
-      // 2) Get active manuals
-      const manRes = await fetch("/api/manuals", {
-        credentials: "include",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
       const manualsData = await manRes.json()
-
-      // 3) Get archived manuals (managers only — employees use a simpler list)
-      const archivedRes = !isEmployee
-        ? await fetch("/api/manuals/archived/all", {
-            credentials: "include",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          })
-        : null
       const archivedData = archivedRes && archivedRes.ok ? await archivedRes.json() : []
       const archivedById = new Map<string, any>()
       archivedData.forEach((item: any) => {
@@ -199,6 +214,12 @@ export default function ManualPage() {
         allCategories.forEach((cat: any) => {
           if (!next[cat.id]) next[cat.id] = "active"
         })
+        writeModulePageCache(cacheKey, {
+          categories: merged,
+          archivedCategories: mergedArchived,
+          categoryItemView: next,
+          expandedCategories,
+        })
         return next
       })
     } catch (err) {
@@ -207,9 +228,25 @@ export default function ManualPage() {
   }
 
   useEffect(() => {
+    const cached = readModulePageCache(cacheKey)
+    if (cached) {
+      setCategories(cached.categories)
+      setArchivedCategories(cached.archivedCategories)
+      setCategoryItemView(cached.categoryItemView)
+      setExpandedCategories(cached.expandedCategories?.length ? cached.expandedCategories : ["1"])
+    }
     loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEmployee])
+
+  useEffect(() => {
+    writeModulePageCache(cacheKey, {
+      categories,
+      archivedCategories,
+      categoryItemView,
+      expandedCategories,
+    })
+  }, [archivedCategories, categories, categoryItemView, expandedCategories])
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories(prev =>
@@ -999,7 +1036,7 @@ export default function ManualPage() {
         {/* Categories */}
         <div className="space-y-4">
           {(showArchived ? archivedCategories : categories).map((category) => {
-            const currentItemView = categoryItemView[category.id] ?? (showArchived ? "archived" : "active")
+            const currentItemView = categoryItemView[category.id] ?? "active"
             const currentManuals =
               currentItemView === "archived"
                 ? (category.archivedManuals || [])

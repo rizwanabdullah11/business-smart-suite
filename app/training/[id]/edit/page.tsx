@@ -1,56 +1,27 @@
 "use client"
 
-import { useState, use } from "react"
-import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
-import { COLORS } from "@/constant/colors"
+import { use } from "react"
+import DynamicModuleEditPage from "@/components/dynamic-module-edit-page"
 
 export default function EditTrainingPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = use(params)
+  const { id } = use(params)
 
-    return (
-        <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
-            <div className="p-6">
-                <div className="max-w-4xl mx-auto">
-                    {/* Back Button */}
-                    <div className="mb-6">
-                        <Link
-                            href="/training"
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all"
-                            style={{
-                                background: COLORS.bgWhite,
-                                color: COLORS.textPrimary,
-                                border: `1px solid ${COLORS.border}`,
-                            }}
-                        >
-                            <ArrowLeft className="w-4 h-4" />
-                            Back to Training
-                        </Link>
-                    </div>
-
-                    {/* Edit Form */}
-                    <div
-                        className="rounded-lg p-6"
-                        style={{
-                            background: COLORS.bgWhite,
-                            border: `1px solid ${COLORS.border}`,
-                        }}
-                    >
-                        <h1 className="text-2xl font-bold mb-6" style={{ color: COLORS.textPrimary }}>
-                            Edit Training Record
-                        </h1>
-
-                        <div className="text-center py-12">
-                            <p className="text-lg font-medium" style={{ color: COLORS.textPrimary }}>
-                                Edit Form UI Coming Soon
-                            </p>
-                            <p className="text-sm mt-2" style={{ color: COLORS.textSecondary }}>
-                                ID: {id}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
+  return (
+    <DynamicModuleEditPage
+      id={id}
+      moduleSlug="training"
+      pageTitle="Edit Training Record"
+      backHref="/training"
+      backLabel="Back to Training"
+      fields={[
+        { key: "title", label: "Training", required: true, placeholder: "Training title..." },
+        { key: "employee", label: "Employee", placeholder: "Employee name..." },
+        { key: "department", label: "Department", placeholder: "Department..." },
+        { key: "date", label: "Training Date", type: "date" },
+        { key: "expiry", label: "Expiry Date", type: "date" },
+        { key: "status", label: "Status", type: "select", options: ["Valid", "Expired", "Pending"], defaultValue: "Valid" },
+        { key: "certificate", label: "Certificate Issued", type: "checkbox", defaultValue: true },
+      ]}
+    />
+  )
 }

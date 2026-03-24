@@ -54,7 +54,7 @@ export const GET = withAuth(
       const query = andConditions.length > 0 ? { $and: andConditions } : {}
 
       const manuals = await Manual.find(query)
-        .populate("category", "_id name archived isArchived")
+        .select("-fileData")
         .sort({ createdAt: -1 })
         .lean()
 
