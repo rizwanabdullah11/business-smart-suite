@@ -225,9 +225,10 @@ export function DashboardContent() {
       const doc = new jsPDF({ unit: "pt", format: "a4" })
       const pageWidth = doc.internal.pageSize.getWidth()
       const pageHeight = doc.internal.pageSize.getHeight()
-      const margin = 40
+      const margin = 36
       const contentWidth = pageWidth - margin * 2
-      const lineHeight = 16
+      const footerHeight = 26
+      const sectionGap = 18
       let y = margin
       const startDate = new Date(`${exportStartDate}T00:00:00`)
       const endDate = new Date(`${exportEndDate}T23:59:59.999`)
@@ -244,103 +245,429 @@ export function DashboardContent() {
         if (Number.isNaN(date.getTime())) return false
         return date >= startDate && date <= endDate
       })
-      const filteredStats = [
-        {
-          title: "Total Documents",
-          value: String(filteredDocs.length),
-          subtitle: "within selected date range",
-          change: "filtered",
-        },
-        {
-          title: "Active Users",
-          value: stats.find((stat) => stat.title === "Active Users")?.value || "-",
-          subtitle: "current scoped users",
-          change: "live",
-        },
-        {
-          title: "Pending Reviews",
-          value: String(filteredDocs.filter((doc) => !doc.approved).length),
-          subtitle: "within selected date range",
-          change: "filtered",
-        },
-        {
-          title: "Completed Tasks",
-          value: String(filteredDocs.filter((doc) => Boolean(doc.approved)).length),
-          subtitle: "within selected date range",
-          change: "filtered",
-        },
-      ]
+      const sortedDocs = [...filteredDocs].sort((a, b) => {
+        const aDate = new Date(a.updatedAt || a.createdAt || 0).getTime()
+        const bDate = new Date(b.updatedAt || b.createdAt || 0).getTime()
+        return bDate - aDate
+      })
+      const sortedActivities = [...filteredActivities].sort((a, b) => {
+        const aDate = new Date(a.dateValue || 0).getTime()
+        const bDate = new Date(b.dateValue || 0).getTime()
+        return bDate - aDate
+      })
 
-      const ensurePageSpace = (heightNeeded = 24) => {
-        if (y + heightNeeded <= pageHeight - margin) return
-        doc.addPage()
-        y = margin
+      const toRgb = (hex: string) => {
+        const normalized = hex.replace("#", "")
+        const value = normalized.length === 3
+          ? normalized.split("").map((char) => char + char).join("")
+          : normalized
+        const num = Number.parseInt(value, 16)
+        return [
+          (num >> 16) & 255,
+          (num >> 8) & 255,
+          num & 255,
+        ] as const
       }
 
-      const writeWrappedText = (text: string, size = 11, color: string = COLORS.textSecondary) => {
-        doc.setFont("helvetica", "normal")
-        doc.setFontSize(size)
-        doc.setTextColor(color)
-        const lines = doc.splitTextToSize(text, contentWidth)
-        ensurePageSpace(lines.length * lineHeight)
-        doc.text(lines, margin, y)
-        y += lines.length * lineHeight
+      const palette = {
+        ink: toRgb(COLORS.textPrimary),
+        muted: toRgb(COLORS.textSecondary),
+        lightText: toRgb(COLORS.textLight),
+        border: toRgb(COLORS.border),
+        panel: toRgb(COLORS.gray50),
+        panelAlt: toRgb(COLORS.indigo50),
+        brand: toRgb(COLORS.indigo600),
+        brandDark: toRgb(COLORS.indigo800),
+        brandSoft: toRgb(COLORS.indigo100),
+        success: toRgb(COLORS.green600),
+        successSoft: toRgb(COLORS.green100),
+        warning: toRgb(COLORS.orange600),
+        warningSoft: toRgb(COLORS.orange100),
+        danger: toRgb(COLORS.danger),
+        dangerSoft: toRgb(COLORS.pink100),
       }
 
-      const writeSectionTitle = (text: string) => {
-        ensurePageSpace(30)
-        doc.setFont("helvetica", "bold")
-        doc.setFontSize(16)
-        doc.setTextColor(COLORS.textPrimary)
-        doc.text(text, margin, y)
-        y += 24
+      const approvedDocs = sortedDocs.filter((item) => Boolean(item.approved)).length
+      const archivedDocs = sortedDocs.filter((item) => Boolean(item.archived || item.isArchived)).length
+      const pendingDocs = Math.max(sortedDocs.length - approvedDocs, 0)
+      const activeDocs = Math.max(sortedDocs.length - archivedDocs, 0)
+      const completionRate = sortedDocs.length > 0 ? Math.round((approvedDocs / sortedDocs.length) * 100) : 0
+      const contributingUsers = new Set(sortedActivities.map((item) => item.user).filter(Boolean)).size
+      const activeUsersValue = stats.find((stat) => stat.title === "Active Users")?.value || "-"
+      const reportGeneratedAt = new Date()
+
+      const formatDate = (value?: string, includeTime = false) => {
+        if (!value) return "-"
+        const date = new Date(value)
+        if (Number.isNaN(date.getTime())) return "-"
+        return includeTime
+          ? date.toLocaleString([], {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : date.toLocaleDateString([], {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })
       }
 
-      const writeItemTitle = (text: string) => {
-        ensurePageSpace(20)
-        doc.setFont("helvetica", "bold")
-        doc.setFontSize(12)
-        doc.setTextColor(COLORS.textPrimary)
-        doc.text(text, margin, y)
+      const setFill = (rgb: readonly [number, number, number]) => doc.setFillColor(rgb[0], rgb[1], rgb[2])
+      const setStroke = (rgb: readonly [number, number, number]) => doc.setDrawColor(rgb[0], rgb[1], rgb[2])
+      const setText = (rgb: readonly [number, number, number]) => doc.setTextColor(rgb[0], rgb[1], rgb[2])
+
+      const getDocumentStatus = (item: AnyDoc) => {
+        if (item.archived || item.isArchived) {
+          return { label: "Archived", text: palette.warning, fill: palette.warningSoft }
+        }
+        if (item.approved) {
+          return { label: "Approved", text: palette.success, fill: palette.successSoft }
+        }
+        return { label: "Pending Review", text: palette.danger, fill: palette.dangerSoft }
+      }
+
+      const truncateText = (text: string, maxWidth: number, fontSize = 10, fontStyle: "normal" | "bold" = "normal") => {
+        doc.setFont("helvetica", fontStyle)
+        doc.setFontSize(fontSize)
+        if (doc.getTextWidth(text) <= maxWidth) return text
+        let output = text
+        while (output.length > 0 && doc.getTextWidth(`${output}...`) > maxWidth) {
+          output = output.slice(0, -1)
+        }
+        return output ? `${output}...` : "..."
+      }
+
+      const drawDivider = () => {
+        setStroke(palette.border)
+        doc.setLineWidth(1)
+        doc.line(margin, y, pageWidth - margin, y)
         y += 16
       }
 
-      doc.setFont("helvetica", "bold")
-      doc.setFontSize(22)
-      doc.setTextColor(COLORS.textPrimary)
-      doc.text("Business Smart Suite Dashboard Report", margin, y)
-      y += 28
-
-      writeWrappedText(`Scope: ${dashboardScopeLabel}`, 12, COLORS.primary)
-      writeWrappedText(`User: ${user?.name || "Unknown User"} (${user?.role || "unknown"})`)
-      writeWrappedText(`Generated: ${new Date().toLocaleString()}`)
-      writeWrappedText(`Date range: ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`)
-
-      const activeOrganizationId =
-        typeof window !== "undefined" ? localStorage.getItem("activeOrganizationId") || "" : ""
-      if (activeOrganizationId) {
-        writeWrappedText(`Organization Scope ID: ${activeOrganizationId}`)
+      const drawPageHeader = (label: string) => {
+        setText(palette.brandDark)
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(13)
+        doc.text("Business Smart Suite", margin, y)
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(10)
+        setText(palette.muted)
+        doc.text(label, pageWidth - margin, y, { align: "right" })
+        y += 12
+        drawDivider()
       }
 
-      y += 8
-      writeSectionTitle("Summary")
-      filteredStats.forEach((stat) => {
-        writeItemTitle(`${stat.title}: ${stat.value}`)
-        writeWrappedText(`${stat.subtitle} | Change: ${stat.change}`)
-        y += 6
-      })
+      const ensurePageSpace = (heightNeeded = 24, nextPageLabel = "Dashboard Report") => {
+        if (y + heightNeeded <= pageHeight - margin - footerHeight) return
+        doc.addPage()
+        y = margin
+        drawPageHeader(nextPageLabel)
+      }
 
-      y += 6
-      writeSectionTitle("Recent Activity")
-      if (filteredActivities.length === 0) {
-        writeWrappedText(loading ? "Dashboard data is still loading." : "No recent activity found in the selected date range.")
-      } else {
-        filteredActivities.forEach((activity, index) => {
-          writeItemTitle(`${index + 1}. ${activity.action}`)
-          writeWrappedText(`Item: ${activity.item}`)
-          writeWrappedText(`By: ${activity.user} | Time: ${activity.time}`)
-          y += 8
+      const writeWrappedText = (
+        text: string,
+        size = 10,
+        color: readonly [number, number, number] = palette.muted,
+        width = contentWidth,
+        x = margin
+      ) => {
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(size)
+        setText(color)
+        const lineHeight = size + 5
+        const lines = doc.splitTextToSize(text, width)
+        ensurePageSpace(lines.length * lineHeight)
+        doc.text(lines, x, y)
+        y += lines.length * lineHeight
+      }
+
+      const writeSectionTitle = (text: string, subtitle?: string) => {
+        ensurePageSpace(48, text)
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(17)
+        setText(palette.ink)
+        doc.text(text, margin, y)
+        y += 20
+        if (subtitle) {
+          writeWrappedText(subtitle, 10, palette.muted)
+        }
+        y += 6
+      }
+
+      const metricCards = [
+        {
+          title: "Reports In Range",
+          value: String(sortedDocs.length),
+          caption: "Records updated in the selected period",
+          fill: palette.brandSoft,
+          text: palette.brandDark,
+        },
+        {
+          title: "Approved Items",
+          value: String(approvedDocs),
+          caption: `${completionRate}% approval rate`,
+          fill: palette.successSoft,
+          text: palette.success,
+        },
+        {
+          title: "Pending Review",
+          value: String(pendingDocs),
+          caption: "Items still awaiting sign-off",
+          fill: palette.dangerSoft,
+          text: palette.danger,
+        },
+        {
+          title: "Active Users",
+          value: String(activeUsersValue),
+          caption: `${contributingUsers} contributors in this date range`,
+          fill: palette.warningSoft,
+          text: palette.warning,
+        },
+      ]
+
+      const drawMetricCards = () => {
+        const cardGap = 14
+        const cardWidth = (contentWidth - cardGap) / 2
+        const cardHeight = 74
+        metricCards.forEach((card, index) => {
+          const column = index % 2
+          if (column === 0) {
+            ensurePageSpace(cardHeight + 10, "Summary")
+          }
+          const row = Math.floor(index / 2)
+          const x = margin + column * (cardWidth + cardGap)
+          const cardY = y + row * (cardHeight + cardGap)
+          setFill(card.fill)
+          doc.roundedRect(x, cardY, cardWidth, cardHeight, 12, 12, "F")
+          doc.setFont("helvetica", "bold")
+          doc.setFontSize(11)
+          setText(card.text)
+          doc.text(card.title, x + 16, cardY + 20)
+          doc.setFontSize(22)
+          doc.text(card.value, x + 16, cardY + 46)
+          doc.setFont("helvetica", "normal")
+          doc.setFontSize(9)
+          setText(palette.muted)
+          const captionLines = doc.splitTextToSize(card.caption, cardWidth - 32)
+          doc.text(captionLines, x + 16, cardY + 62)
         })
+        y += Math.ceil(metricCards.length / 2) * (cardHeight + cardGap)
+      }
+
+      const drawHighlightsBox = () => {
+        ensurePageSpace(122, "Executive Summary")
+        setFill(palette.panel)
+        setStroke(palette.border)
+        doc.roundedRect(margin, y, contentWidth, 112, 14, 14, "FD")
+        const boxTop = y + 22
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(13)
+        setText(palette.ink)
+        doc.text("Executive Summary", margin + 18, boxTop)
+
+        y += 40
+        writeWrappedText(
+          `This report presents ${sortedDocs.length} reports and ${sortedActivities.length} logged activities for ${dashboardScopeLabel.toLowerCase()} between ${formatDate(exportStartDate)} and ${formatDate(exportEndDate)}. It is formatted for client and management sharing, with emphasis on status visibility, activity tracking, and document readiness.`,
+          10,
+          palette.muted,
+          contentWidth - 36,
+          margin + 18
+        )
+
+        const bullets = [
+          `${activeDocs} active records and ${archivedDocs} archived records are included in this reporting period.`,
+          `${approvedDocs} reports are approved, while ${pendingDocs} still need attention or review.`,
+          `${sortedActivities.length} dated activities were captured across ${contributingUsers || 0} contributing users.`,
+        ]
+
+        bullets.forEach((bullet) => {
+          setFill(palette.brand)
+          doc.circle(margin + 22, y - 3, 2.2, "F")
+          writeWrappedText(bullet, 10, palette.muted, contentWidth - 52, margin + 32)
+        })
+
+        y += 10
+      }
+
+      const drawCoverHeader = () => {
+        const headerHeight = 128
+        setFill(palette.brandDark)
+        doc.roundedRect(margin, y, contentWidth, headerHeight, 18, 18, "F")
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(24)
+        setText(toRgb(COLORS.textWhite))
+        doc.text("Dashboard Performance Report", margin + 24, y + 34)
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(11)
+        doc.text("Business Smart Suite", margin + 24, y + 54)
+        doc.text(`${dashboardScopeLabel} | ${formatDate(exportStartDate)} - ${formatDate(exportEndDate)}`, margin + 24, y + 72)
+        doc.text(`Prepared for: ${user?.name || "Unknown User"}`, margin + 24, y + 90)
+        doc.text(`Generated on: ${formatDate(reportGeneratedAt.toISOString(), true)}`, margin + 24, y + 108)
+        y += headerHeight + 24
+      }
+
+      const drawDocumentsTable = () => {
+        writeSectionTitle("Document Register", "Detailed list of all reports/documents in the selected reporting window.")
+        if (sortedDocs.length === 0) {
+          writeWrappedText("No reports or documents were updated in the selected date range.")
+          return
+        }
+
+        const colIndex = 28
+        const colTitle = 250
+        const colStatus = 110
+        const colDate = contentWidth - colIndex - colTitle - colStatus
+        const rowHeight = 28
+
+        const drawHeaderRow = () => {
+          ensurePageSpace(34, "Document Register")
+          setFill(palette.panelAlt)
+          doc.roundedRect(margin, y, contentWidth, rowHeight, 8, 8, "F")
+          doc.setFont("helvetica", "bold")
+          doc.setFontSize(10)
+          setText(palette.brandDark)
+          doc.text("#", margin + 10, y + 18)
+          doc.text("Report / Document", margin + colIndex + 8, y + 18)
+          doc.text("Status", margin + colIndex + colTitle + 8, y + 18)
+          doc.text("Last Updated", margin + colIndex + colTitle + colStatus + 8, y + 18)
+          y += rowHeight + 8
+        }
+
+        drawHeaderRow()
+        sortedDocs.forEach((item, index) => {
+          ensurePageSpace(rowHeight + 8, "Document Register")
+          if (y + rowHeight > pageHeight - margin - footerHeight) {
+            doc.addPage()
+            y = margin
+            drawPageHeader("Document Register")
+            drawHeaderRow()
+          }
+
+          const rowFill = index % 2 === 0 ? palette.panel : toRgb(COLORS.bgWhite)
+          setFill(rowFill)
+          setStroke(palette.border)
+          doc.roundedRect(margin, y, contentWidth, rowHeight, 8, 8, "FD")
+
+          const status = getDocumentStatus(item)
+          const itemTitle = truncateText(item.title || "Untitled document", colTitle - 18, 10, "bold")
+          doc.setFont("helvetica", "normal")
+          doc.setFontSize(10)
+          setText(palette.muted)
+          doc.text(String(index + 1), margin + 10, y + 18)
+          doc.setFont("helvetica", "bold")
+          setText(palette.ink)
+          doc.text(itemTitle, margin + colIndex + 8, y + 18)
+
+          const chipWidth = Math.min(Math.max(doc.getTextWidth(status.label) + 18, 70), colStatus - 12)
+          setFill(status.fill)
+          doc.roundedRect(margin + colIndex + colTitle + 8, y + 7, chipWidth, 14, 7, 7, "F")
+          doc.setFont("helvetica", "bold")
+          doc.setFontSize(8)
+          setText(status.text)
+          doc.text(status.label, margin + colIndex + colTitle + 17, y + 17)
+
+          doc.setFont("helvetica", "normal")
+          doc.setFontSize(9)
+          setText(palette.muted)
+          doc.text(
+            truncateText(formatDate(item.updatedAt || item.createdAt), colDate - 12, 9),
+            margin + colIndex + colTitle + colStatus + 8,
+            y + 18
+          )
+          y += rowHeight + 8
+        })
+      }
+
+      const drawActivityTable = () => {
+        y += sectionGap
+        writeSectionTitle("Activity Log", "Recent dated actions captured within the selected reporting period.")
+        if (sortedActivities.length === 0) {
+          writeWrappedText("No recent activity was recorded in the selected date range.")
+          return
+        }
+
+        const colDate = 96
+        const colUser = 105
+        const colAction = 132
+        const colItem = contentWidth - colDate - colUser - colAction
+        const rowHeight = 30
+
+        const drawHeaderRow = () => {
+          ensurePageSpace(36, "Activity Log")
+          setFill(palette.panelAlt)
+          doc.roundedRect(margin, y, contentWidth, rowHeight, 8, 8, "F")
+          doc.setFont("helvetica", "bold")
+          doc.setFontSize(10)
+          setText(palette.brandDark)
+          doc.text("Date", margin + 8, y + 19)
+          doc.text("User", margin + colDate + 8, y + 19)
+          doc.text("Action", margin + colDate + colUser + 8, y + 19)
+          doc.text("Item", margin + colDate + colUser + colAction + 8, y + 19)
+          y += rowHeight + 8
+        }
+
+        drawHeaderRow()
+        sortedActivities.forEach((activity, index) => {
+          ensurePageSpace(rowHeight + 8, "Activity Log")
+          if (y + rowHeight > pageHeight - margin - footerHeight) {
+            doc.addPage()
+            y = margin
+            drawPageHeader("Activity Log")
+            drawHeaderRow()
+          }
+
+          const rowFill = index % 2 === 0 ? palette.panel : toRgb(COLORS.bgWhite)
+          setFill(rowFill)
+          setStroke(palette.border)
+          doc.roundedRect(margin, y, contentWidth, rowHeight, 8, 8, "FD")
+
+          doc.setFont("helvetica", "normal")
+          doc.setFontSize(9)
+          setText(palette.muted)
+          doc.text(truncateText(formatDate(activity.dateValue), colDate - 12, 9), margin + 8, y + 19)
+          doc.text(truncateText(activity.user || "-", colUser - 12, 9), margin + colDate + 8, y + 19)
+
+          doc.setFont("helvetica", "bold")
+          setText(palette.ink)
+          doc.text(truncateText(activity.action || "-", colAction - 12, 9, "bold"), margin + colDate + colUser + 8, y + 19)
+
+          doc.setFont("helvetica", "normal")
+          setText(palette.muted)
+          doc.text(
+            truncateText(activity.item || "-", colItem - 12, 9),
+            margin + colDate + colUser + colAction + 8,
+            y + 19
+          )
+          y += rowHeight + 8
+        })
+      }
+
+      drawCoverHeader()
+      writeSectionTitle("Key Metrics", "A concise overview of dashboard performance across the selected reporting period.")
+      drawMetricCards()
+      y += 10
+      drawHighlightsBox()
+
+      doc.addPage()
+      y = margin
+      drawPageHeader("Document Register")
+      drawDocumentsTable()
+      drawActivityTable()
+
+      const totalPages = doc.getNumberOfPages()
+      for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
+        doc.setPage(pageNumber)
+        setStroke(palette.border)
+        doc.setLineWidth(1)
+        doc.line(margin, pageHeight - footerHeight, pageWidth - margin, pageHeight - footerHeight)
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(9)
+        setText(palette.lightText)
+        doc.text("Confidential management report", margin, pageHeight - 10)
+        doc.text(`Page ${pageNumber} of ${totalPages}`, pageWidth - margin, pageHeight - 10, { align: "right" })
       }
 
       const safeScope = dashboardScopeLabel.toLowerCase().replace(/\s+/g, "-")
