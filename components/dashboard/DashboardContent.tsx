@@ -68,6 +68,37 @@ type DashboardApiResponse = {
   docs?: AnyDoc[]
 }
 
+type MonthlyActivityPoint = {
+  name: string
+  value: number
+}
+
+type AchievementPoint = {
+  name: string
+  late: number
+  onTime: number
+}
+
+type CostPoint = {
+  name: string
+  cost: number
+}
+
+type AnalyticsSummary = {
+  totalItems: number
+  completed: number
+  pending: number
+  totalCost: number
+  averageCost: number
+}
+
+type DashboardAnalyticsResponse = {
+  summary?: AnalyticsSummary
+  monthlyActivity?: MonthlyActivityPoint[]
+  achievementData?: AchievementPoint[]
+  costTrend?: CostPoint[]
+}
+
 function formatTimeAgo(dateValue?: string) {
   if (!dateValue) return "Unknown time"
   const now = Date.now()
@@ -232,6 +263,16 @@ export function DashboardContent() {
       let y = margin
       const startDate = new Date(`${exportStartDate}T00:00:00`)
       const endDate = new Date(`${exportEndDate}T23:59:59.999`)
+      const token = localStorage.getItem("token")
+      const analyticsQuery = new URLSearchParams({ startDate: exportStartDate, endDate: exportEndDate })
+      const analyticsResponse = await fetch(`/api/analytics?${analyticsQuery.toString()}`, {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (!analyticsResponse.ok) {
+        throw new Error("Failed to fetch analytics data for PDF")
+      }
+      const analyticsPayload = (await analyticsResponse.json()) as DashboardAnalyticsResponse
       const filteredDocs = dashboardDocs.filter((doc) => {
         const rawDate = doc.updatedAt || doc.createdAt
         if (!rawDate) return false
@@ -295,6 +336,16 @@ export function DashboardContent() {
       const contributingUsers = new Set(sortedActivities.map((item) => item.user).filter(Boolean)).size
       const activeUsersValue = stats.find((stat) => stat.title === "Active Users")?.value || "-"
       const reportGeneratedAt = new Date()
+      const analyticsSummary = analyticsPayload.summary || {
+        totalItems: 0,
+        completed: 0,
+        pending: 0,
+        totalCost: 0,
+        averageCost: 0,
+      }
+      const monthlyActivity = Array.isArray(analyticsPayload.monthlyActivity) ? analyticsPayload.monthlyActivity : []
+      const achievementData = Array.isArray(analyticsPayload.achievementData) ? analyticsPayload.achievementData : []
+      const costTrend = Array.isArray(analyticsPayload.costTrend) ? analyticsPayload.costTrend : []
 
       const formatDate = (value?: string, includeTime = false) => {
         if (!value) return "-"
@@ -314,64 +365,6 @@ export function DashboardContent() {
               day: "numeric",
             })
       }
-
-      const formatDateKey = (value: Date | string) => {
-        const date = typeof value === "string" ? new Date(value) : value
-        if (Number.isNaN(date.getTime())) return ""
-        const year = date.getFullYear()
-        const month = String(date.getMonth() + 1).padStart(2, "0")
-        const day = String(date.getDate()).padStart(2, "0")
-        return `${year}-${month}-${day}`
-      }
-
-      const dateWiseAnalytics = (() => {
-        const docsByDate = new Map<string, AnyDoc[]>()
-        const activitiesByDate = new Map<string, ActivityItem[]>()
-
-        sortedDocs.forEach((item) => {
-          const rawDate = item.updatedAt || item.createdAt
-          const key = rawDate ? formatDateKey(rawDate) : ""
-          if (!key) return
-          const existing = docsByDate.get(key) || []
-          existing.push(item)
-          docsByDate.set(key, existing)
-        })
-
-        sortedActivities.forEach((item) => {
-          const key = item.dateValue ? formatDateKey(item.dateValue) : ""
-          if (!key) return
-          const existing = activitiesByDate.get(key) || []
-          existing.push(item)
-          activitiesByDate.set(key, existing)
-        })
-
-        const rows: Array<{
-          key: string
-          label: string
-          reports: number
-          approved: number
-          pending: number
-          activities: number
-        }> = []
-
-        const cursor = new Date(startDate)
-        while (cursor <= endDate) {
-          const key = formatDateKey(cursor)
-          const docsForDay = docsByDate.get(key) || []
-          const activitiesForDay = activitiesByDate.get(key) || []
-          rows.push({
-            key,
-            label: formatDate(cursor.toISOString()),
-            reports: docsForDay.length,
-            approved: docsForDay.filter((item) => Boolean(item.approved)).length,
-            pending: docsForDay.filter((item) => !item.approved).length,
-            activities: activitiesForDay.length,
-          })
-          cursor.setDate(cursor.getDate() + 1)
-        }
-
-        return rows
-      })()
 
       const setFill = (rgb: readonly [number, number, number]) => doc.setFillColor(rgb[0], rgb[1], rgb[2])
       const setStroke = (rgb: readonly [number, number, number]) => doc.setDrawColor(rgb[0], rgb[1], rgb[2])
@@ -639,60 +632,151 @@ export function DashboardContent() {
         })
       }
 
-      const drawAnalyticsTable = () => {
-        writeSectionTitle("Analytics", "Date-wise dashboard analytics for the selected reporting period.")
-        if (dateWiseAnalytics.length === 0) {
-          writeWrappedText("No analytics data is available for the selected date range.")
-          return
-        }
+      const drawMiniBarChart = (
+        title: string,
+        subtitle: string,
+        points: Array<{ name: string; value: number }>,
+        color: readonly [number, number, number]
+      ) => {
+        const boxHeight = 190
+        ensurePageSpace(boxHeight + 12, title)
+        setFill(palette.panel)
+        setStroke(palette.border)
+        doc.roundedRect(margin, y, contentWidth, boxHeight, 12, 12, "FD")
 
-        const colDate = 108
-        const colReports = 82
-        const colApproved = 82
-        const colPending = 82
-        const colActivities = contentWidth - colDate - colReports - colApproved - colPending
-        const rowHeight = 28
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(13)
+        setText(palette.ink)
+        doc.text(title, margin + 16, y + 22)
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(9)
+        setText(palette.muted)
+        doc.text(subtitle, margin + 16, y + 38)
 
-        const drawHeaderRow = () => {
-          ensurePageSpace(34, "Analytics")
-          setFill(palette.panelAlt)
-          doc.roundedRect(margin, y, contentWidth, rowHeight, 8, 8, "F")
+        const chartTop = y + 56
+        const chartHeight = 92
+        const chartBottom = chartTop + chartHeight
+        const chartLeft = margin + 16
+        const chartWidth = contentWidth - 32
+        const chartRight = chartLeft + chartWidth
+        const safePoints = points.length > 0 ? points : [{ name: "No Data", value: 0 }]
+        const maxValue = Math.max(...safePoints.map((point) => point.value), 1)
+        const barGap = 8
+        const barWidth = Math.max((chartWidth - barGap * (safePoints.length - 1)) / safePoints.length, 12)
+
+        setStroke(palette.border)
+        doc.line(chartLeft, chartBottom, chartRight, chartBottom)
+        doc.line(chartLeft, chartTop, chartLeft, chartBottom)
+
+        safePoints.forEach((point, index) => {
+          const barHeight = maxValue === 0 ? 0 : (point.value / maxValue) * (chartHeight - 8)
+          const x = chartLeft + index * (barWidth + barGap)
+          const barY = chartBottom - barHeight
+          setFill(color)
+          doc.roundedRect(x, barY, Math.max(barWidth - 2, 8), Math.max(barHeight, 3), 4, 4, "F")
+          doc.setFont("helvetica", "normal")
+          doc.setFontSize(8)
+          setText(palette.muted)
+          doc.text(truncateText(point.name, barWidth + 8, 8), x + barWidth / 2, chartBottom + 12, { align: "center" })
+          doc.setFontSize(8)
+          setText(palette.ink)
+          doc.text(String(point.value), x + barWidth / 2, barY - 4, { align: "center" })
+        })
+
+        y += boxHeight + 12
+      }
+
+      const drawAnalyticsDashboard = () => {
+        writeSectionTitle("Analytics Dashboard", "Same analytics view used in the analytics page for the selected date range.")
+
+        const analyticsCards = [
+          { label: "Total Items", value: String(analyticsSummary.totalItems), fill: palette.brandSoft, text: palette.brandDark },
+          { label: "Completed", value: String(analyticsSummary.completed), fill: palette.successSoft, text: palette.success },
+          { label: "Pending", value: String(analyticsSummary.pending), fill: palette.warningSoft, text: palette.warning },
+          { label: "Average Cost", value: `£${analyticsSummary.averageCost.toFixed(2)}`, fill: palette.panelAlt, text: palette.brandDark },
+        ]
+
+        const cardGap = 12
+        const cardWidth = (contentWidth - cardGap) / 2
+        const cardHeight = 66
+        analyticsCards.forEach((card, index) => {
+          if (index % 2 === 0) ensurePageSpace(cardHeight + 12, "Analytics Dashboard")
+          const col = index % 2
+          const row = Math.floor(index / 2)
+          const x = margin + col * (cardWidth + cardGap)
+          const cardY = y + row * (cardHeight + cardGap)
+          setFill(card.fill)
+          doc.roundedRect(x, cardY, cardWidth, cardHeight, 10, 10, "F")
           doc.setFont("helvetica", "bold")
           doc.setFontSize(10)
-          setText(palette.brandDark)
-          doc.text("Date", margin + 8, y + 18)
-          doc.text("Reports", margin + colDate + 8, y + 18)
-          doc.text("Approved", margin + colDate + colReports + 8, y + 18)
-          doc.text("Pending", margin + colDate + colReports + colApproved + 8, y + 18)
-          doc.text("Activities", margin + colDate + colReports + colApproved + colPending + 8, y + 18)
-          y += rowHeight + 8
-        }
+          setText(card.text)
+          doc.text(card.label, x + 14, cardY + 20)
+          doc.setFontSize(20)
+          doc.text(card.value, x + 14, cardY + 45)
+        })
+        y += Math.ceil(analyticsCards.length / 2) * (cardHeight + cardGap) + 4
 
-        drawHeaderRow()
-        dateWiseAnalytics.forEach((entry, index) => {
-          ensurePageSpace(rowHeight + 8, "Analytics")
-          if (y + rowHeight > pageHeight - margin - footerHeight) {
-            doc.addPage()
-            y = margin
-            drawPageHeader("Analytics")
-            drawHeaderRow()
+        drawMiniBarChart(
+          "Monthly Document Activity",
+          "Count by month",
+          monthlyActivity.map((point) => ({ name: point.name, value: point.value })),
+          palette.brand
+        )
+
+        writeSectionTitle("Areas and Achievement Rate", "Late versus on-time items by area, matching the analytics page.")
+        if (achievementData.length === 0) {
+          writeWrappedText("No achievement data is available for the selected date range.")
+        } else {
+          const rowHeight = 28
+          const colArea = 250
+          const colLate = 90
+          const colOnTime = contentWidth - colArea - colLate
+
+          const drawHeaderRow = () => {
+            ensurePageSpace(36, "Areas and Achievement Rate")
+            setFill(palette.panelAlt)
+            doc.roundedRect(margin, y, contentWidth, rowHeight, 8, 8, "F")
+            doc.setFont("helvetica", "bold")
+            doc.setFontSize(10)
+            setText(palette.brandDark)
+            doc.text("Area", margin + 8, y + 18)
+            doc.text("Late", margin + colArea + 8, y + 18)
+            doc.text("On Time", margin + colArea + colLate + 8, y + 18)
+            y += rowHeight + 8
           }
 
-          const rowFill = index % 2 === 0 ? palette.panel : toRgb(COLORS.bgWhite)
-          setFill(rowFill)
-          setStroke(palette.border)
-          doc.roundedRect(margin, y, contentWidth, rowHeight, 8, 8, "FD")
+          drawHeaderRow()
+          achievementData.forEach((entry, index) => {
+            ensurePageSpace(rowHeight + 8, "Areas and Achievement Rate")
+            if (y + rowHeight > pageHeight - margin - footerHeight) {
+              doc.addPage()
+              y = margin
+              drawPageHeader("Areas and Achievement Rate")
+              drawHeaderRow()
+            }
+            const rowFill = index % 2 === 0 ? palette.panel : toRgb(COLORS.bgWhite)
+            setFill(rowFill)
+            setStroke(palette.border)
+            doc.roundedRect(margin, y, contentWidth, rowHeight, 8, 8, "FD")
+            doc.setFont("helvetica", "normal")
+            doc.setFontSize(9)
+            setText(palette.ink)
+            doc.text(truncateText(entry.name, colArea - 16, 9), margin + 8, y + 18)
+            setText(palette.danger)
+            doc.text(String(entry.late), margin + colArea + 8, y + 18)
+            setText(palette.success)
+            doc.text(String(entry.onTime), margin + colArea + colLate + 8, y + 18)
+            y += rowHeight + 8
+          })
+        }
 
-          doc.setFont("helvetica", "normal")
-          doc.setFontSize(9)
-          setText(palette.ink)
-          doc.text(entry.label, margin + 8, y + 18)
-          doc.text(String(entry.reports), margin + colDate + 8, y + 18)
-          doc.text(String(entry.approved), margin + colDate + colReports + 8, y + 18)
-          doc.text(String(entry.pending), margin + colDate + colReports + colApproved + 8, y + 18)
-          doc.text(String(entry.activities), margin + colDate + colReports + colApproved + colPending + 8, y + 18)
-          y += rowHeight + 8
-        })
+        y += sectionGap
+        drawMiniBarChart(
+          "Cost of Quality (12-Month Period)",
+          `Total Cost: £${analyticsSummary.totalCost.toFixed(2)} | Average Cost: £${analyticsSummary.averageCost.toFixed(2)}`,
+          costTrend.map((point) => ({ name: point.name, value: point.cost })),
+          palette.success
+        )
       }
 
       const drawActivityTable = () => {
@@ -767,8 +851,8 @@ export function DashboardContent() {
 
       doc.addPage()
       y = margin
-      drawPageHeader("Analytics")
-      drawAnalyticsTable()
+      drawPageHeader("Analytics Dashboard")
+      drawAnalyticsDashboard()
       y += sectionGap
       drawDocumentsTable()
       drawActivityTable()
