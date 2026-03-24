@@ -128,14 +128,15 @@ function buildAchievement(rows: AnalyticsDoc[]) {
   return Array.from(group.values()).slice(0, 12)
 }
 
-function buildCostTrend(rows: AnalyticsDoc[]) {
+function buildCostTrend(rows: AnalyticsDoc[], startDate: string, endDate: string) {
   const totals = new Map<string, number>()
   const months: { key: string; name: string }[] = []
-  const d = new Date()
+  const d = new Date(startDate)
   d.setDate(1)
-  d.setMonth(d.getMonth() - 11)
+  const end = new Date(endDate)
+  end.setDate(1)
 
-  for (let i = 0; i < 12; i++) {
+  while (d <= end) {
     const key = `${d.getFullYear()}-${d.getMonth()}`
     totals.set(key, 0)
     months.push({ key, name: monthShort(d) })
@@ -202,19 +203,15 @@ export const GET = withAuth(
       const end = new Date(endDate)
       end.setHours(23, 59, 59, 999)
 
-      let scoped = allRows.filter((row) => {
+      const scoped = allRows.filter((row) => {
         const d = getDateValue(row)
         if (!d) return false
         return d >= start && d <= end
       })
 
-      if (scoped.length === 0 && allRows.length > 0) {
-        scoped = allRows.filter((row) => Boolean(getDateValue(row)))
-      }
-
       const monthlyActivity = buildMonthlyActivity(scoped, startDate, endDate)
       const achievementData = buildAchievement(scoped)
-      const costTrend = buildCostTrend(scoped)
+      const costTrend = buildCostTrend(scoped, startDate, endDate)
       const totalCost = costTrend.reduce((sum, row) => sum + row.cost, 0)
       const totalItems = scoped.length
       const completed = scoped.filter((row) => {

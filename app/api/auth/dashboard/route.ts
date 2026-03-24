@@ -36,6 +36,7 @@ const DASHBOARD_MODULES = [
 
 type DashboardDoc = {
   _id?: unknown
+  _module?: string
   title?: string
   approved?: boolean
   archived?: boolean
@@ -85,11 +86,19 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     const [manuals, ...moduleDocs] = await Promise.all([
       Manual.find(activeQuery).select(selectFields).sort({ createdAt: -1 }).lean(),
       ...DASHBOARD_MODULES.map((module) =>
-        getModuleModel(module).find(activeQuery).select(selectFields).sort({ createdAt: -1 }).lean()
+        getModuleModel(module)
+          .find(activeQuery)
+          .select(selectFields)
+          .sort({ createdAt: -1 })
+          .lean()
+          .then((rows) => rows.map((row: any) => ({ ...row, _module: module })))
       ),
     ])
 
-    const allDocs = [...(manuals as DashboardDoc[]), ...moduleDocs.flat()] as DashboardDoc[]
+    const allDocs = [
+      ...(manuals as DashboardDoc[]).map((doc) => ({ ...doc, _module: "manual" })),
+      ...moduleDocs.flat(),
+    ] as DashboardDoc[]
     const completedCount = allDocs.filter((doc) => Boolean(doc.approved)).length
     const pendingCount = allDocs.filter((doc) => !doc.approved).length
 
@@ -176,6 +185,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       recentActivities,
       docs: allDocs.map((doc) => ({
         _id: String(doc._id || ""),
+        _module: doc._module || "",
         title: doc.title || "",
         approved: Boolean(doc.approved),
         archived: Boolean(doc.archived),

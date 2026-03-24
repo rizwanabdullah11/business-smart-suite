@@ -25,12 +25,67 @@ type ActivityItem = {
 
 type AnyDoc = {
   _id?: string
+  _module?: string
   title?: string
   approved?: boolean
   archived?: boolean
   isArchived?: boolean
   createdAt?: string
   updatedAt?: string
+}
+
+const PDF_MODULE_ORDER = [
+  "manual",
+  "policies",
+  "procedures",
+  "forms",
+  "certificates",
+  "business-continuity",
+  "management-reviews",
+  "job-descriptions",
+  "work-instructions",
+  "risk-assessments",
+  "coshh",
+  "technical-file",
+  "ims-aspects-impacts",
+  "audit-schedule",
+  "interested-parties",
+  "organisational-context",
+  "objectives",
+  "maintenance",
+  "improvement-register",
+  "statement-of-applicability",
+  "legal-register",
+  "suppliers",
+  "training",
+  "energy-consumption",
+] as const
+
+const PDF_MODULE_LABELS: Record<string, string> = {
+  manual: "Manual",
+  policies: "Policies",
+  procedures: "Procedures",
+  forms: "Forms",
+  certificates: "Certificates",
+  "business-continuity": "Business Continuity",
+  "management-reviews": "Management Reviews",
+  "job-descriptions": "Job Descriptions",
+  "work-instructions": "Work Instructions",
+  "risk-assessments": "Risk Assessments",
+  coshh: "COSHH",
+  "technical-file": "Technical File",
+  "ims-aspects-impacts": "IMS Aspects & Impacts",
+  "audit-schedule": "Audit Schedule",
+  "interested-parties": "Interested Parties",
+  "organisational-context": "Organisational Context",
+  objectives: "Objectives",
+  maintenance: "Maintenance",
+  "improvement-register": "Improvement Register",
+  "statement-of-applicability": "Statement of Applicability",
+  "legal-register": "Legal Register",
+  suppliers: "Suppliers",
+  training: "Training",
+  "energy-consumption": "Energy Consumption",
 }
 
 const DASHBOARD_CACHE_KEY_PREFIX = "dashboardCache:v1"
@@ -346,6 +401,26 @@ export function DashboardContent() {
       const monthlyActivity = Array.isArray(analyticsPayload.monthlyActivity) ? analyticsPayload.monthlyActivity : []
       const achievementData = Array.isArray(analyticsPayload.achievementData) ? analyticsPayload.achievementData : []
       const costTrend = Array.isArray(analyticsPayload.costTrend) ? analyticsPayload.costTrend : []
+      const groupedDocs = (() => {
+        const groups = new Map<string, AnyDoc[]>()
+        sortedDocs.forEach((doc) => {
+          const key = doc._module || "other"
+          const existing = groups.get(key) || []
+          existing.push(doc)
+          groups.set(key, existing)
+        })
+
+        const orderedKeys = [
+          ...PDF_MODULE_ORDER.filter((key) => groups.has(key)),
+          ...Array.from(groups.keys()).filter((key) => !PDF_MODULE_ORDER.includes(key as typeof PDF_MODULE_ORDER[number])),
+        ]
+
+        return orderedKeys.map((key) => ({
+          key,
+          label: PDF_MODULE_LABELS[key] || key,
+          items: groups.get(key) || [],
+        }))
+      })()
 
       const formatDate = (value?: string, includeTime = false) => {
         if (!value) return "-"
@@ -364,6 +439,13 @@ export function DashboardContent() {
               month: "short",
               day: "numeric",
             })
+      }
+
+      const formatMonthYear = (value?: string) => {
+        if (!value) return "Selected Date Range"
+        const date = new Date(value)
+        if (Number.isNaN(date.getTime())) return "Selected Date Range"
+        return date.toLocaleDateString([], { month: "short", year: "numeric" })
       }
 
       const setFill = (rgb: readonly [number, number, number]) => doc.setFillColor(rgb[0], rgb[1], rgb[2])
@@ -587,48 +669,70 @@ export function DashboardContent() {
           y += rowHeight + 8
         }
 
-        drawHeaderRow()
-        sortedDocs.forEach((item, index) => {
-          ensurePageSpace(rowHeight + 8, "Document Register")
-          if (y + rowHeight > pageHeight - margin - footerHeight) {
-            doc.addPage()
-            y = margin
-            drawPageHeader("Document Register")
-            drawHeaderRow()
-          }
+        let overallIndex = 1
+        groupedDocs.forEach((group, groupIndex) => {
+          ensurePageSpace(30, "Document Register")
+          if (groupIndex > 0) y += 6
 
-          const rowFill = index % 2 === 0 ? palette.panel : toRgb(COLORS.bgWhite)
-          setFill(rowFill)
-          setStroke(palette.border)
-          doc.roundedRect(margin, y, contentWidth, rowHeight, 8, 8, "FD")
-
-          const status = getDocumentStatus(item)
-          const itemTitle = truncateText(item.title || "Untitled document", colTitle - 18, 10, "bold")
-          doc.setFont("helvetica", "normal")
-          doc.setFontSize(10)
-          setText(palette.muted)
-          doc.text(String(index + 1), margin + 10, y + 18)
+          setFill(palette.brandSoft)
+          doc.roundedRect(margin, y, contentWidth, 22, 8, 8, "F")
           doc.setFont("helvetica", "bold")
-          setText(palette.ink)
-          doc.text(itemTitle, margin + colIndex + 8, y + 18)
+          doc.setFontSize(11)
+          setText(palette.brandDark)
+          doc.text(`${group.label} (${group.items.length})`, margin + 12, y + 15)
+          y += 30
 
-          const chipWidth = Math.min(Math.max(doc.getTextWidth(status.label) + 18, 70), colStatus - 12)
-          setFill(status.fill)
-          doc.roundedRect(margin + colIndex + colTitle + 8, y + 7, chipWidth, 14, 7, 7, "F")
-          doc.setFont("helvetica", "bold")
-          doc.setFontSize(8)
-          setText(status.text)
-          doc.text(status.label, margin + colIndex + colTitle + 17, y + 17)
+          drawHeaderRow()
+          group.items.forEach((item, index) => {
+            ensurePageSpace(rowHeight + 8, "Document Register")
+            if (y + rowHeight > pageHeight - margin - footerHeight) {
+              doc.addPage()
+              y = margin
+              drawPageHeader("Document Register")
+              setFill(palette.brandSoft)
+              doc.roundedRect(margin, y, contentWidth, 22, 8, 8, "F")
+              doc.setFont("helvetica", "bold")
+              doc.setFontSize(11)
+              setText(palette.brandDark)
+              doc.text(`${group.label} (${group.items.length})`, margin + 12, y + 15)
+              y += 30
+              drawHeaderRow()
+            }
 
-          doc.setFont("helvetica", "normal")
-          doc.setFontSize(9)
-          setText(palette.muted)
-          doc.text(
-            truncateText(formatDate(item.updatedAt || item.createdAt), colDate - 12, 9),
-            margin + colIndex + colTitle + colStatus + 8,
-            y + 18
-          )
-          y += rowHeight + 8
+            const rowFill = index % 2 === 0 ? palette.panel : toRgb(COLORS.bgWhite)
+            setFill(rowFill)
+            setStroke(palette.border)
+            doc.roundedRect(margin, y, contentWidth, rowHeight, 8, 8, "FD")
+
+            const status = getDocumentStatus(item)
+            const itemTitle = truncateText(item.title || "Untitled document", colTitle - 18, 10, "bold")
+            doc.setFont("helvetica", "normal")
+            doc.setFontSize(10)
+            setText(palette.muted)
+            doc.text(String(overallIndex), margin + 10, y + 18)
+            doc.setFont("helvetica", "bold")
+            setText(palette.ink)
+            doc.text(itemTitle, margin + colIndex + 8, y + 18)
+
+            const chipWidth = Math.min(Math.max(doc.getTextWidth(status.label) + 18, 70), colStatus - 12)
+            setFill(status.fill)
+            doc.roundedRect(margin + colIndex + colTitle + 8, y + 7, chipWidth, 14, 7, 7, "F")
+            doc.setFont("helvetica", "bold")
+            doc.setFontSize(8)
+            setText(status.text)
+            doc.text(status.label, margin + colIndex + colTitle + 17, y + 17)
+
+            doc.setFont("helvetica", "normal")
+            doc.setFontSize(9)
+            setText(palette.muted)
+            doc.text(
+              truncateText(formatDate(item.updatedAt || item.createdAt), colDate - 12, 9),
+              margin + colIndex + colTitle + colStatus + 8,
+              y + 18
+            )
+            y += rowHeight + 8
+            overallIndex += 1
+          })
         })
       }
 
@@ -772,7 +876,7 @@ export function DashboardContent() {
 
         y += sectionGap
         drawMiniBarChart(
-          "Cost of Quality (12-Month Period)",
+          `Cost of Quality (${formatMonthYear(exportStartDate)} - ${formatMonthYear(exportEndDate)})`,
           `Total Cost: £${analyticsSummary.totalCost.toFixed(2)} | Average Cost: £${analyticsSummary.averageCost.toFixed(2)}`,
           costTrend.map((point) => ({ name: point.name, value: point.cost })),
           palette.success
