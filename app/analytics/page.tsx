@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, Zap, RefreshCw } from "lucide-react"
 import { COLORS } from "@/constant/colors"
@@ -14,6 +14,9 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts"
 
 type MonthlyActivityPoint = {
@@ -45,6 +48,12 @@ type AnalyticsResponse = {
   monthlyActivity: MonthlyActivityPoint[]
   achievementData: AchievementPoint[]
   costTrend: CostPoint[]
+}
+
+type CompletionPoint = {
+  name: string
+  value: number
+  color: string
 }
 
 function formatDateInput(value: Date) {
@@ -79,15 +88,32 @@ export default function AnalyticsPage() {
     return formatDateInput(d)
   })
   const [endDate, setEndDate] = useState(() => formatDateInput(new Date()))
+  const previousRangeRef = useRef<{ startDate: string; endDate: string } | null>(null)
+
+  const completionData: CompletionPoint[] = [
+    { name: "Completed", value: summary.completed, color: COLORS.green500 },
+    { name: "Pending", value: summary.pending, color: COLORS.orange500 },
+  ]
 
   const loadData = async () => {
+    if (!startDate || !endDate) return
+    if (new Date(startDate) > new Date(endDate)) {
+      setError("Start date cannot be after end date")
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     setError(null)
     try {
       const token = localStorage.getItem("token")
       const query = new URLSearchParams({ startDate, endDate })
+      const headers: Record<string, string> = {}
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
       const res = await fetch(`/api/analytics?${query.toString()}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers,
       })
       if (!res.ok) {
         throw new Error("Failed to fetch analytics data")
@@ -105,8 +131,12 @@ export default function AnalyticsPage() {
   }
 
   useEffect(() => {
-    loadData()
-  }, [])
+    const previousRange = previousRangeRef.current
+    if (!previousRange || previousRange.startDate !== startDate || previousRange.endDate !== endDate) {
+      previousRangeRef.current = { startDate, endDate }
+      loadData()
+    }
+  })
 
   return (
     <div className="min-h-screen p-8" style={{ background: COLORS.bgGrayLight }}>
@@ -171,6 +201,25 @@ export default function AnalyticsPage() {
           </div>
         )}
 
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+          {[
+            { label: "Total Items", value: summary.totalItems, bg: COLORS.blue50, color: COLORS.blue700 },
+            { label: "Completed", value: summary.completed, bg: COLORS.green50, color: COLORS.green600 },
+            { label: "Pending", value: summary.pending, bg: COLORS.orange50, color: COLORS.orange700 },
+            { label: "Average Cost", value: `£${summary.averageCost.toFixed(2)}`, bg: COLORS.indigo50, color: COLORS.indigo700 },
+          ].map((card) => (
+            <div key={card.label} className="rounded-xl border p-5 shadow-sm" style={{ borderColor: COLORS.border }}>
+              <div
+                className="inline-flex px-3 py-1 rounded-full text-xs font-semibold mb-3"
+                style={{ background: card.bg, color: card.color }}
+              >
+                {card.label}
+              </div>
+              <p className="text-2xl font-bold text-black">{card.value}</p>
+            </div>
+          ))}
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <div className="bg-white rounded-xl border p-6 shadow-sm" style={{ borderColor: COLORS.border }}>
             <h3 className="text-sm font-semibold text-black mb-6">Monthly Document Activity</h3>
@@ -193,37 +242,74 @@ export default function AnalyticsPage() {
 
           <div className="bg-white rounded-xl border p-6 shadow-sm" style={{ borderColor: COLORS.border }}>
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-black">Areas and Achievement Rate</h3>
+              <h3 className="text-sm font-semibold text-black">Completed vs Pending</h3>
             </div>
 
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={achievementData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis
-                    dataKey="name"
-                    interval={0}
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                    tick={{ fontSize: 10, fill: COLORS.textSecondary }}
-                  />
-                  <YAxis tick={{ fontSize: 12, fill: COLORS.textSecondary }} />
-                  <Tooltip contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }} />
-                  <Bar dataKey="late" name="Late" fill={COLORS.pink500} radius={[4, 4, 0, 0]} barSize={30} />
-                  <Bar dataKey="onTime" name="On Time" fill={COLORS.primary} radius={[4, 4, 0, 0]} barSize={30} />
-                </BarChart>
+                <PieChart>
+                  <Pie
+                    data={completionData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={90}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {completionData.map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [value, "Items"]} />
+                </PieChart>
               </ResponsiveContainer>
             </div>
             <div className="flex items-center justify-center gap-6 mt-2">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-sm" style={{ background: COLORS.pink500 }}></div>
-                <span className="text-sm text-gray-600 font-medium">Late</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-sm" style={{ background: COLORS.primary }}></div>
-                <span className="text-sm text-gray-600 font-medium">On Time</span>
-              </div>
+              {completionData.map((entry) => (
+                <div key={entry.name} className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-sm" style={{ background: entry.color }}></div>
+                  <span className="text-sm text-gray-600 font-medium">
+                    {entry.name} ({entry.value})
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border p-6 shadow-sm mb-8" style={{ borderColor: COLORS.border }}>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-black">Areas and Achievement Rate</h3>
+          </div>
+
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={achievementData} margin={{ top: 20, right: 30, left: 20, bottom: 70 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  interval={0}
+                  angle={-35}
+                  textAnchor="end"
+                  height={80}
+                  tick={{ fontSize: 11, fill: COLORS.textSecondary }}
+                />
+                <YAxis tick={{ fontSize: 12, fill: COLORS.textSecondary }} />
+                <Tooltip contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }} />
+                <Bar dataKey="late" name="Late" fill={COLORS.pink500} radius={[4, 4, 0, 0]} barSize={26} />
+                <Bar dataKey="onTime" name="On Time" fill={COLORS.primary} radius={[4, 4, 0, 0]} barSize={26} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex items-center justify-center gap-6 mt-3">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-sm" style={{ background: COLORS.pink500 }}></div>
+              <span className="text-sm text-gray-600 font-medium">Late</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-sm" style={{ background: COLORS.primary }}></div>
+              <span className="text-sm text-gray-600 font-medium">On Time</span>
             </div>
           </div>
         </div>

@@ -31,6 +31,7 @@ import {
     Truck,
     GraduationCap,
     Zap,
+    MessageSquare,
     Home,
     LayoutDashboard
 } from "lucide-react"
@@ -107,6 +108,7 @@ export function Sidebar({}: SidebarProps = {}) {
                 { icon: Truck, label: "Suppliers", href: "/suppliers" },
                 { icon: GraduationCap, label: "Training", href: "/training" },
                 { icon: Zap, label: "Energy Consumption", href: "/energy-consumption" },
+                { icon: MessageSquare, label: "Customer Feedback", href: "/customer-feedback" },
             ]
         },
         {
