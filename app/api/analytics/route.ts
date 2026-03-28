@@ -30,6 +30,7 @@ const MODULES = [
   "suppliers",
   "training",
   "energy-consumption",
+  "customer-feedback",
 ] as const
 
 const MODULE_LABELS: Record<string, string> = {
@@ -57,6 +58,7 @@ const MODULE_LABELS: Record<string, string> = {
   suppliers: "Suppliers",
   training: "Training",
   "energy-consumption": "Energy Consumption",
+  "customer-feedback": "Customer Feedback",
 }
 
 type AnalyticsDoc = {

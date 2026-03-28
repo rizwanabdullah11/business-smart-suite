@@ -32,6 +32,7 @@ const DASHBOARD_MODULES = [
   "suppliers",
   "training",
   "energy-consumption",
+  "customer-feedback",
 ] as const
 
 type DashboardDoc = {

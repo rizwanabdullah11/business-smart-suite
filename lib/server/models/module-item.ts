@@ -25,6 +25,7 @@ const ALLOWED_MODULES = new Set([
   "suppliers",
   "training",
   "energy-consumption",
+  "customer-feedback",
 ])
 
 export function isSupportedModule(module: string) {

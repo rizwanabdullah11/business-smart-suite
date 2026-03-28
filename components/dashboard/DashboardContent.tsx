@@ -1,9 +1,11 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { TrendingUp, TrendingDown, FileText, Users, AlertCircle, CheckCircle, FileDown, Loader2 } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 import { useAuth } from "@/contexts/auth-context"
+import { Permission } from "@/lib/types/permissions"
 
 type DashboardStat = {
   title: string
@@ -59,6 +61,7 @@ const PDF_MODULE_ORDER = [
   "suppliers",
   "training",
   "energy-consumption",
+  "customer-feedback",
 ] as const
 
 const PDF_MODULE_LABELS: Record<string, string> = {
@@ -86,6 +89,7 @@ const PDF_MODULE_LABELS: Record<string, string> = {
   suppliers: "Suppliers",
   training: "Training",
   "energy-consumption": "Energy Consumption",
+  "customer-feedback": "Customer Feedback",
 }
 
 const DASHBOARD_CACHE_KEY_PREFIX = "dashboardCache:v1"
@@ -170,7 +174,8 @@ function formatTimeAgo(dateValue?: string) {
 }
 
 export function DashboardContent() {
-  const { user, isAuthenticated, isAdmin, isEmployee, isOrganization, loading: authLoading } = useAuth()
+  const router = useRouter()
+  const { user, isAuthenticated, isAdmin, isEmployee, isOrganization, loading: authLoading, can } = useAuth()
   const [stats, setStats] = useState<DashboardStat[]>([
     { title: "Total Documents", value: "-", change: "0%", trend: "up", icon: FileText, color: COLORS.blue500, subtitle: "live data" },
     { title: "Active Users", value: "-", change: "0%", trend: "up", icon: Users, color: COLORS.emerald500, subtitle: "live data" },
@@ -184,6 +189,7 @@ export function DashboardContent() {
   const [exportingPdf, setExportingPdf] = useState(false)
   const [exportStartDate, setExportStartDate] = useState("")
   const [exportEndDate, setExportEndDate] = useState("")
+  const [activeQuickAction, setActiveQuickAction] = useState<"create" | "review" | "alerts" | null>(null)
 
   useEffect(() => {
     if (authLoading || !isAuthenticated) return
@@ -284,6 +290,25 @@ export function DashboardContent() {
     []
   )
   const visibleActivities = showAllActivities ? recentActivities : recentActivities.slice(0, 6)
+  const pendingReviewDocs = useMemo(
+    () => dashboardDocs.filter((doc) => !doc.approved && !doc.archived && !doc.isArchived),
+    [dashboardDocs]
+  )
+  const archivedDocs = useMemo(
+    () => dashboardDocs.filter((doc) => Boolean(doc.archived || doc.isArchived)),
+    [dashboardDocs]
+  )
+  const staleDocs = useMemo(
+    () =>
+      dashboardDocs.filter((doc) => {
+        const rawDate = doc.updatedAt || doc.createdAt
+        if (!rawDate) return false
+        const timestamp = new Date(rawDate).getTime()
+        if (Number.isNaN(timestamp)) return false
+        return Date.now() - timestamp > 30 * 24 * 60 * 60 * 1000
+      }),
+    [dashboardDocs]
+  )
   const isExportRangeValid =
     Boolean(exportStartDate) &&
     Boolean(exportEndDate) &&
@@ -294,6 +319,86 @@ export function DashboardContent() {
     if (isAdmin) return "Admin Dashboard"
     return "Dashboard"
   }, [isAdmin, isEmployee, isOrganization])
+  const createDocumentOptions = useMemo(
+    () =>
+      [
+        { label: "Manual", description: "Create a new manual document", href: "/manual/new", enabled: can(Permission.CREATE_MANUAL) },
+        { label: "Policy", description: "Create a new policy", href: "/policies/new", enabled: can(Permission.CREATE_POLICY) },
+        { label: "Procedure", description: "Create a new procedure", href: "/procedures/new", enabled: can(Permission.CREATE_PROCEDURE) },
+        { label: "Form", description: "Create a new form", href: "/forms/new", enabled: can(Permission.CREATE_FORM) },
+        { label: "Certificate", description: "Create a new certificate", href: "/certificate/new", enabled: can(Permission.CREATE_CERTIFICATE) },
+        { label: "Audit Schedule", description: "Create a new audit schedule item", href: "/audit-schedule/new", enabled: can(Permission.CREATE_AUDIT_SCHEDULE) },
+        { label: "Improvement", description: "Create a new improvement register item", href: "/improvement-register/new", enabled: can(Permission.CREATE_IMPROVEMENT) },
+        { label: "Customer Feedback", description: "Capture a new customer feedback record", href: "/customer-feedback/new", enabled: can(Permission.CREATE_CATEGORY) },
+      ].filter((option) => option.enabled),
+    [can]
+  )
+  const alertItems = useMemo(() => {
+    const items: Array<{ title: string; description: string; action?: "review" | "activity" | "analytics" }> = []
+    if (pendingReviewDocs.length > 0) {
+      items.push({
+        title: `${pendingReviewDocs.length} documents need review`,
+        description: "There are documents waiting for approval or follow-up.",
+        action: "review",
+      })
+    }
+    if (archivedDocs.length > 0) {
+      items.push({
+        title: `${archivedDocs.length} archived documents detected`,
+        description: "Archived records are present in your dashboard data.",
+        action: "analytics",
+      })
+    }
+    if (staleDocs.length > 0) {
+      items.push({
+        title: `${staleDocs.length} documents are older than 30 days`,
+        description: "These documents may need an update or a fresh review.",
+        action: "review",
+      })
+    }
+    if (!loading && recentActivities.length === 0) {
+      items.push({
+        title: "No recent activity found",
+        description: "No recent document activity has been recorded yet.",
+        action: "activity",
+      })
+    }
+    return items
+  }, [archivedDocs.length, loading, pendingReviewDocs.length, recentActivities.length, staleDocs.length])
+
+  const getDocumentHref = (doc: AnyDoc) => {
+    if (!doc._id) return "/dashboard"
+    if (doc._module === "manual") return `/manual/${doc._id}`
+    if (doc._module) return `/${doc._module}/${doc._id}`
+    return "/dashboard"
+  }
+
+  const handleOpenDocument = (doc: AnyDoc) => {
+    setActiveQuickAction(null)
+    router.push(getDocumentHref(doc))
+  }
+
+  const handleOpenCreateOption = (href: string) => {
+    setActiveQuickAction(null)
+    router.push(href)
+  }
+
+  const handleAlertAction = (action?: "review" | "activity" | "analytics") => {
+    if (action === "review") {
+      setActiveQuickAction("review")
+      return
+    }
+    setActiveQuickAction(null)
+    if (action === "analytics") {
+      router.push("/analytics")
+      return
+    }
+    if (action === "activity") {
+      setShowAllActivities(true)
+      const recentActivitySection = document.getElementById("dashboard-recent-activity")
+      recentActivitySection?.scrollIntoView({ behavior: "smooth", block: "start" })
+    }
+  }
 
   const handleExportPdf = async () => {
     if (!exportStartDate || !exportEndDate) {
@@ -1159,6 +1264,7 @@ export function DashboardContent() {
 
             {/* Recent Activity */}
             <div
+                id="dashboard-recent-activity"
                 className="p-7 rounded-xl border"
                 style={{
                     background: COLORS.bgWhite,
@@ -1219,6 +1325,7 @@ export function DashboardContent() {
             {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div
+                    onClick={() => setActiveQuickAction("create")}
                     className="p-7 rounded-xl border-0 cursor-pointer transition-all duration-300 hover:scale-105"
                     style={{
                         background: COLORS.gradientCyan,
@@ -1242,6 +1349,7 @@ export function DashboardContent() {
                 </div>
 
                 <div
+                    onClick={() => setActiveQuickAction("review")}
                     className="p-7 rounded-xl border-0 cursor-pointer transition-all duration-300 hover:scale-105"
                     style={{
                         background: COLORS.gradientForest,
@@ -1265,6 +1373,7 @@ export function DashboardContent() {
                 </div>
 
                 <div
+                    onClick={() => setActiveQuickAction("alerts")}
                     className="p-7 rounded-xl border-0 cursor-pointer transition-all duration-300 hover:scale-105"
                     style={{
                         background: COLORS.gradientPurple,
@@ -1287,6 +1396,161 @@ export function DashboardContent() {
                     </div>
                 </div>
             </div>
+
+            {activeQuickAction ? (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                style={{ background: "rgba(15, 23, 42, 0.45)" }}
+                onClick={() => setActiveQuickAction(null)}
+              >
+                <div
+                  className="w-full max-w-3xl rounded-2xl border shadow-2xl"
+                  style={{ background: COLORS.bgWhite, borderColor: COLORS.border }}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div
+                    className="flex items-center justify-between px-6 py-5 border-b"
+                    style={{ borderColor: COLORS.border }}
+                  >
+                    <div>
+                      <h3 className="text-2xl font-bold" style={{ color: COLORS.textPrimary }}>
+                        {activeQuickAction === "create"
+                          ? "Create Document"
+                          : activeQuickAction === "review"
+                            ? "Review Tasks"
+                            : "View Alerts"}
+                      </h3>
+                      <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                        {activeQuickAction === "create"
+                          ? "Choose where you want to create a new document."
+                          : activeQuickAction === "review"
+                            ? "Open pending documents that need your attention."
+                            : "Review key dashboard alerts and follow-up actions."}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveQuickAction(null)}
+                      className="px-4 py-2 rounded-lg font-semibold"
+                      style={{ background: COLORS.bgGray, color: COLORS.textPrimary }}
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  <div className="p-6">
+                    {activeQuickAction === "create" ? (
+                      createDocumentOptions.length === 0 ? (
+                        <div className="p-5 rounded-xl" style={{ background: COLORS.bgGray }}>
+                          <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                            You do not currently have permission to create documents from the dashboard.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {createDocumentOptions.map((option) => (
+                            <button
+                              key={option.href}
+                              type="button"
+                              onClick={() => handleOpenCreateOption(option.href)}
+                              className="text-left p-5 rounded-xl border transition-all hover:shadow-md"
+                              style={{ borderColor: COLORS.border, background: COLORS.bgGrayLight }}
+                            >
+                              <h4 className="text-lg font-bold mb-2" style={{ color: COLORS.textPrimary }}>
+                                {option.label}
+                              </h4>
+                              <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                                {option.description}
+                              </p>
+                            </button>
+                          ))}
+                        </div>
+                      )
+                    ) : null}
+
+                    {activeQuickAction === "review" ? (
+                      pendingReviewDocs.length === 0 ? (
+                        <div className="p-5 rounded-xl" style={{ background: COLORS.bgGray }}>
+                          <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                            No pending review tasks were found in the current dashboard data.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-1">
+                          {pendingReviewDocs.map((doc) => (
+                            <button
+                              key={doc._id}
+                              type="button"
+                              onClick={() => handleOpenDocument(doc)}
+                              className="w-full text-left p-4 rounded-xl border transition-all hover:shadow-md"
+                              style={{ borderColor: COLORS.border, background: COLORS.bgGrayLight }}
+                            >
+                              <div className="flex items-center justify-between gap-4">
+                                <div>
+                                  <p className="text-base font-bold" style={{ color: COLORS.textPrimary }}>
+                                    {doc.title || "Untitled Document"}
+                                  </p>
+                                  <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                                    {PDF_MODULE_LABELS[doc._module || ""] || "Document"} • Last updated {formatTimeAgo(doc.updatedAt || doc.createdAt)}
+                                  </p>
+                                </div>
+                                <span
+                                  className="px-3 py-1 rounded-full text-xs font-bold"
+                                  style={{ background: COLORS.orange100, color: COLORS.orange700 }}
+                                >
+                                  Pending
+                                </span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )
+                    ) : null}
+
+                    {activeQuickAction === "alerts" ? (
+                      alertItems.length === 0 ? (
+                        <div className="p-5 rounded-xl" style={{ background: COLORS.bgGray }}>
+                          <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                            No alerts right now. Your dashboard looks healthy.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {alertItems.map((item, index) => (
+                            <div
+                              key={`${item.title}-${index}`}
+                              className="p-5 rounded-xl border"
+                              style={{ borderColor: COLORS.border, background: COLORS.bgGrayLight }}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div>
+                                  <p className="text-base font-bold" style={{ color: COLORS.textPrimary }}>
+                                    {item.title}
+                                  </p>
+                                  <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                                    {item.description}
+                                  </p>
+                                </div>
+                                {item.action ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAlertAction(item.action)}
+                                    className="px-4 py-2 rounded-lg text-sm font-semibold"
+                                    style={{ background: COLORS.primary, color: COLORS.textWhite }}
+                                  >
+                                    Open
+                                  </button>
+                                ) : null}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : null}
     </div>
   )
 }
