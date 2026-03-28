@@ -23,6 +23,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
   const [filterRole, setFilterRole] = useState<string>("all")
   const [showAdmins, setShowAdmins] = useState(true) // Toggle to show/hide admin users
 
@@ -340,6 +341,7 @@ export default function UsersPage() {
                     <div className="flex items-center justify-end gap-2">
                       {can(Permission.EDIT_USER) && (
                         <button
+                          onClick={() => setEditingUser(user)}
                           className="p-2 rounded-lg hover:bg-opacity-10 transition-all"
                           style={{ color: COLORS.blue500 }}
                           title="Edit User"
@@ -389,6 +391,19 @@ export default function UsersPage() {
           onClose={() => setShowAddModal(false)}
           onSuccess={() => {
             setShowAddModal(false)
+            loadUsers()
+          }}
+        />
+      )}
+
+      {editingUser && (
+        <EditUserModal
+          user={editingUser}
+          isAdmin={isAdmin}
+          isOrganization={isOrganization}
+          onClose={() => setEditingUser(null)}
+          onSuccess={() => {
+            setEditingUser(null)
             loadUsers()
           }}
         />
@@ -621,6 +636,223 @@ function AddUserModal({ isAdmin, isOrganization, onClose, onSuccess }: AddUserMo
               }}
             >
               {loading ? "Creating..." : "Create User"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 rounded-lg font-medium hover:shadow-md transition-all"
+              style={{
+                background: COLORS.bgGray,
+                color: COLORS.textPrimary,
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+interface EditUserModalProps {
+  user: User
+  isAdmin: boolean
+  isOrganization: boolean
+  onClose: () => void
+  onSuccess: () => void
+}
+
+function EditUserModal({ user, isAdmin, isOrganization, onClose, onSuccess }: EditUserModalProps) {
+  const [formData, setFormData] = useState({
+    name: user.name || "",
+    email: user.email || "",
+    role: user.role || "Employee",
+    organizationId: user.organizationId || "",
+  })
+  const [organizations, setOrganizations] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (isAdmin || isOrganization) {
+      loadOrganizations()
+    }
+  }, [isAdmin, isOrganization])
+
+  const loadOrganizations = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch("/api/organizations", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setOrganizations(Array.isArray(data) ? data : [])
+      }
+    } catch (error) {
+      console.error("Error loading organizations:", error)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      const token = localStorage.getItem("token")
+      const userData: any = {
+        name: formData.name,
+        email: formData.email,
+      }
+
+      if (isAdmin) {
+        userData.role = formData.role
+        if (formData.role === "Organization") {
+          userData.organizationName = formData.name
+          userData.organizationEmail = formData.email
+          delete userData.organizationId
+        } else if (formData.role === "Employee" && formData.organizationId) {
+          userData.organizationId = formData.organizationId
+        }
+      }
+
+      const response = await fetch(`/api/users/${user._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(userData),
+      })
+
+      if (response.ok) {
+        onSuccess()
+      } else {
+        const error = await response.json().catch(() => ({}))
+        alert(error.error || "Failed to update user")
+      }
+    } catch (error) {
+      console.error("Error updating user:", error)
+      alert("Failed to update user")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div
+        className="rounded-xl shadow-xl w-full max-w-md"
+        style={{ background: COLORS.bgWhite }}
+      >
+        <div
+          className="p-6 border-b"
+          style={{ borderColor: COLORS.border }}
+        >
+          <h2 className="text-2xl font-bold" style={{ color: COLORS.textPrimary }}>
+            Edit User
+          </h2>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+              Name *
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Enter full name"
+              className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+              style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+              Email *
+            </label>
+            <input
+              type="email"
+              required
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="Enter email address"
+              className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+              style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
+            />
+          </div>
+
+          {isAdmin && (
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                Role *
+              </label>
+              <select
+                required
+                value={formData.role}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    role: e.target.value,
+                    organizationId: e.target.value === "Employee" ? formData.organizationId : "",
+                  })
+                }
+                className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
+              >
+                <option value="Admin">Admin</option>
+                <option value="Organization">Organization</option>
+                <option value="Employee">Employee</option>
+              </select>
+            </div>
+          )}
+
+          {isAdmin && formData.role === "Employee" && (
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
+                Organization
+              </label>
+              <select
+                value={formData.organizationId}
+                onChange={(e) => setFormData({ ...formData, organizationId: e.target.value })}
+                className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
+              >
+                <option value="">Select organization</option>
+                {organizations.map((org) => (
+                  <option key={org._id} value={org._id}>
+                    {org.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {isOrganization && (
+            <div className="p-4 rounded-lg" style={{ background: `${COLORS.blue500}10`, border: `1px solid ${COLORS.blue500}30` }}>
+              <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                You can update your employee's basic details here.
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 px-4 py-2 rounded-lg font-medium hover:shadow-md transition-all"
+              style={{
+                background: COLORS.primary,
+                color: COLORS.textWhite,
+              }}
+            >
+              {loading ? "Saving..." : "Save Changes"}
             </button>
             <button
               type="button"
