@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, Zap, RefreshCw } from "lucide-react"
 import { COLORS } from "@/constant/colors"
@@ -88,14 +88,14 @@ export default function AnalyticsPage() {
     return formatDateInput(d)
   })
   const [endDate, setEndDate] = useState(() => formatDateInput(new Date()))
-  const previousRangeRef = useRef<{ startDate: string; endDate: string } | null>(null)
+  const dateRangeKey = `${startDate}|${endDate}`
 
   const completionData: CompletionPoint[] = [
     { name: "Completed", value: summary.completed, color: COLORS.green500 },
     { name: "Pending", value: summary.pending, color: COLORS.orange500 },
   ]
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!startDate || !endDate) return
     if (new Date(startDate) > new Date(endDate)) {
       setError("Start date cannot be after end date")
@@ -128,15 +128,11 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [startDate, endDate])
 
   useEffect(() => {
-    const previousRange = previousRangeRef.current
-    if (!previousRange || previousRange.startDate !== startDate || previousRange.endDate !== endDate) {
-      previousRangeRef.current = { startDate, endDate }
-      loadData()
-    }
-  })
+    void loadData()
+  }, [dateRangeKey, loadData])
 
   return (
     <div className="min-h-screen p-8" style={{ background: COLORS.bgGrayLight }}>
