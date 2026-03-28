@@ -24,7 +24,10 @@ function normalizeCategories(data: unknown): CustomerFeedbackCategory[] {
 
 export async function loadCustomerFeedbackCategories(): Promise<CustomerFeedbackCategory[]> {
   const token = localStorage.getItem("token")
-  const authHeaders = token ? { Authorization: `Bearer ${token}` } : {}
+  const authHeaders: Record<string, string> = {}
+  if (token) {
+    authHeaders.Authorization = `Bearer ${token}`
+  }
 
   const fetchCategories = async () => {
     const response = await fetch("/api/categories?type=customer-feedback", { headers: authHeaders })

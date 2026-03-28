@@ -71,7 +71,10 @@ export default function CustomerFeedbackDetailPage() {
     const loadData = async () => {
       try {
         const token = localStorage.getItem("token")
-        const headers = token ? { Authorization: `Bearer ${token}` } : {}
+        const headers: Record<string, string> = {}
+        if (token) {
+          headers.Authorization = `Bearer ${token}`
+        }
         const itemResponse = await fetch(`/api/customer-feedback/${id}`, { headers })
         if (!itemResponse.ok) throw new Error("Failed to load feedback")
         const nextItem = await itemResponse.json()

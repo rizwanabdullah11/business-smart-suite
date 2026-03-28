@@ -89,7 +89,10 @@ export default function CustomerFeedbackPage() {
     try {
       setLoading(true)
       const token = localStorage.getItem("token")
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      const headers: Record<string, string> = {}
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
       const [categoryResponse, itemResponse] = await Promise.all([
         fetch("/api/categories?type=customer-feedback", { headers, credentials: "include" }),
         fetch("/api/customer-feedback", { headers, credentials: "include" }),

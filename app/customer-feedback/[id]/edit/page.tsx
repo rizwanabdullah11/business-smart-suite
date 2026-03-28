@@ -34,7 +34,10 @@ export default function EditCustomerFeedbackPage() {
     const loadData = async () => {
       try {
         const token = localStorage.getItem("token")
-        const headers = token ? { Authorization: `Bearer ${token}` } : {}
+        const headers: Record<string, string> = {}
+        if (token) {
+          headers.Authorization = `Bearer ${token}`
+        }
         const [categoryResponse, itemResponse] = await Promise.all([
           loadCustomerFeedbackCategories(),
           fetch(`/api/customer-feedback/${id}`, { headers }),
@@ -42,7 +45,7 @@ export default function EditCustomerFeedbackPage() {
 
         if (!itemResponse.ok) throw new Error("Failed to load customer feedback")
         const item = await itemResponse.json()
-        const normalized = await categoryResponse
+        const normalized = categoryResponse
 
         setCategories(normalized)
         setTitle(String(item?.title || ""))
