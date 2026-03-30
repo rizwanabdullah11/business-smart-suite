@@ -4,18 +4,17 @@ import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import {
   Archive,
-  Building2,
   Calendar,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Edit,
   Eye,
-  Mail,
   MessageSquare,
-  Phone,
   Plus,
   Star,
   Trash2,
-  User,
+  X,
 } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 
@@ -54,28 +53,34 @@ function toCategoryId(item: FeedbackItem) {
   return item.categoryId || ""
 }
 
-function statusStyle(status?: string) {
-  if (status === "Resolved") return { bg: COLORS.green100, color: COLORS.green600 }
-  if (status === "In Review") return { bg: COLORS.orange100, color: COLORS.orange700 }
-  return { bg: COLORS.blue100, color: COLORS.blue700 }
+function getStatusTone(status?: string) {
+  if (status === "Resolved")
+    return { label: "Resolved", background: "#f0fdf4", color: "#15803d", borderColor: "#bbf7d0" }
+  if (status === "In Review")
+    return { label: "In Review", background: "#fffaf3", color: "#c2410c", borderColor: "#fed7aa" }
+  return { label: "New", background: "#f7f6ff", color: "#4338ca", borderColor: "#c7d2fe" }
 }
 
-function typeStyle(type?: string) {
-  if (type === "Complaint") return { bg: COLORS.pink100, color: COLORS.pink700 }
-  if (type === "Suggestion") return { bg: COLORS.indigo100, color: COLORS.indigo700 }
-  if (type === "Support") return { bg: COLORS.orange100, color: COLORS.orange700 }
-  return { bg: COLORS.green100, color: COLORS.green600 }
+function formatDate(value?: string) {
+  if (!value) return "—"
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return value
+  return d.toLocaleDateString("en-GB")
 }
 
-function renderStars(value?: string | number) {
-  const numeric = Math.max(1, Math.min(5, Number(value || 0) || 0))
-  return Array.from({ length: 5 }).map((_, index) => (
-    <Star
-      key={index}
-      className={`w-4 h-4 ${index < numeric ? "fill-current" : ""}`}
-      style={{ color: index < numeric ? "#F59E0B" : "#D1D5DB" }}
-    />
-  ))
+function RatingStars({ value }: { value?: string | number }) {
+  const n = Math.max(0, Math.min(5, Number(value || 0) || 0))
+  return (
+    <div className="flex items-center gap-0.5">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Star
+          key={i}
+          className={`h-3.5 w-3.5 ${i < n ? "fill-current" : ""}`}
+          style={{ color: i < n ? "#f59e0b" : "#d1d5db" }}
+        />
+      ))}
+    </div>
+  )
 }
 
 export default function CustomerFeedbackPage() {
@@ -84,26 +89,24 @@ export default function CustomerFeedbackPage() {
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<"All" | "New" | "In Review" | "Resolved">("All")
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([])
+  const [selectedItems, setSelectedItems] = useState<Record<string, Set<string>>>({})
 
   const loadData = async () => {
     try {
       setLoading(true)
       const token = localStorage.getItem("token")
-      const headers: Record<string, string> = {}
-      if (token) {
-        headers.Authorization = `Bearer ${token}`
-      }
-      const [categoryResponse, itemResponse] = await Promise.all([
+      const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
+      const [catRes, itemRes] = await Promise.all([
         fetch("/api/categories?type=customer-feedback", { headers, credentials: "include" }),
         fetch("/api/customer-feedback", { headers, credentials: "include" }),
       ])
-
-      const nextCategories = categoryResponse.ok ? await categoryResponse.json() : []
-      const nextItems = itemResponse.ok ? await itemResponse.json() : []
-      setCategories(Array.isArray(nextCategories) ? nextCategories : [])
+      const nextCats = catRes.ok ? await catRes.json() : []
+      const nextItems = itemRes.ok ? await itemRes.json() : []
+      setCategories(Array.isArray(nextCats) ? nextCats : [])
       setItems(Array.isArray(nextItems) ? nextItems : [])
-    } catch (error) {
-      console.error("Failed to load customer feedback:", error)
+    } catch (err) {
+      console.error("Failed to load customer feedback:", err)
     } finally {
       setLoading(false)
     }
@@ -113,58 +116,66 @@ export default function CustomerFeedbackPage() {
     loadData()
   }, [])
 
-  const filteredItems = useMemo(() => {
-    return items.filter((item) => {
-      if (item.archived || item.isArchived) return false
-      if (statusFilter === "All") return true
-      return (item.status || "New") === statusFilter
-    })
-  }, [items, statusFilter])
+  const filteredItems = useMemo(
+    () =>
+      items.filter((item) => {
+        if (item.archived || item.isArchived) return false
+        if (statusFilter === "All") return true
+        return (item.status || "New") === statusFilter
+      }),
+    [items, statusFilter],
+  )
 
   const groupedItems = useMemo(() => {
-    const categoryMap = new Map<string, string>()
-    categories.forEach((category) => {
-      const id = String(category._id || category.id || "")
-      if (id) categoryMap.set(id, String(category.name || "Unnamed Category"))
+    const catMap = new Map<string, string>()
+    categories.forEach((c) => {
+      const id = String(c._id || c.id || "")
+      if (id) catMap.set(id, String(c.name || "Unnamed Category"))
     })
-
-    const groups = new Map<string, { title: string; items: FeedbackItem[] }>()
+    const groups = new Map<string, { id: string; title: string; items: FeedbackItem[] }>()
     filteredItems.forEach((item) => {
-      const categoryId = toCategoryId(item)
-      const key = categoryId || "uncategorized"
-      const title = categoryMap.get(categoryId) || "Uncategorized Feedback"
-      const group = groups.get(key) || { title, items: [] }
+      const catId = toCategoryId(item)
+      const key = catId || "uncategorized"
+      const title = catMap.get(catId) || "Uncategorized Feedback"
+      const group = groups.get(key) || { id: key, title, items: [] }
       group.items.push(item)
       groups.set(key, group)
     })
-
     return Array.from(groups.values())
   }, [categories, filteredItems])
 
+  useEffect(() => {
+    if (groupedItems.length > 0 && expandedGroups.length === 0) {
+      setExpandedGroups([groupedItems[0].id])
+    }
+  }, [groupedItems])
+
+  const toggleGroup = (id: string) => {
+    setExpandedGroups((prev) => (prev.includes(id) ? [] : [id]))
+  }
+
   const stats = useMemo(() => {
-    const activeItems = items.filter((item) => !item.archived && !item.isArchived)
-    const total = activeItems.length
-    const averageRating =
+    const active = items.filter((i) => !i.archived && !i.isArchived)
+    const total = active.length
+    const avgRating =
       total > 0
-        ? (
-            activeItems.reduce((sum, item) => sum + (Number(item.rating || 0) || 0), 0) / total
-          ).toFixed(1)
+        ? (active.reduce((s, i) => s + (Number(i.rating || 0) || 0), 0) / total).toFixed(1)
         : "0.0"
     return {
       total,
-      averageRating,
-      newCount: activeItems.filter((item) => (item.status || "New") === "New").length,
-      resolvedCount: activeItems.filter((item) => item.status === "Resolved").length,
+      avgRating,
+      newCount: active.filter((i) => (i.status || "New") === "New").length,
+      resolvedCount: active.filter((i) => i.status === "Resolved").length,
     }
   }, [items])
 
   const updateStatus = async (item: FeedbackItem, status: "New" | "In Review" | "Resolved") => {
+    const itemId = String(item._id || item.id || "")
+    if (!itemId) return
     try {
-      const itemId = String(item._id || item.id || "")
-      if (!itemId) return
       setActionLoading(`status-${itemId}`)
       const token = localStorage.getItem("token")
-      const response = await fetch(`/api/customer-feedback/${itemId}`, {
+      await fetch(`/api/customer-feedback/${itemId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -172,23 +183,21 @@ export default function CustomerFeedbackPage() {
         },
         body: JSON.stringify({ ...item, status }),
       })
-      if (!response.ok) throw new Error("Failed to update feedback status")
       await loadData()
-    } catch (error) {
-      console.error("Failed to update feedback status:", error)
-      alert("Failed to update feedback status")
+    } catch (err) {
+      console.error(err)
     } finally {
       setActionLoading(null)
     }
   }
 
   const archiveItem = async (item: FeedbackItem) => {
+    const itemId = String(item._id || item.id || "")
+    if (!itemId) return
     try {
-      const itemId = String(item._id || item.id || "")
-      if (!itemId) return
       setActionLoading(`archive-${itemId}`)
       const token = localStorage.getItem("token")
-      const response = await fetch(`/api/customer-feedback/${itemId}`, {
+      await fetch(`/api/customer-feedback/${itemId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -196,11 +205,9 @@ export default function CustomerFeedbackPage() {
         },
         body: JSON.stringify({ ...item, archived: true, isArchived: true }),
       })
-      if (!response.ok) throw new Error("Failed to archive feedback")
       await loadData()
-    } catch (error) {
-      console.error("Failed to archive feedback:", error)
-      alert("Failed to archive feedback")
+    } catch (err) {
+      console.error(err)
     } finally {
       setActionLoading(null)
     }
@@ -210,292 +217,382 @@ export default function CustomerFeedbackPage() {
     try {
       setActionLoading(`delete-${itemId}`)
       const token = localStorage.getItem("token")
-      const response = await fetch(`/api/customer-feedback/${itemId}`, {
+      await fetch(`/api/customer-feedback/${itemId}`, {
         method: "DELETE",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
-      if (!response.ok) throw new Error("Failed to delete feedback")
       await loadData()
-    } catch (error) {
-      console.error("Failed to delete feedback:", error)
-      alert("Failed to delete feedback")
+    } catch (err) {
+      console.error(err)
     } finally {
       setActionLoading(null)
     }
   }
 
   return (
-    <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
-      <div className="p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div
-            className="rounded-2xl p-6 border"
-            style={{ background: COLORS.bgWhite, borderColor: COLORS.border }}
-          >
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-              <div className="flex items-start gap-4">
-                <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                  style={{ background: `${COLORS.primary}15`, color: COLORS.primary }}
-                >
-                  <MessageSquare className="w-7 h-7" />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold" style={{ color: COLORS.textPrimary }}>
-                    Customer Feedback
-                  </h1>
-                  <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
-                    Track customer comments, satisfaction, complaints, and follow-up actions in a customer-focused view.
-                  </p>
-                </div>
-              </div>
+    <div className="min-h-screen" style={{ background: "linear-gradient(180deg,#f7f8fb 0%,#f3f5f9 100%)" }}>
+      <div className="mx-auto max-w-[1400px] p-4 sm:p-6">
 
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  href="/customer-feedback/new"
-                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl font-semibold"
-                  style={{ background: COLORS.primaryGradient, color: COLORS.textWhite }}
+        {/* ── Header ── */}
+        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex items-start gap-3">
+            <div>
+              <div className="mb-1 flex items-center gap-2">
+                <div
+                  className="flex h-10 w-10 items-center justify-center rounded-xl"
+                  style={{ background: COLORS.indigo50, color: COLORS.indigo700, border: `1px solid ${COLORS.indigo200}` }}
                 >
-                  <Plus className="w-5 h-5" />
-                  Add Feedback
-                </Link>
+                  <MessageSquare className="h-5 w-5" />
+                </div>
+                <h1 className="text-3xl font-bold tracking-tight" style={{ color: COLORS.textPrimary }}>
+                  Customer Feedback
+                </h1>
               </div>
+              <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                Track customer comments, satisfaction, complaints, and follow-up actions.
+              </p>
             </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-            {[
-              { label: "Total Feedback", value: stats.total, color: COLORS.blue100, text: COLORS.blue700 },
-              { label: "Average Rating", value: stats.averageRating, color: COLORS.orange100, text: COLORS.orange700 },
-              { label: "New Feedback", value: stats.newCount, color: COLORS.indigo100, text: COLORS.indigo700 },
-              { label: "Resolved", value: stats.resolvedCount, color: COLORS.green100, text: COLORS.green600 },
-            ].map((stat) => (
-              <div
-                key={stat.label}
-                className="rounded-2xl p-5 border"
-                style={{ background: COLORS.bgWhite, borderColor: COLORS.border }}
+          <div className="flex flex-wrap gap-2">
+            <Link href="/customer-feedback/new">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-md"
+                style={{ background: "#111827", color: COLORS.textWhite, border: "1px solid #111827" }}
               >
-                <div
-                  className="inline-flex px-3 py-1 rounded-full text-xs font-bold mb-3"
-                  style={{ background: stat.color, color: stat.text }}
-                >
-                  {stat.label}
-                </div>
-                <p className="text-3xl font-bold" style={{ color: COLORS.textPrimary }}>
-                  {stat.value}
-                </p>
-              </div>
+                <Plus className="h-4 w-4" />
+                Add New
+              </button>
+            </Link>
+          </div>
+        </div>
+
+        {/* ── Stats ── */}
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: "Total", value: stats.total, bg: COLORS.indigo50, color: COLORS.indigo700, border: COLORS.indigo200 },
+            { label: "Avg Rating", value: stats.avgRating, bg: "#fffbeb", color: "#b45309", border: "#fde68a" },
+            { label: "New", value: stats.newCount, bg: "#f0f9ff", color: "#0369a1", border: "#bae6fd" },
+            { label: "Resolved", value: stats.resolvedCount, bg: "#f0fdf4", color: "#15803d", border: "#bbf7d0" },
+          ].map((s) => (
+            <div
+              key={s.label}
+              className="rounded-2xl px-4 py-3"
+              style={{ background: s.bg, border: `1px solid ${s.border}` }}
+            >
+              <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: s.color }}>{s.label}</div>
+              <div className="mt-1 text-2xl font-bold" style={{ color: s.color }}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Status Filter Tabs ── */}
+        <div className="mb-5 flex flex-wrap items-center gap-3">
+          <div
+            className="inline-flex rounded-xl p-1"
+            style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}
+          >
+            {(["All", "New", "In Review", "Resolved"] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setStatusFilter(f)}
+                className="rounded-lg px-4 py-2 text-sm font-semibold transition-all"
+                style={{
+                  background: statusFilter === f ? COLORS.indigo700 : "transparent",
+                  color: statusFilter === f ? COLORS.textWhite : COLORS.textSecondary,
+                }}
+              >
+                {f}
+              </button>
             ))}
           </div>
+        </div>
 
+        {/* ── Content ── */}
+        {loading ? (
           <div
-            className="rounded-2xl p-5 border"
-            style={{ background: COLORS.bgWhite, borderColor: COLORS.border }}
+            className="rounded-2xl px-6 py-16 text-center"
+            style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}
           >
-            <div className="flex flex-wrap gap-3">
-              {(["All", "New", "In Review", "Resolved"] as const).map((filter) => (
-                <button
-                  key={filter}
-                  type="button"
-                  onClick={() => setStatusFilter(filter)}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold border"
-                  style={{
-                    background: statusFilter === filter ? COLORS.primaryGradient : COLORS.bgWhite,
-                    color: statusFilter === filter ? COLORS.textWhite : COLORS.textPrimary,
-                    borderColor: statusFilter === filter ? COLORS.primary : COLORS.border,
-                  }}
-                >
-                  {filter}
-                </button>
-              ))}
-            </div>
+            <p style={{ color: COLORS.textSecondary }}>Loading customer feedback…</p>
           </div>
-
-          {loading ? (
-            <div
-              className="rounded-2xl p-10 border text-center"
-              style={{ background: COLORS.bgWhite, borderColor: COLORS.border }}
-            >
-              <p style={{ color: COLORS.textSecondary }}>Loading customer feedback...</p>
-            </div>
-          ) : groupedItems.length === 0 ? (
-            <div
-              className="rounded-2xl p-10 border text-center"
-              style={{ background: COLORS.bgWhite, borderColor: COLORS.border }}
-            >
-              <p className="font-semibold" style={{ color: COLORS.textPrimary }}>
-                No customer feedback found.
-              </p>
-              <p className="text-sm mt-2" style={{ color: COLORS.textSecondary }}>
-                Add your first feedback entry to start tracking customer responses.
-              </p>
-            </div>
-          ) : (
-            groupedItems.map((group) => (
-              <div key={group.title} className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-bold" style={{ color: COLORS.textPrimary }}>
-                      {group.title}
-                    </h2>
-                    <p className="text-sm" style={{ color: COLORS.textSecondary }}>
-                      {group.items.length} feedback entr{group.items.length === 1 ? "y" : "ies"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                  {group.items.map((item) => {
-                    const itemId = String(item._id || item.id || "")
-                    const status = statusStyle(item.status)
-                    const type = typeStyle(item.feedbackType)
-                    return (
+        ) : groupedItems.length === 0 ? (
+          <div
+            className="rounded-2xl px-6 py-16 text-center"
+            style={{ background: COLORS.bgGrayLight, border: `1px solid ${COLORS.border}` }}
+          >
+            <MessageSquare className="mx-auto mb-3 h-10 w-10" style={{ color: COLORS.textLight }} />
+            <div className="mb-1 text-base font-semibold" style={{ color: COLORS.textPrimary }}>No feedback found</div>
+            <p className="text-sm" style={{ color: COLORS.textSecondary }}>Add your first feedback entry to start tracking customer responses.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {groupedItems.map((group) => {
+              const isExpanded = expandedGroups.includes(group.id)
+              const sortedGroup = group.items
+              return (
+                <div
+                  key={group.id}
+                  className="overflow-hidden rounded-2xl shadow-sm"
+                  style={{ background: COLORS.bgWhite, border: "1px solid #ececf3", boxShadow: "0 10px 30px rgba(31,41,55,0.05)" }}
+                >
+                  {/* Category Header */}
+                  <div
+                    className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    style={{ background: "#341746", color: "#fff" }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group.id)}
+                      className="flex items-center gap-3 text-left"
+                    >
                       <div
-                        key={itemId}
-                        className="rounded-2xl p-5 border shadow-sm"
-                        style={{ background: COLORS.bgWhite, borderColor: COLORS.border }}
+                        className="flex h-7 w-7 items-center justify-center rounded-md"
+                        style={{ background: "rgba(255,255,255,0.14)" }}
                       >
-                        <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <h3 className="text-xl font-bold" style={{ color: COLORS.textPrimary }}>
-                              {item.title || "Untitled Feedback"}
-                            </h3>
-                            <div className="flex flex-wrap items-center gap-2 mt-3">
-                              <span
-                                className="px-3 py-1 rounded-full text-xs font-bold"
-                                style={{ background: status.bg, color: status.color }}
-                              >
-                                {item.status || "New"}
-                              </span>
-                              <span
-                                className="px-3 py-1 rounded-full text-xs font-bold"
-                                style={{ background: type.bg, color: type.color }}
-                              >
-                                {item.feedbackType || "Feedback"}
-                              </span>
-                              {item.channel ? (
-                                <span
-                                  className="px-3 py-1 rounded-full text-xs font-bold"
-                                  style={{ background: COLORS.gray100, color: COLORS.gray700 }}
-                                >
-                                  {item.channel}
-                                </span>
-                              ) : null}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1">{renderStars(item.rating)}</div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-5 text-sm" style={{ color: COLORS.textSecondary }}>
-                          <div className="flex items-center gap-2">
-                            <User className="w-4 h-4" />
-                            <span>{item.customerName || "No customer name"}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Building2 className="w-4 h-4" />
-                            <span>{item.companyName || "No company"}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Mail className="w-4 h-4" />
-                            <span>{item.email || "No email"}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Phone className="w-4 h-4" />
-                            <span>{item.phone || "No phone"}</span>
-                          </div>
-                          <div className="flex items-center gap-2 md:col-span-2">
-                            <Calendar className="w-4 h-4" />
-                            <span>{item.submittedDate || item.createdAt || "No date"}</span>
-                          </div>
-                        </div>
-
-                        <div
-                          className="mt-5 rounded-xl p-4"
-                          style={{ background: COLORS.bgGrayLight, border: `1px solid ${COLORS.border}` }}
-                        >
-                          <p className="text-sm font-semibold mb-2" style={{ color: COLORS.textPrimary }}>
-                            Customer Feedback
-                          </p>
-                          <p className="text-sm leading-6" style={{ color: COLORS.textSecondary }}>
-                            {item.feedback || "No feedback text provided."}
-                          </p>
-                        </div>
-
-                        {item.followUpAction ? (
-                          <div
-                            className="mt-4 rounded-xl p-4"
-                            style={{ background: COLORS.indigo50, border: `1px solid ${COLORS.indigo100}` }}
-                          >
-                            <div className="flex items-center gap-2 mb-2">
-                              <CheckCircle2 className="w-4 h-4" style={{ color: COLORS.indigo700 }} />
-                              <p className="text-sm font-semibold" style={{ color: COLORS.indigo700 }}>
-                                Follow-up Action
-                              </p>
-                            </div>
-                            <p className="text-sm leading-6" style={{ color: COLORS.textSecondary }}>
-                              {item.followUpAction}
-                            </p>
-                          </div>
-                        ) : null}
-
-                        <div className="flex flex-wrap gap-2 mt-5">
-                          <Link
-                            href={`/customer-feedback/${itemId}`}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-                            style={{ background: COLORS.gray100, color: COLORS.gray700 }}
-                          >
-                            <Eye className="w-4 h-4" />
-                            View
-                          </Link>
-                          <Link
-                            href={`/customer-feedback/${itemId}/edit`}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-                            style={{ background: COLORS.blue100, color: COLORS.blue700 }}
-                          >
-                            <Edit className="w-4 h-4" />
-                            Edit
-                          </Link>
-                          {item.status !== "Resolved" ? (
-                            <button
-                              type="button"
-                              onClick={() => updateStatus(item, item.status === "New" ? "In Review" : "Resolved")}
-                              disabled={actionLoading === `status-${itemId}`}
-                              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-                              style={{ background: COLORS.green100, color: COLORS.green600 }}
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                              {item.status === "New" ? "Start Review" : "Resolve"}
-                            </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            onClick={() => archiveItem(item)}
-                            disabled={actionLoading === `archive-${itemId}`}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-                            style={{ background: COLORS.orange100, color: COLORS.orange700 }}
-                          >
-                            <Archive className="w-4 h-4" />
-                            Archive
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => deleteItem(itemId)}
-                            disabled={actionLoading === `delete-${itemId}`}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-                            style={{ background: COLORS.pink100, color: COLORS.pink700 }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Delete
-                          </button>
+                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      </div>
+                      <div>
+                        <div className="text-base font-semibold">{group.title}</div>
+                        <div className="text-xs text-white/70">
+                          {sortedGroup.length} feedback entr{sortedGroup.length === 1 ? "y" : "ies"} in view
                         </div>
                       </div>
-                    )
-                  })}
+                    </button>
+
+                    <div className="flex items-center gap-1.5">
+                      <div className="mr-1 flex h-7 w-5 items-center justify-center opacity-50">
+                        <svg width="12" height="14" viewBox="0 0 12 14" fill="white">
+                          <circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/>
+                          <circle cx="3" cy="7" r="1.5"/><circle cx="9" cy="7" r="1.5"/>
+                          <circle cx="3" cy="12" r="1.5"/><circle cx="9" cy="12" r="1.5"/>
+                        </svg>
+                      </div>
+                      <div
+                        className="h-6 w-6 rounded"
+                        style={{ background: "rgba(255,255,255,0.92)", border: "1px solid rgba(255,255,255,0.4)" }}
+                      />
+                      <Link href="/customer-feedback/new">
+                        <button
+                          type="button"
+                          className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
+                          style={{ background: "#22c55e" }}
+                          title="Add Feedback"
+                        >
+                          <Plus className="h-3.5 w-3.5 text-white" />
+                        </button>
+                      </Link>
+                    </div>
+                  </div>
+
+                  {/* Table */}
+                  {isExpanded ? (
+                    <div className="p-4 sm:p-5">
+                      <div className="mb-3 flex justify-end text-xs sm:text-sm" style={{ color: COLORS.textSecondary }}>
+                        Showing {sortedGroup.length} result{sortedGroup.length === 1 ? "" : "s"}
+                      </div>
+                      <div
+                        className="overflow-hidden rounded-2xl"
+                        style={{ border: "1px solid #efeff5", background: "#fcfcff" }}
+                      >
+                        <div className="overflow-x-auto p-3">
+                          <table className="min-w-full text-left">
+                            <thead style={{ background: "#fff" }}>
+                              <tr style={{ color: "#707685" }}>
+                                <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wide">
+                                  <input
+                                    type="checkbox"
+                                    className="h-4 w-4 rounded cursor-pointer"
+                                    checked={sortedGroup.length > 0 && sortedGroup.every((i) => {
+                                      const id = String(i._id || i.id || "")
+                                      return selectedItems[group.id]?.has(id)
+                                    })}
+                                    onChange={(e) => {
+                                      const ids = sortedGroup.map((i) => String(i._id || i.id || ""))
+                                      setSelectedItems((prev) => ({
+                                        ...prev,
+                                        [group.id]: e.target.checked ? new Set(ids) : new Set(),
+                                      }))
+                                    }}
+                                  />
+                                </th>
+                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Customer</th>
+                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Type</th>
+                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Rating</th>
+                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Date</th>
+                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Status</th>
+                                <th className="px-2 py-2 text-right text-[11px] font-semibold uppercase tracking-wide">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sortedGroup.map((item, index) => {
+                                const itemId = String(item._id || item.id || "")
+                                const statusTone = getStatusTone(item.status)
+                                const isSelected = selectedItems[group.id]?.has(itemId) ?? false
+                                return (
+                                  <tr
+                                    key={itemId}
+                                    style={{
+                                      background: isSelected ? "#f4f2ff" : "#fff",
+                                      borderTop: index === 0 ? "none" : "1px solid #efeff5",
+                                      borderBottom: index === sortedGroup.length - 1 ? "1px solid #efeff5" : "none",
+                                    }}
+                                  >
+                                    <td className="px-2 py-1 align-top">
+                                      <input
+                                        type="checkbox"
+                                        className="mt-1 h-4 w-4 rounded cursor-pointer"
+                                        checked={isSelected}
+                                        onChange={(e) => {
+                                          setSelectedItems((prev) => {
+                                            const current = new Set(prev[group.id] ?? [])
+                                            if (e.target.checked) current.add(itemId)
+                                            else current.delete(itemId)
+                                            return { ...prev, [group.id]: current }
+                                          })
+                                        }}
+                                      />
+                                    </td>
+                                    <td className="px-2 py-1 align-top">
+                                      <div className="flex items-start gap-3">
+                                        <div
+                                          className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                                          style={{ background: "#f4f2ff", color: COLORS.indigo700, border: `1px solid ${COLORS.indigo200}` }}
+                                        >
+                                          <MessageSquare className="h-4 w-4" />
+                                        </div>
+                                        <div className="min-w-0">
+                                          <Link
+                                            href={`/customer-feedback/${itemId}`}
+                                            className="block text-sm font-semibold hover:underline sm:text-[15px] break-words"
+                                            style={{ color: COLORS.indigo700 }}
+                                          >
+                                            {item.title || item.customerName || "Untitled Feedback"}
+                                          </Link>
+                                          {item.customerName && item.title ? (
+                                            <div className="mt-0.5 text-xs" style={{ color: "#73788a" }}>{item.customerName}</div>
+                                          ) : null}
+                                          {item.companyName ? (
+                                            <div className="mt-0.5 text-xs" style={{ color: "#73788a" }}>{item.companyName}</div>
+                                          ) : null}
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="px-2 py-1 align-top">
+                                      {item.feedbackType ? (
+                                        <span
+                                          className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                                          style={{
+                                            background: item.feedbackType === "Complaint" ? "#fdf2f8" : item.feedbackType === "Suggestion" ? COLORS.indigo50 : "#fff7ed",
+                                            color: item.feedbackType === "Complaint" ? "#be185d" : item.feedbackType === "Suggestion" ? COLORS.indigo700 : "#c2410c",
+                                            border: `1px solid ${item.feedbackType === "Complaint" ? "#fbcfe8" : item.feedbackType === "Suggestion" ? COLORS.indigo200 : "#fed7aa"}`,
+                                          }}
+                                        >
+                                          {item.feedbackType}
+                                        </span>
+                                      ) : (
+                                        <span className="text-sm" style={{ color: COLORS.textPrimary }}>—</span>
+                                      )}
+                                    </td>
+                                    <td className="px-2 py-1 align-top">
+                                      <RatingStars value={item.rating} />
+                                    </td>
+                                    <td className="px-2 py-1 align-top text-sm" style={{ color: COLORS.textPrimary }}>
+                                      <div className="flex items-center gap-2">
+                                        <Calendar className="h-4 w-4" style={{ color: COLORS.textLight }} />
+                                        {formatDate(item.submittedDate || item.createdAt)}
+                                      </div>
+                                    </td>
+                                    <td className="px-2 py-1 align-top">
+                                      <span
+                                        className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                                        style={{
+                                          background: statusTone.background,
+                                          color: statusTone.color,
+                                          border: `1px solid ${statusTone.borderColor}`,
+                                        }}
+                                      >
+                                        {statusTone.label}
+                                      </span>
+                                    </td>
+                                    <td className="px-2 py-1">
+                                      <div className="flex items-center justify-end gap-1">
+                                        <div className="mr-1 flex h-6 w-5 cursor-move items-center justify-center opacity-30 hover:opacity-60">
+                                          <svg width="10" height="14" viewBox="0 0 10 14" fill="#374151">
+                                            <circle cx="2.5" cy="2" r="1.5"/><circle cx="7.5" cy="2" r="1.5"/>
+                                            <circle cx="2.5" cy="7" r="1.5"/><circle cx="7.5" cy="7" r="1.5"/>
+                                            <circle cx="2.5" cy="12" r="1.5"/><circle cx="7.5" cy="12" r="1.5"/>
+                                          </svg>
+                                        </div>
+                                        <Link href={`/customer-feedback/${itemId}`}>
+                                          <button
+                                            type="button"
+                                            className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
+                                            style={{ background: "#6366f1" }}
+                                            title="View"
+                                          >
+                                            <Eye className="h-3.5 w-3.5 text-white" />
+                                          </button>
+                                        </Link>
+                                        <Link href={`/customer-feedback/${itemId}/edit`}>
+                                          <button
+                                            type="button"
+                                            className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
+                                            style={{ background: "#4f46e5" }}
+                                            title="Edit"
+                                          >
+                                            <Edit className="h-3.5 w-3.5 text-white" />
+                                          </button>
+                                        </Link>
+                                        {item.status !== "Resolved" ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => updateStatus(item, item.status === "New" ? "In Review" : "Resolved")}
+                                            disabled={actionLoading === `status-${itemId}`}
+                                            className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                            style={{ background: "#22c55e" }}
+                                            title={item.status === "New" ? "Start Review" : "Mark Resolved"}
+                                          >
+                                            <CheckCircle2 className="h-3.5 w-3.5 text-white" />
+                                          </button>
+                                        ) : null}
+                                        <button
+                                          type="button"
+                                          onClick={() => archiveItem(item)}
+                                          disabled={actionLoading === `archive-${itemId}`}
+                                          className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                          style={{ background: "#f59e0b" }}
+                                          title="Archive"
+                                        >
+                                          <Archive className="h-3.5 w-3.5 text-white" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => deleteItem(itemId)}
+                                          disabled={actionLoading === `delete-${itemId}`}
+                                          className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                          style={{ background: "#ef4444" }}
+                                          title="Delete"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5 text-white" />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
-              </div>
-            ))
-          )}
-        </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )
