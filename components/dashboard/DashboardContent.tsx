@@ -591,17 +591,17 @@ export function DashboardContent() {
         if (Number.isNaN(date.getTime())) return "-"
         return includeTime
           ? date.toLocaleString([], {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
           : date.toLocaleDateString([], {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            })
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })
       }
 
       const formatMonthYear = (value?: string) => {
@@ -1202,759 +1202,736 @@ export function DashboardContent() {
 
   return (
     <div className="space-y-8">
-            {/* Back to home + title */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <Link href="/dashboard">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all hover:bg-gray-50"
-                  style={{ borderColor: COLORS.border, color: COLORS.primary, background: COLORS.bgWhite }}
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  Back to Home
-                </button>
-              </Link>
-              <div className="text-right">
-                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: COLORS.textSecondary }}>
-                  Analytics
-                </p>
-                <h1 className="text-2xl font-black" style={{ color: COLORS.textPrimary }}>
-                  Dashboard
-                </h1>
-              </div>
-            </div>
+      <div
+        className="p-6 rounded-xl border space-y-4"
+        style={{
+          background: COLORS.bgWhite,
+          borderColor: COLORS.border
+        }}
+      >
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold" style={{ color: COLORS.textPrimary }}>
+              {dashboardScopeLabel}
+            </h2>
+            <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+              Select a start and end date, then export the scoped dashboard data as PDF.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            disabled={exportingPdf || loading || !isExportRangeValid}
+            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg font-bold transition-all duration-200"
+            style={{
+              background: COLORS.gradientIndigo,
+              color: COLORS.textWhite,
+              boxShadow: COLORS.shadowPurple,
+              opacity: exportingPdf || loading || !isExportRangeValid ? 0.7 : 1
+            }}
+          >
+            {exportingPdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileDown className="w-5 h-5" />}
+            {exportingPdf ? "Generating PDF..." : "Download PDF"}
+          </button>
+        </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold mb-2" style={{ color: COLORS.textPrimary }}>
+              Start date
+            </label>
+            <input
+              type="date"
+              value={exportStartDate}
+              onChange={(e) => setExportStartDate(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              style={{
+                borderColor: COLORS.border,
+                background: COLORS.bgWhite,
+                color: COLORS.textPrimary,
+              }}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-2" style={{ color: COLORS.textPrimary }}>
+              End date
+            </label>
+            <input
+              type="date"
+              value={exportEndDate}
+              onChange={(e) => setExportEndDate(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              style={{
+                borderColor: COLORS.border,
+                background: COLORS.bgWhite,
+                color: COLORS.textPrimary,
+              }}
+            />
+          </div>
+        </div>
+
+        {!isExportRangeValid ? (
+          <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+            Select a valid start date and end date to enable PDF download.
+          </p>
+        ) : null}
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, index) => {
+          const Icon = stat.icon
+          const TrendIcon = stat.trend === "up" ? TrendingUp : TrendingDown
+
+          return (
             <div
-                className="p-6 rounded-xl border space-y-4"
-                style={{
-                    background: COLORS.bgWhite,
-                    borderColor: COLORS.border
-                }}
+              key={index}
+              className="p-7 rounded-xl border-0 transition-all duration-300 hover:scale-105 cursor-pointer"
+              style={{
+                background: gradients[index],
+                boxShadow: shadows[index]
+              }}
             >
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
-                        <h2 className="text-2xl font-bold" style={{ color: COLORS.textPrimary }}>
-                            {dashboardScopeLabel}
-                        </h2>
-                        <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
-                            Select a start and end date, then export the scoped dashboard data as PDF.
-                        </p>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={handleExportPdf}
-                        disabled={exportingPdf || loading || !isExportRangeValid}
-                        className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg font-bold transition-all duration-200"
-                        style={{
-                            background: COLORS.gradientIndigo,
-                            color: COLORS.textWhite,
-                            boxShadow: COLORS.shadowPurple,
-                            opacity: exportingPdf || loading || !isExportRangeValid ? 0.7 : 1
-                        }}
-                    >
-                        {exportingPdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileDown className="w-5 h-5" />}
-                        {exportingPdf ? "Generating PDF..." : "Download PDF"}
-                    </button>
+              <div className="flex items-start justify-between mb-5">
+                <div
+                  className="p-4 rounded-lg backdrop-blur-sm"
+                  style={{ background: 'rgba(255, 255, 255, 0.25)' }}
+                >
+                  <Icon className="w-7 h-7 text-white" />
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-semibold mb-2" style={{ color: COLORS.textPrimary }}>
-                            Start date
-                        </label>
-                        <input
-                            type="date"
-                            value={exportStartDate}
-                            onChange={(e) => setExportStartDate(e.target.value)}
-                            className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            style={{
-                                borderColor: COLORS.border,
-                                background: COLORS.bgWhite,
-                                color: COLORS.textPrimary,
-                            }}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold mb-2" style={{ color: COLORS.textPrimary }}>
-                            End date
-                        </label>
-                        <input
-                            type="date"
-                            value={exportEndDate}
-                            onChange={(e) => setExportEndDate(e.target.value)}
-                            className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            style={{
-                                borderColor: COLORS.border,
-                                background: COLORS.bgWhite,
-                                color: COLORS.textPrimary,
-                            }}
-                        />
-                    </div>
-                </div>
-
-                {!isExportRangeValid ? (
-                    <p className="text-sm" style={{ color: COLORS.textSecondary }}>
-                        Select a valid start date and end date to enable PDF download.
-                    </p>
-                ) : null}
-            </div>
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {stats.map((stat, index) => {
-                    const Icon = stat.icon
-                    const TrendIcon = stat.trend === "up" ? TrendingUp : TrendingDown
-
-                    return (
-                        <div
-                            key={index}
-                            className="p-7 rounded-xl border-0 transition-all duration-300 hover:scale-105 cursor-pointer"
-                            style={{
-                                background: gradients[index],
-                                boxShadow: shadows[index]
-                            }}
-                        >
-                            <div className="flex items-start justify-between mb-5">
-                                <div
-                                    className="p-4 rounded-lg backdrop-blur-sm"
-                                    style={{ background: 'rgba(255, 255, 255, 0.25)' }}
-                                >
-                                    <Icon className="w-7 h-7 text-white" />
-                                </div>
-                                <div
-                                    className="flex items-center gap-1 text-base font-bold text-white"
-                                >
-                                    <TrendIcon className="w-5 h-5" />
-                                    {stat.change}
-                                </div>
-                            </div>
-                            <h3 className="text-4xl font-bold mb-2 text-white">
-                                {stat.value}
-                            </h3>
-                            <p className="text-base font-bold mb-2 text-white opacity-90">
-                                {stat.title}
-                            </p>
-                            <p className="text-sm text-white opacity-75">
-                                {loading ? "loading..." : stat.subtitle}
-                            </p>
-                        </div>
-                    )
-                })}
-            </div>
-
-            {/* Compliance score + Module breakdown */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div
-                className="rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6 relative overflow-hidden border"
-                style={{
-                  background: "linear-gradient(135deg,#1a0533 0%,#3b0764 60%,#341746 100%)",
-                  borderColor: "rgba(124,58,237,0.35)",
-                  boxShadow: "0 8px 32px rgba(124,58,237,0.25)",
-                }}
-              >
-                <div className="relative w-36 h-36 shrink-0">
-                  <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="10" />
-                    <circle
-                      cx="60"
-                      cy="60"
-                      r="54"
-                      fill="none"
-                      stroke="url(#dashComplianceGrad)"
-                      strokeWidth="10"
-                      strokeLinecap="round"
-                      strokeDasharray={`${(complianceScore / 100) * 339.3} 339.3`}
-                    />
-                    <defs>
-                      <linearGradient id="dashComplianceGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#7c3aed" />
-                        <stop offset="100%" stopColor="#a855f7" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-                    <span className="text-3xl font-black">{loading ? "—" : `${complianceScore}%`}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">Compliance</span>
-                  </div>
-                </div>
-                <div className="flex-1 text-center sm:text-left">
-                  <h3 className="text-lg font-black text-white">ISO compliance score</h3>
-                  <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
-                    Approved documents vs active records across all modules.
-                  </p>
-                  <p className="text-xs mt-3 font-semibold" style={{ color: "rgba(255,255,255,0.45)" }}>
-                    {dashboardDocs.filter((d) => d.approved).length} approved · {dashboardDocs.length} total active
-                  </p>
+                <div
+                  className="flex items-center gap-1 text-base font-bold text-white"
+                >
+                  <TrendIcon className="w-5 h-5" />
+                  {stat.change}
                 </div>
               </div>
-
-              <div
-                className="rounded-2xl p-5 border"
-                style={{ background: COLORS.bgWhite, borderColor: COLORS.border }}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-bold" style={{ color: COLORS.textPrimary }}>
-                    Module breakdown
-                  </h3>
-                  <span className="text-xs font-semibold" style={{ color: COLORS.textSecondary }}>
-                    {moduleBreakdown.length} modules
-                  </span>
-                </div>
-                <div className="space-y-3 max-h-[280px] overflow-y-auto pr-1">
-                  {moduleBreakdown.length === 0 ? (
-                    <p className="text-sm" style={{ color: COLORS.textSecondary }}>
-                      {loading ? "Loading…" : "No module data yet."}
-                    </p>
-                  ) : (
-                    moduleBreakdown.map(([key, count], i) => {
-                      const max = moduleBreakdown[0]?.[1] || 1
-                      const pct = Math.round((count / max) * 100)
-                      return (
-                        <div key={key}>
-                          <div className="flex justify-between text-xs font-semibold mb-1">
-                            <span style={{ color: COLORS.textPrimary }}>{PDF_MODULE_LABELS[key] || key}</span>
-                            <span style={{ color: COLORS.textSecondary }}>{count}</span>
-                          </div>
-                          <div className="h-2 rounded-full overflow-hidden" style={{ background: COLORS.bgGray }}>
-                            <div
-                              className="h-full rounded-full transition-all duration-500"
-                              style={{
-                                width: `${pct}%`,
-                                background: moduleBarColors[i % moduleBarColors.length],
-                              }}
-                            />
-                          </div>
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
+              <h3 className="text-4xl font-bold mb-2 text-white">
+                {stat.value}
+              </h3>
+              <p className="text-base font-bold mb-2 text-white opacity-90">
+                {stat.title}
+              </p>
+              <p className="text-sm text-white opacity-75">
+                {loading ? "loading..." : stat.subtitle}
+              </p>
             </div>
+          )
+        })}
+      </div>
 
-            {/* System health */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                {
-                  icon: Activity,
-                  label: "Live activity",
-                  value: loading ? "—" : `${healthMetrics.activityCount} events`,
-                  sub: healthMetrics.activityCount > 0 ? "Recent" : "None yet",
-                  gradient: "linear-gradient(135deg,#059669,#10b981)",
-                },
-                {
-                  icon: Zap,
-                  label: "Active modules",
-                  value: loading ? "—" : `${healthMetrics.modules}`,
-                  sub: "In use",
-                  gradient: "linear-gradient(135deg,#2563eb,#3b82f6)",
-                },
-                {
-                  icon: AlertCircle,
-                  label: "Pending reviews",
-                  value: loading ? "—" : `${healthMetrics.pending}`,
-                  sub: healthMetrics.pending > 0 ? "Needs attention" : "All clear",
-                  gradient:
-                    healthMetrics.pending > 0
-                      ? "linear-gradient(135deg,#ea580c,#f97316)"
-                      : "linear-gradient(135deg,#64748b,#94a3b8)",
-                },
-                {
-                  icon: ShieldCheck,
-                  label: "Compliance rate",
-                  value: loading ? "—" : `${healthMetrics.pct}%`,
-                  sub: healthMetrics.pct >= 80 ? "Strong" : healthMetrics.pct >= 50 ? "Monitor" : "Review",
-                  gradient: "linear-gradient(135deg,#7c3aed,#a855f7)",
-                },
-              ].map((item) => {
-                const Icon = item.icon
+      {/* Compliance score + Module breakdown */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div
+          className="rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6 relative overflow-hidden border"
+          style={{
+            background: "linear-gradient(135deg,#1a0533 0%,#3b0764 60%,#341746 100%)",
+            borderColor: "rgba(124,58,237,0.35)",
+            boxShadow: "0 8px 32px rgba(124,58,237,0.25)",
+          }}
+        >
+          <div className="relative w-36 h-36 shrink-0">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="10" />
+              <circle
+                cx="60"
+                cy="60"
+                r="54"
+                fill="none"
+                stroke="url(#dashComplianceGrad)"
+                strokeWidth="10"
+                strokeLinecap="round"
+                strokeDasharray={`${(complianceScore / 100) * 339.3} 339.3`}
+              />
+              <defs>
+                <linearGradient id="dashComplianceGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#7c3aed" />
+                  <stop offset="100%" stopColor="#a855f7" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+              <span className="text-3xl font-black">{loading ? "—" : `${complianceScore}%`}</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">Compliance</span>
+            </div>
+          </div>
+          <div className="flex-1 text-center sm:text-left">
+            <h3 className="text-lg font-black text-white">ISO compliance score</h3>
+            <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
+              Approved documents vs active records across all modules.
+            </p>
+            <p className="text-xs mt-3 font-semibold" style={{ color: "rgba(255,255,255,0.45)" }}>
+              {dashboardDocs.filter((d) => d.approved).length} approved · {dashboardDocs.length} total active
+            </p>
+          </div>
+        </div>
+
+        <div
+          className="rounded-2xl p-5 border"
+          style={{ background: COLORS.bgWhite, borderColor: COLORS.border }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-bold" style={{ color: COLORS.textPrimary }}>
+              Module breakdown
+            </h3>
+            <span className="text-xs font-semibold" style={{ color: COLORS.textSecondary }}>
+              {moduleBreakdown.length} modules
+            </span>
+          </div>
+          <div className="space-y-3 max-h-[280px] overflow-y-auto pr-1">
+            {moduleBreakdown.length === 0 ? (
+              <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                {loading ? "Loading…" : "No module data yet."}
+              </p>
+            ) : (
+              moduleBreakdown.map(([key, count], i) => {
+                const max = moduleBreakdown[0]?.[1] || 1
+                const pct = Math.round((count / max) * 100)
                 return (
-                  <div
-                    key={item.label}
-                    className="rounded-2xl p-4 text-white relative overflow-hidden"
-                    style={{ background: item.gradient, boxShadow: "0 4px 14px rgba(0,0,0,0.12)" }}
-                  >
-                    <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-20 bg-white" />
-                    <Icon className="w-5 h-5 mb-3 opacity-90 relative z-10" />
-                    <p className="text-xs font-bold uppercase tracking-wide opacity-80 relative z-10">{item.label}</p>
-                    <p className="text-xl font-black mt-1 relative z-10">{item.value}</p>
-                    <p className="text-[11px] opacity-75 mt-0.5 relative z-10">{item.sub}</p>
+                  <div key={key}>
+                    <div className="flex justify-between text-xs font-semibold mb-1">
+                      <span style={{ color: COLORS.textPrimary }}>{PDF_MODULE_LABELS[key] || key}</span>
+                      <span style={{ color: COLORS.textSecondary }}>{count}</span>
+                    </div>
+                    <div className="h-2 rounded-full overflow-hidden" style={{ background: COLORS.bgGray }}>
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${pct}%`,
+                          background: moduleBarColors[i % moduleBarColors.length],
+                        }}
+                      />
+                    </div>
                   </div>
                 )
-              })}
+              })
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* System health */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          {
+            icon: Activity,
+            label: "Live activity",
+            value: loading ? "—" : `${healthMetrics.activityCount} events`,
+            sub: healthMetrics.activityCount > 0 ? "Recent" : "None yet",
+            gradient: "linear-gradient(135deg,#059669,#10b981)",
+          },
+          {
+            icon: Zap,
+            label: "Active modules",
+            value: loading ? "—" : `${healthMetrics.modules}`,
+            sub: "In use",
+            gradient: "linear-gradient(135deg,#2563eb,#3b82f6)",
+          },
+          {
+            icon: AlertCircle,
+            label: "Pending reviews",
+            value: loading ? "—" : `${healthMetrics.pending}`,
+            sub: healthMetrics.pending > 0 ? "Needs attention" : "All clear",
+            gradient:
+              healthMetrics.pending > 0
+                ? "linear-gradient(135deg,#ea580c,#f97316)"
+                : "linear-gradient(135deg,#64748b,#94a3b8)",
+          },
+          {
+            icon: ShieldCheck,
+            label: "Compliance rate",
+            value: loading ? "—" : `${healthMetrics.pct}%`,
+            sub: healthMetrics.pct >= 80 ? "Strong" : healthMetrics.pct >= 50 ? "Monitor" : "Review",
+            gradient: "linear-gradient(135deg,#7c3aed,#a855f7)",
+          },
+        ].map((item) => {
+          const Icon = item.icon
+          return (
+            <div
+              key={item.label}
+              className="rounded-2xl p-4 text-white relative overflow-hidden"
+              style={{ background: item.gradient, boxShadow: "0 4px 14px rgba(0,0,0,0.12)" }}
+            >
+              <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-20 bg-white" />
+              <Icon className="w-5 h-5 mb-3 opacity-90 relative z-10" />
+              <p className="text-xs font-bold uppercase tracking-wide opacity-80 relative z-10">{item.label}</p>
+              <p className="text-xl font-black mt-1 relative z-10">{item.value}</p>
+              <p className="text-[11px] opacity-75 mt-0.5 relative z-10">{item.sub}</p>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Document status + Recent documents */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="xl:col-span-1 space-y-4">
+          {[
+            {
+              label: "Total documents",
+              value: dashboardDocs.length,
+              sub: "Active records",
+              gradient: "linear-gradient(135deg,#7c3aed,#a855f7)",
+            },
+            {
+              label: "Pending review",
+              value: pendingReviewDocs.length,
+              sub: "Awaiting sign-off",
+              gradient: "linear-gradient(135deg,#ea580c,#f97316)",
+            },
+            {
+              label: "Archived",
+              value: archivedDocs.length,
+              sub: "Stored records",
+              gradient: "linear-gradient(135deg,#475569,#64748b)",
+              onClick: () => setActiveDocList("archived"),
+            },
+            {
+              label: "Stale (30+ days)",
+              value: staleDocs.length,
+              sub: "May need refresh",
+              gradient: "linear-gradient(135deg,#2563eb,#3b82f6)",
+              onClick: () => setActiveDocList("stale"),
+            },
+          ].map((card) => {
+            const inner = (
+              <>
+                <div className="text-3xl font-black text-white min-w-[2.5rem] text-center">
+                  {loading ? "—" : card.value}
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-white">{card.label}</div>
+                  <div className="text-xs text-white opacity-60">{card.sub}</div>
+                </div>
+              </>
+            )
+            const className = `w-full text-left rounded-2xl px-5 py-4 flex items-center gap-4 transition-transform ${card.onClick ? "hover:scale-[1.02] cursor-pointer" : "cursor-default"
+              }`
+            const style = {
+              background: card.gradient,
+              boxShadow: "0 4px 14px rgba(0,0,0,0.15)",
+              opacity: card.onClick || card.value > 0 ? 1 : 0.85,
+            }
+            return card.onClick ? (
+              <button key={card.label} type="button" onClick={card.onClick} className={className} style={style}>
+                {inner}
+              </button>
+            ) : (
+              <div key={card.label} className={className} style={style}>
+                {inner}
+              </div>
+            )
+          })}
+        </div>
+
+        <div
+          className="xl:col-span-2 rounded-2xl p-6 border"
+          style={{ background: COLORS.bgWhite, borderColor: COLORS.border }}
+        >
+          <h3 className="text-lg font-bold mb-4" style={{ color: COLORS.textPrimary }}>
+            Recent documents
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {recentDocsGrid.length === 0 ? (
+              <p className="text-sm col-span-2" style={{ color: COLORS.textSecondary }}>
+                {loading ? "Loading…" : "No documents yet."}
+              </p>
+            ) : (
+              recentDocsGrid.map((doc) => (
+                <button
+                  key={doc._id}
+                  type="button"
+                  onClick={() => router.push(getDocumentHref(doc))}
+                  className="text-left p-4 rounded-xl border transition-all hover:shadow-md"
+                  style={{ borderColor: COLORS.border, background: COLORS.bgGrayLight }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}
+                    >
+                      <BookOpen className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-sm truncate" style={{ color: COLORS.textPrimary }}>
+                        {doc.title || "Untitled"}
+                      </p>
+                      <p className="text-xs mt-0.5" style={{ color: COLORS.textSecondary }}>
+                        {PDF_MODULE_LABELS[doc._module || ""] || doc._module || "—"} ·{" "}
+                        {formatTimeAgo(doc.updatedAt || doc.createdAt)}
+                      </p>
+                      <span
+                        className="inline-block mt-2 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        style={{
+                          background: doc.approved ? `${COLORS.green500}22` : `${COLORS.orange500}22`,
+                          color: doc.approved ? COLORS.green600 : COLORS.orange700,
+                        }}
+                      >
+                        {doc.approved ? "Approved" : "Pending"}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div
+        id="dashboard-recent-activity"
+        className="p-7 rounded-xl border"
+        style={{
+          background: COLORS.bgWhite,
+          borderColor: COLORS.border
+        }}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold" style={{ color: COLORS.textPrimary }}>
+            Recent Activity
+          </h2>
+        </div>
+        <div className="space-y-4 max-h-[360px] overflow-y-auto pr-1">
+          {visibleActivities.length === 0 ? (
+            <div className="p-5 rounded-lg" style={{ background: COLORS.bgGray }}>
+              <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                {loading ? "Loading recent activity..." : "No recent activity found."}
+              </p>
+            </div>
+          ) : (
+            visibleActivities.map((activity, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between p-5 rounded-lg transition-all duration-200 hover:bg-opacity-50"
+                style={{ background: COLORS.bgGray }}
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="font-bold text-base" style={{ color: COLORS.textPrimary }}>
+                      {activity.action}
+                    </span>
+                    <span
+                      className="px-3 py-1 rounded text-sm font-semibold"
+                      style={{
+                        background: `${COLORS.primary}15`,
+                        color: COLORS.primary
+                      }}
+                    >
+                      {activity.item}
+                    </span>
+                  </div>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                    by {activity.user} • {activity.time}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div
+          onClick={() => setActiveQuickAction("create")}
+          className="p-7 rounded-xl border-0 cursor-pointer transition-all duration-300 hover:scale-105"
+          style={{
+            background: COLORS.gradientCyan,
+            boxShadow: COLORS.shadowBlue
+          }}
+        >
+          <div className="text-center">
+            <div
+              className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center backdrop-blur-sm"
+              style={{ background: 'rgba(255, 255, 255, 0.25)' }}
+            >
+              <FileText className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="font-bold text-xl mb-3 text-white">
+              Create Document
+            </h3>
+            <p className="text-base text-white opacity-90">
+              Start a new policy or procedure
+            </p>
+          </div>
+        </div>
+
+        <div
+          onClick={() => setActiveQuickAction("review")}
+          className="p-7 rounded-xl border-0 cursor-pointer transition-all duration-300 hover:scale-105"
+          style={{
+            background: COLORS.gradientForest,
+            boxShadow: COLORS.shadowGreen
+          }}
+        >
+          <div className="text-center">
+            <div
+              className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center backdrop-blur-sm"
+              style={{ background: 'rgba(255, 255, 255, 0.25)' }}
+            >
+              <CheckCircle className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="font-bold text-xl mb-3 text-white">
+              Review Tasks
+            </h3>
+            <p className="text-base text-white opacity-90">
+              Check pending approvals
+            </p>
+          </div>
+        </div>
+
+        <div
+          onClick={() => setActiveQuickAction("alerts")}
+          className="p-7 rounded-xl border-0 cursor-pointer transition-all duration-300 hover:scale-105"
+          style={{
+            background: COLORS.gradientPurple,
+            boxShadow: COLORS.shadowPink
+          }}
+        >
+          <div className="text-center">
+            <div
+              className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center backdrop-blur-sm"
+              style={{ background: 'rgba(255, 255, 255, 0.25)' }}
+            >
+              <AlertCircle className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="font-bold text-xl mb-3 text-white">
+              View Alerts
+            </h3>
+            <p className="text-base text-white opacity-90">
+              Check system notifications
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {activeQuickAction ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(15, 23, 42, 0.45)" }}
+          onClick={() => setActiveQuickAction(null)}
+        >
+          <div
+            className="w-full max-w-3xl rounded-2xl border shadow-2xl"
+            style={{ background: COLORS.bgWhite, borderColor: COLORS.border }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div
+              className="flex items-center justify-between px-6 py-5 border-b"
+              style={{ borderColor: COLORS.border }}
+            >
+              <div>
+                <h3 className="text-2xl font-bold" style={{ color: COLORS.textPrimary }}>
+                  {activeQuickAction === "create"
+                    ? "Create Document"
+                    : activeQuickAction === "review"
+                      ? "Review Tasks"
+                      : "View Alerts"}
+                </h3>
+                <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                  {activeQuickAction === "create"
+                    ? "Choose where you want to create a new document."
+                    : activeQuickAction === "review"
+                      ? "Open pending documents that need your attention."
+                      : "Review key dashboard alerts and follow-up actions."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveQuickAction(null)}
+                className="px-4 py-2 rounded-lg font-semibold"
+                style={{ background: COLORS.bgGray, color: COLORS.textPrimary }}
+              >
+                Close
+              </button>
             </div>
 
-            {/* Document status + Recent documents */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-              <div className="xl:col-span-1 space-y-4">
-                {[
-                  {
-                    label: "Total documents",
-                    value: dashboardDocs.length,
-                    sub: "Active records",
-                    gradient: "linear-gradient(135deg,#7c3aed,#a855f7)",
-                  },
-                  {
-                    label: "Pending review",
-                    value: pendingReviewDocs.length,
-                    sub: "Awaiting sign-off",
-                    gradient: "linear-gradient(135deg,#ea580c,#f97316)",
-                  },
-                  {
-                    label: "Archived",
-                    value: archivedDocs.length,
-                    sub: "Stored records",
-                    gradient: "linear-gradient(135deg,#475569,#64748b)",
-                    onClick: () => setActiveDocList("archived"),
-                  },
-                  {
-                    label: "Stale (30+ days)",
-                    value: staleDocs.length,
-                    sub: "May need refresh",
-                    gradient: "linear-gradient(135deg,#2563eb,#3b82f6)",
-                    onClick: () => setActiveDocList("stale"),
-                  },
-                ].map((card) => {
-                  const inner = (
-                    <>
-                      <div className="text-3xl font-black text-white min-w-[2.5rem] text-center">
-                        {loading ? "—" : card.value}
-                      </div>
-                      <div>
-                        <div className="text-sm font-bold text-white">{card.label}</div>
-                        <div className="text-xs text-white opacity-60">{card.sub}</div>
-                      </div>
-                    </>
-                  )
-                  const className = `w-full text-left rounded-2xl px-5 py-4 flex items-center gap-4 transition-transform ${
-                    card.onClick ? "hover:scale-[1.02] cursor-pointer" : "cursor-default"
-                  }`
-                  const style = {
-                    background: card.gradient,
-                    boxShadow: "0 4px 14px rgba(0,0,0,0.15)",
-                    opacity: card.onClick || card.value > 0 ? 1 : 0.85,
-                  }
-                  return card.onClick ? (
-                    <button key={card.label} type="button" onClick={card.onClick} className={className} style={style}>
-                      {inner}
-                    </button>
-                  ) : (
-                    <div key={card.label} className={className} style={style}>
-                      {inner}
-                    </div>
-                  )
-                })}
-              </div>
-
-              <div
-                className="xl:col-span-2 rounded-2xl p-6 border"
-                style={{ background: COLORS.bgWhite, borderColor: COLORS.border }}
-              >
-                <h3 className="text-lg font-bold mb-4" style={{ color: COLORS.textPrimary }}>
-                  Recent documents
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {recentDocsGrid.length === 0 ? (
-                    <p className="text-sm col-span-2" style={{ color: COLORS.textSecondary }}>
-                      {loading ? "Loading…" : "No documents yet."}
+            <div className="p-6">
+              {activeQuickAction === "create" ? (
+                createDocumentOptions.length === 0 ? (
+                  <div className="p-5 rounded-xl" style={{ background: COLORS.bgGray }}>
+                    <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                      You do not currently have permission to create documents from the dashboard.
                     </p>
-                  ) : (
-                    recentDocsGrid.map((doc) => (
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {createDocumentOptions.map((option) => (
+                      <button
+                        key={option.href}
+                        type="button"
+                        onClick={() => handleOpenCreateOption(option.href)}
+                        className="text-left p-5 rounded-xl border transition-all hover:shadow-md"
+                        style={{ borderColor: COLORS.border, background: COLORS.bgGrayLight }}
+                      >
+                        <h4 className="text-lg font-bold mb-2" style={{ color: COLORS.textPrimary }}>
+                          {option.label}
+                        </h4>
+                        <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                          {option.description}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                )
+              ) : null}
+
+              {activeQuickAction === "review" ? (
+                pendingReviewDocs.length === 0 ? (
+                  <div className="p-5 rounded-xl" style={{ background: COLORS.bgGray }}>
+                    <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                      No pending review tasks were found in the current dashboard data.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-1">
+                    {pendingReviewDocs.map((doc) => (
                       <button
                         key={doc._id}
                         type="button"
-                        onClick={() => router.push(getDocumentHref(doc))}
-                        className="text-left p-4 rounded-xl border transition-all hover:shadow-md"
+                        onClick={() => handleOpenDocument(doc)}
+                        className="w-full text-left p-4 rounded-xl border transition-all hover:shadow-md"
                         style={{ borderColor: COLORS.border, background: COLORS.bgGrayLight }}
                       >
-                        <div className="flex items-start gap-3">
-                          <div
-                            className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                            style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <p className="text-base font-bold" style={{ color: COLORS.textPrimary }}>
+                              {doc.title || "Untitled Document"}
+                            </p>
+                            <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                              {PDF_MODULE_LABELS[doc._module || ""] || "Document"} • Last updated {formatTimeAgo(doc.updatedAt || doc.createdAt)}
+                            </p>
+                          </div>
+                          <span
+                            className="px-3 py-1 rounded-full text-xs font-bold"
+                            style={{ background: COLORS.orange100, color: COLORS.orange700 }}
                           >
-                            <BookOpen className="w-5 h-5 text-white" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-bold text-sm truncate" style={{ color: COLORS.textPrimary }}>
-                              {doc.title || "Untitled"}
-                            </p>
-                            <p className="text-xs mt-0.5" style={{ color: COLORS.textSecondary }}>
-                              {PDF_MODULE_LABELS[doc._module || ""] || doc._module || "—"} ·{" "}
-                              {formatTimeAgo(doc.updatedAt || doc.createdAt)}
-                            </p>
-                            <span
-                              className="inline-block mt-2 text-[10px] font-bold px-2 py-0.5 rounded-full"
-                              style={{
-                                background: doc.approved ? `${COLORS.green500}22` : `${COLORS.orange500}22`,
-                                color: doc.approved ? COLORS.green600 : COLORS.orange700,
-                              }}
-                            >
-                              {doc.approved ? "Approved" : "Pending"}
-                            </span>
-                          </div>
+                            Pending
+                          </span>
                         </div>
                       </button>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
+                    ))}
+                  </div>
+                )
+              ) : null}
 
-            {/* Recent Activity */}
-            <div
-                id="dashboard-recent-activity"
-                className="p-7 rounded-xl border"
-                style={{
-                    background: COLORS.bgWhite,
-                    borderColor: COLORS.border
-                }}
-            >
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold" style={{ color: COLORS.textPrimary }}>
-                        Recent Activity
-                    </h2>
-                </div>
-                <div className="space-y-4 max-h-[360px] overflow-y-auto pr-1">
-                    {visibleActivities.length === 0 ? (
-                      <div className="p-5 rounded-lg" style={{ background: COLORS.bgGray }}>
-                        <p className="text-sm" style={{ color: COLORS.textSecondary }}>
-                          {loading ? "Loading recent activity..." : "No recent activity found."}
-                        </p>
-                      </div>
-                    ) : (
-                      visibleActivities.map((activity, index) => (
-                          <div
-                              key={index}
-                              className="flex items-center justify-between p-5 rounded-lg transition-all duration-200 hover:bg-opacity-50"
-                              style={{ background: COLORS.bgGray }}
-                          >
-                              <div className="flex-1">
-                                  <div className="flex items-center gap-3 mb-2">
-                                      <span className="font-bold text-base" style={{ color: COLORS.textPrimary }}>
-                                          {activity.action}
-                                      </span>
-                                      <span
-                                          className="px-3 py-1 rounded text-sm font-semibold"
-                                          style={{
-                                              background: `${COLORS.primary}15`,
-                                              color: COLORS.primary
-                                          }}
-                                      >
-                                          {activity.item}
-                                      </span>
-                                  </div>
-                                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>
-                                      by {activity.user} • {activity.time}
-                                  </p>
-                                </div>
+              {activeQuickAction === "alerts" ? (
+                alertItems.length === 0 ? (
+                  <div className="p-5 rounded-xl" style={{ background: COLORS.bgGray }}>
+                    <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                      No alerts right now. Your dashboard looks healthy.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {alertItems.map((item, index) => (
+                      <div
+                        key={`${item.title}-${index}`}
+                        className="p-5 rounded-xl border"
+                        style={{ borderColor: COLORS.border, background: COLORS.bgGrayLight }}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <p className="text-base font-bold" style={{ color: COLORS.textPrimary }}>
+                              {item.title}
+                            </p>
+                            <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                              {item.description}
+                            </p>
                           </div>
-                      ))
-                    )}
-                </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div
-                    onClick={() => setActiveQuickAction("create")}
-                    className="p-7 rounded-xl border-0 cursor-pointer transition-all duration-300 hover:scale-105"
-                    style={{
-                        background: COLORS.gradientCyan,
-                        boxShadow: COLORS.shadowBlue
-                    }}
-                >
-                    <div className="text-center">
-                        <div
-                            className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center backdrop-blur-sm"
-                            style={{ background: 'rgba(255, 255, 255, 0.25)' }}
-                        >
-                            <FileText className="w-8 h-8 text-white" />
-                        </div>
-                        <h3 className="font-bold text-xl mb-3 text-white">
-                            Create Document
-                        </h3>
-                        <p className="text-base text-white opacity-90">
-                            Start a new policy or procedure
-                        </p>
-                    </div>
-                </div>
-
-                <div
-                    onClick={() => setActiveQuickAction("review")}
-                    className="p-7 rounded-xl border-0 cursor-pointer transition-all duration-300 hover:scale-105"
-                    style={{
-                        background: COLORS.gradientForest,
-                        boxShadow: COLORS.shadowGreen
-                    }}
-                >
-                    <div className="text-center">
-                        <div
-                            className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center backdrop-blur-sm"
-                            style={{ background: 'rgba(255, 255, 255, 0.25)' }}
-                        >
-                            <CheckCircle className="w-8 h-8 text-white" />
-                        </div>
-                        <h3 className="font-bold text-xl mb-3 text-white">
-                            Review Tasks
-                        </h3>
-                        <p className="text-base text-white opacity-90">
-                            Check pending approvals
-                        </p>
-                    </div>
-                </div>
-
-                <div
-                    onClick={() => setActiveQuickAction("alerts")}
-                    className="p-7 rounded-xl border-0 cursor-pointer transition-all duration-300 hover:scale-105"
-                    style={{
-                        background: COLORS.gradientPurple,
-                        boxShadow: COLORS.shadowPink
-                    }}
-                >
-                    <div className="text-center">
-                        <div
-                            className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center backdrop-blur-sm"
-                            style={{ background: 'rgba(255, 255, 255, 0.25)' }}
-                        >
-                            <AlertCircle className="w-8 h-8 text-white" />
-                        </div>
-                        <h3 className="font-bold text-xl mb-3 text-white">
-                            View Alerts
-                        </h3>
-                        <p className="text-base text-white opacity-90">
-                            Check system notifications
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            {activeQuickAction ? (
-              <div
-                className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                style={{ background: "rgba(15, 23, 42, 0.45)" }}
-                onClick={() => setActiveQuickAction(null)}
-              >
-                <div
-                  className="w-full max-w-3xl rounded-2xl border shadow-2xl"
-                  style={{ background: COLORS.bgWhite, borderColor: COLORS.border }}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <div
-                    className="flex items-center justify-between px-6 py-5 border-b"
-                    style={{ borderColor: COLORS.border }}
-                  >
-                    <div>
-                      <h3 className="text-2xl font-bold" style={{ color: COLORS.textPrimary }}>
-                        {activeQuickAction === "create"
-                          ? "Create Document"
-                          : activeQuickAction === "review"
-                            ? "Review Tasks"
-                            : "View Alerts"}
-                      </h3>
-                      <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
-                        {activeQuickAction === "create"
-                          ? "Choose where you want to create a new document."
-                          : activeQuickAction === "review"
-                            ? "Open pending documents that need your attention."
-                            : "Review key dashboard alerts and follow-up actions."}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setActiveQuickAction(null)}
-                      className="px-4 py-2 rounded-lg font-semibold"
-                      style={{ background: COLORS.bgGray, color: COLORS.textPrimary }}
-                    >
-                      Close
-                    </button>
-                  </div>
-
-                  <div className="p-6">
-                    {activeQuickAction === "create" ? (
-                      createDocumentOptions.length === 0 ? (
-                        <div className="p-5 rounded-xl" style={{ background: COLORS.bgGray }}>
-                          <p className="text-sm" style={{ color: COLORS.textSecondary }}>
-                            You do not currently have permission to create documents from the dashboard.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {createDocumentOptions.map((option) => (
+                          {item.action ? (
                             <button
-                              key={option.href}
                               type="button"
-                              onClick={() => handleOpenCreateOption(option.href)}
-                              className="text-left p-5 rounded-xl border transition-all hover:shadow-md"
-                              style={{ borderColor: COLORS.border, background: COLORS.bgGrayLight }}
+                              onClick={() => handleAlertAction(item.action)}
+                              className="px-4 py-2 rounded-lg text-sm font-semibold"
+                              style={{ background: COLORS.primary, color: COLORS.textWhite }}
                             >
-                              <h4 className="text-lg font-bold mb-2" style={{ color: COLORS.textPrimary }}>
-                                {option.label}
-                              </h4>
-                              <p className="text-sm" style={{ color: COLORS.textSecondary }}>
-                                {option.description}
-                              </p>
+                              Open
                             </button>
-                          ))}
+                          ) : null}
                         </div>
-                      )
-                    ) : null}
-
-                    {activeQuickAction === "review" ? (
-                      pendingReviewDocs.length === 0 ? (
-                        <div className="p-5 rounded-xl" style={{ background: COLORS.bgGray }}>
-                          <p className="text-sm" style={{ color: COLORS.textSecondary }}>
-                            No pending review tasks were found in the current dashboard data.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-1">
-                          {pendingReviewDocs.map((doc) => (
-                            <button
-                              key={doc._id}
-                              type="button"
-                              onClick={() => handleOpenDocument(doc)}
-                              className="w-full text-left p-4 rounded-xl border transition-all hover:shadow-md"
-                              style={{ borderColor: COLORS.border, background: COLORS.bgGrayLight }}
-                            >
-                              <div className="flex items-center justify-between gap-4">
-                                <div>
-                                  <p className="text-base font-bold" style={{ color: COLORS.textPrimary }}>
-                                    {doc.title || "Untitled Document"}
-                                  </p>
-                                  <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
-                                    {PDF_MODULE_LABELS[doc._module || ""] || "Document"} • Last updated {formatTimeAgo(doc.updatedAt || doc.createdAt)}
-                                  </p>
-                                </div>
-                                <span
-                                  className="px-3 py-1 rounded-full text-xs font-bold"
-                                  style={{ background: COLORS.orange100, color: COLORS.orange700 }}
-                                >
-                                  Pending
-                                </span>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )
-                    ) : null}
-
-                    {activeQuickAction === "alerts" ? (
-                      alertItems.length === 0 ? (
-                        <div className="p-5 rounded-xl" style={{ background: COLORS.bgGray }}>
-                          <p className="text-sm" style={{ color: COLORS.textSecondary }}>
-                            No alerts right now. Your dashboard looks healthy.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {alertItems.map((item, index) => (
-                            <div
-                              key={`${item.title}-${index}`}
-                              className="p-5 rounded-xl border"
-                              style={{ borderColor: COLORS.border, background: COLORS.bgGrayLight }}
-                            >
-                              <div className="flex items-start justify-between gap-4">
-                                <div>
-                                  <p className="text-base font-bold" style={{ color: COLORS.textPrimary }}>
-                                    {item.title}
-                                  </p>
-                                  <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
-                                    {item.description}
-                                  </p>
-                                </div>
-                                {item.action ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAlertAction(item.action)}
-                                    className="px-4 py-2 rounded-lg text-sm font-semibold"
-                                    style={{ background: COLORS.primary, color: COLORS.textWhite }}
-                                  >
-                                    Open
-                                  </button>
-                                ) : null}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )
-                    ) : null}
+                      </div>
+                    ))}
                   </div>
-                </div>
-              </div>
-            ) : null}
+                )
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
-            {activeDocList ? (
-              <div
-                className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                style={{ background: "rgba(15, 23, 42, 0.5)" }}
+      {activeDocList ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(15, 23, 42, 0.5)" }}
+          onClick={() => setActiveDocList(null)}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl border shadow-2xl max-h-[85vh] flex flex-col"
+            style={{ background: COLORS.bgWhite, borderColor: COLORS.border }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="flex items-center justify-between px-5 py-4 text-white rounded-t-2xl"
+              style={{
+                background:
+                  activeDocList === "archived"
+                    ? "linear-gradient(135deg,#475569,#64748b)"
+                    : "linear-gradient(135deg,#2563eb,#3b82f6)",
+              }}
+            >
+              <h3 className="text-lg font-bold">
+                {activeDocList === "archived" ? "Archived documents" : "Stale documents (30+ days)"}
+              </h3>
+              <button
+                type="button"
                 onClick={() => setActiveDocList(null)}
+                className="px-3 py-1 rounded-lg text-sm font-semibold bg-white/20 hover:bg-white/30"
               >
-                <div
-                  className="w-full max-w-lg rounded-2xl border shadow-2xl max-h-[85vh] flex flex-col"
-                  style={{ background: COLORS.bgWhite, borderColor: COLORS.border }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div
-                    className="flex items-center justify-between px-5 py-4 text-white rounded-t-2xl"
-                    style={{
-                      background:
-                        activeDocList === "archived"
-                          ? "linear-gradient(135deg,#475569,#64748b)"
-                          : "linear-gradient(135deg,#2563eb,#3b82f6)",
+                Close
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1 space-y-2">
+              {(activeDocList === "archived" ? archivedDocs : staleDocs).length === 0 ? (
+                <p className="text-sm text-center py-8" style={{ color: COLORS.textSecondary }}>
+                  No documents in this list.
+                </p>
+              ) : (
+                (activeDocList === "archived" ? archivedDocs : staleDocs).map((doc) => (
+                  <button
+                    key={doc._id}
+                    type="button"
+                    onClick={() => {
+                      setActiveDocList(null)
+                      router.push(getDocumentHref(doc))
                     }}
+                    className="w-full text-left p-3 rounded-xl border transition-all hover:shadow-sm"
+                    style={{ borderColor: COLORS.border, background: COLORS.bgGrayLight }}
                   >
-                    <h3 className="text-lg font-bold">
-                      {activeDocList === "archived" ? "Archived documents" : "Stale documents (30+ days)"}
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={() => setActiveDocList(null)}
-                      className="px-3 py-1 rounded-lg text-sm font-semibold bg-white/20 hover:bg-white/30"
+                    <p className="font-semibold text-sm" style={{ color: COLORS.textPrimary }}>
+                      {doc.title || "Untitled"}
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: COLORS.textSecondary }}>
+                      {PDF_MODULE_LABELS[doc._module || ""] || doc._module || "—"} ·{" "}
+                      {formatTimeAgo(doc.updatedAt || doc.createdAt)}
+                    </p>
+                    <span
+                      className="inline-block mt-2 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{
+                        background:
+                          activeDocList === "archived" ? `${COLORS.gray500}22` : `${COLORS.blue500}22`,
+                        color: activeDocList === "archived" ? COLORS.gray700 : COLORS.blue700,
+                      }}
                     >
-                      Close
-                    </button>
-                  </div>
-                  <div className="p-4 overflow-y-auto flex-1 space-y-2">
-                    {(activeDocList === "archived" ? archivedDocs : staleDocs).length === 0 ? (
-                      <p className="text-sm text-center py-8" style={{ color: COLORS.textSecondary }}>
-                        No documents in this list.
-                      </p>
-                    ) : (
-                      (activeDocList === "archived" ? archivedDocs : staleDocs).map((doc) => (
-                        <button
-                          key={doc._id}
-                          type="button"
-                          onClick={() => {
-                            setActiveDocList(null)
-                            router.push(getDocumentHref(doc))
-                          }}
-                          className="w-full text-left p-3 rounded-xl border transition-all hover:shadow-sm"
-                          style={{ borderColor: COLORS.border, background: COLORS.bgGrayLight }}
-                        >
-                          <p className="font-semibold text-sm" style={{ color: COLORS.textPrimary }}>
-                            {doc.title || "Untitled"}
-                          </p>
-                          <p className="text-xs mt-1" style={{ color: COLORS.textSecondary }}>
-                            {PDF_MODULE_LABELS[doc._module || ""] || doc._module || "—"} ·{" "}
-                            {formatTimeAgo(doc.updatedAt || doc.createdAt)}
-                          </p>
-                          <span
-                            className="inline-block mt-2 text-[10px] font-bold px-2 py-0.5 rounded-full"
-                            style={{
-                              background:
-                                activeDocList === "archived" ? `${COLORS.gray500}22` : `${COLORS.blue500}22`,
-                              color: activeDocList === "archived" ? COLORS.gray700 : COLORS.blue700,
-                            }}
-                          >
-                            {activeDocList === "archived" ? "Archived" : "Stale"}
-                          </span>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : null}
+                      {activeDocList === "archived" ? "Archived" : "Stale"}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

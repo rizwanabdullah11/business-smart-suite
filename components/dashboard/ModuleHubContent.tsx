@@ -103,20 +103,6 @@ export function ModuleHubContent() {
                       </p>
                     </div>
                   </div>
-                  <div
-                    className="lg:max-w-xs lg:text-right space-y-3 shrink-0"
-                    style={{ color: "rgba(255,255,255,0.55)" }}
-                  >
-                    <p className="text-sm leading-relaxed">
-                      Open the <span className="font-semibold text-white/90">navigation menu</span> from the{" "}
-                      <span className="font-semibold text-white/90">B</span> button anytime, or expand a category
-                      below to jump into a module.
-                    </p>
-                    <div
-                      className="h-px w-full lg:ml-auto lg:max-w-[200px] rounded-full opacity-60"
-                      style={{ background: "linear-gradient(90deg, transparent, rgba(168,85,247,0.8), transparent)" }}
-                    />
-                  </div>
                 </div>
               </div>
             </div>

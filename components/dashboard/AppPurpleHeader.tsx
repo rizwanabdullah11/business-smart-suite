@@ -31,24 +31,19 @@ export function AppPurpleHeader({ user, onLogout, onAddFolder }: AppPurpleHeader
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
-            className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform hover:scale-105 active:scale-95"
+            className="flex items-center rounded-xl shrink-0 transition-transform hover:scale-[1.02] active:scale-[0.99]"
             style={{
               background: "linear-gradient(135deg,#7c3aed,#a855f7)",
               boxShadow: "0 4px 14px rgba(124,58,237,0.45)",
+              padding: "14px 18px",
             }}
             title="Open navigation"
             aria-label="Open navigation menu"
           >
-            <span className="text-lg sm:text-xl font-black text-white">B</span>
-          </button>
-          <div className="min-w-0">
-            <p className="text-base sm:text-lg font-black text-white tracking-tight leading-tight truncate">
+            <span className="text-sm sm:text-base font-black text-white whitespace-nowrap">
               Business Smart Suite
-            </p>
-            <p className="text-[11px] sm:text-xs mt-0.5 truncate" style={{ color: "rgba(255,255,255,0.65)" }}>
-              Your comprehensive business management portal
-            </p>
-          </div>
+            </span>
+          </button>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
