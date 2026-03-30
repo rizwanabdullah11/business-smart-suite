@@ -227,9 +227,8 @@ export default function DynamicModulePage({
 
       setCategories(merged)
       setArchivedCategories(mergedArchived)
-      setExpandedCategories((prev) => {
-        const firstCategoryId = merged[0]?.id
-        const nextExpanded = prev.length ? [prev[0]] : firstCategoryId ? [String(firstCategoryId)] : []
+      setExpandedCategories(() => {
+        const nextExpanded: string[] = []
         writeModulePageCache(cacheKey, {
           categories: merged,
           archivedCategories: mergedArchived,
