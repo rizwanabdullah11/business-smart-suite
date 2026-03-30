@@ -22,7 +22,7 @@ export function AppPurpleHeader({ user, onLogout, onAddFolder }: AppPurpleHeader
       <header
         className="fixed top-0 left-0 right-0 z-40 flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3 min-h-[72px]"
         style={{
-          background: "linear-gradient(90deg, #3b0764 0%, #5b21b6 45%, #6d28d9 100%)",
+          background: "#341746",
           borderBottom: "1px solid rgba(255,255,255,0.12)",
           boxShadow: "0 4px 24px rgba(59, 7, 100, 0.35)",
         }}
