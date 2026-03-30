@@ -53,7 +53,7 @@ export function TopNavbar({ user, isCollapsed, onLogout, onAddFolder }: TopNavba
                 background: COLORS.bgWhite,
                 borderColor: COLORS.border,
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
-                paddingLeft: isCollapsed ? '112px' : '312px', // Sidebar width (80/280) + 32px (main padding)
+                paddingLeft: '2rem',
                 paddingRight: '2rem'
             }}
         >

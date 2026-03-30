@@ -6,7 +6,6 @@ import { Loader2 } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/contexts/auth-context"
-import { Sidebar } from "@/components/dashboard/Sidebar"
 import { TopNavbar } from "@/components/dashboard/TopNavbar"
 import { Footer } from "@/components/dashboard/Footer"
 import { CreateSectionDialog } from "@/components/dashboard/CreateSectionDialog"
@@ -43,12 +42,25 @@ export function AppLayout({ children }: AppLayoutProps) {
         setIsCreateSectionOpen(true)
     }
 
-    // Don't show layout on login page
+    // Login page — no layout at all
     if (pathname === '/login') {
         return <>{children}</>
     }
 
-    // Show loading state
+    // Module hub — no sidebar/header, but still needs auth gate
+    if (pathname === '/dashboard') {
+        if (loading) {
+            return (
+                <div className="min-h-screen flex items-center justify-center" style={{ background: '#3b0764' }}>
+                    <Loader2 className="w-10 h-10 animate-spin text-purple-300" />
+                </div>
+            )
+        }
+        if (!isAuthenticated) return null
+        return <>{children}</>
+    }
+
+    // Show loading state for all other pages
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center" style={{ background: COLORS.bgWhite }}>
@@ -67,34 +79,26 @@ export function AppLayout({ children }: AppLayoutProps) {
 
     return (
         <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
-            {/* Sidebar - Always expanded */}
-            <Sidebar />
+            {/* Top Navbar — no sidebar, full width */}
+            <TopNavbar
+                user={user}
+                isCollapsed={true}
+                onLogout={handleLogout}
+                onAddFolder={handleAddFolder}
+            />
 
-            {/* Main Content Area - Fixed margin for static sidebar */}
-            <div
-                className="ml-[280px]"
-            >
-                {/* Top Navbar */}
-                <TopNavbar
-                    user={user}
-                    isCollapsed={false}
-                    onLogout={handleLogout}
-                    onAddFolder={handleAddFolder}
-                />
+            {/* Page Content */}
+            <main className="pt-24 px-8 pb-8">
+                {children}
+            </main>
 
-                {/* Page Content */}
-                <main className="pt-24 px-8 pb-8">
-                    {children}
-                </main>
+            {/* Footer */}
+            <Footer />
 
-                {/* Footer */}
-                <Footer />
-
-                <CreateSectionDialog
-                    open={isCreateSectionOpen}
-                    onOpenChange={setIsCreateSectionOpen}
-                />
-            </div>
+            <CreateSectionDialog
+                open={isCreateSectionOpen}
+                onOpenChange={setIsCreateSectionOpen}
+            />
         </div>
     )
 }

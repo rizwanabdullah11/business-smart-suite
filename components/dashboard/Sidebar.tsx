@@ -252,17 +252,31 @@ export function Sidebar({}: SidebarProps = {}) {
                     </div>
                 ) : (
                     <>
-                        {/* Dashboard Link */}
+                        {/* Dashboard Links */}
                         <Link href="/dashboard">
                             <div
-                                className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-2 cursor-pointer transition-all duration-200 ${isActive('/dashboard') ? 'font-bold' : 'font-medium'}`}
+                                className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-1 cursor-pointer transition-all duration-200 ${isActive('/dashboard') ? 'font-bold' : 'font-medium'}`}
                                 style={{
                                     background: isActive('/dashboard') ? "rgba(168,85,247,0.25)" : 'transparent',
                                     color: isActive('/dashboard') ? "#e9d5ff" : "rgba(255,255,255,0.7)",
+                                    borderLeft: isActive('/dashboard') ? "3px solid #a855f7" : "3px solid transparent",
+                                }}
+                            >
+                                <Home className="w-5 h-5 shrink-0" />
+                                <span className="text-sm">Home</span>
+                            </div>
+                        </Link>
+                        <Link href="/dashboard/analytics">
+                            <div
+                                className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-2 cursor-pointer transition-all duration-200 ${isActive('/dashboard/analytics') ? 'font-bold' : 'font-medium'}`}
+                                style={{
+                                    background: isActive('/dashboard/analytics') ? "rgba(168,85,247,0.25)" : 'transparent',
+                                    color: isActive('/dashboard/analytics') ? "#e9d5ff" : "rgba(255,255,255,0.7)",
+                                    borderLeft: isActive('/dashboard/analytics') ? "3px solid #a855f7" : "3px solid transparent",
                                 }}
                             >
                                 <LayoutDashboard className="w-5 h-5 shrink-0" />
-                                <span className="text-sm">Dashboard</span>
+                                <span className="text-sm">Analytics</span>
                             </div>
                         </Link>
 
