@@ -1712,10 +1712,10 @@ export default function ManualPage() {
                                               onClick={() => toggleApprove(category.id, manual.id, manual.approved)}
                                               disabled={loadingAction === `approve-${manual.id}`}
                                               className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                                              style={{ background: manual.approved ? "#22c55e" : "#e5e7eb" }}
+                                              style={{ background: "#22c55e" }}
                                               title={manual.approved ? "Reopen" : "Mark done"}
                                             >
-                                              <Check className="h-3.5 w-3.5" style={{ color: manual.approved ? "#fff" : "#6b7280" }} />
+                                              <Check className="h-3.5 w-3.5 text-white" />
                                             </button>
                                             <Link href={`/manual/${manual.id}/edit`}>
                                               <button
@@ -1745,30 +1745,30 @@ export default function ManualPage() {
                                               onClick={() => toggleHighlight(category.id, manual.id, manual.highlighted)}
                                               disabled={loadingAction === `highlight-${manual.id}`}
                                               className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                                              style={{ background: manual.highlighted ? "#f59e0b" : "#e5e7eb" }}
+                                              style={{ background: "#f59e0b" }}
                                               title={manual.highlighted ? "Remove Highlight" : "Highlight"}
                                             >
-                                              <Star className={`h-3.5 w-3.5 ${manual.highlighted ? "fill-white text-white" : "text-gray-500"}`} />
+                                              <Star className={`h-3.5 w-3.5 text-white ${manual.highlighted ? "fill-white" : ""}`} />
                                             </button>
                                             <button
                                               type="button"
                                               onClick={() => toggleApprove(category.id, manual.id, manual.approved)}
                                               disabled={loadingAction === `approve-${manual.id}`}
                                               className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                                              style={{ background: manual.approved ? "#22c55e" : "#e5e7eb" }}
+                                              style={{ background: "#22c55e" }}
                                               title={manual.approved ? "Mark as Incomplete" : "Mark as Completed"}
                                             >
-                                              <Check className="h-3.5 w-3.5" style={{ color: manual.approved ? "#fff" : "#6b7280" }} />
+                                              <Check className="h-3.5 w-3.5 text-white" />
                                             </button>
                                             <button
                                               type="button"
                                               onClick={() => togglePause(category.id, manual.id, manual.paused)}
                                               disabled={loadingAction === `pause-${manual.id}`}
                                               className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                                              style={{ background: manual.paused ? "#f59e0b" : "#e5e7eb" }}
+                                              style={{ background: "#f97316" }}
                                               title={manual.paused ? "Resume" : "Pause"}
                                             >
-                                              <Pause className="h-3.5 w-3.5" style={{ color: manual.paused ? "#fff" : "#6b7280" }} />
+                                              <Pause className="h-3.5 w-3.5 text-white" />
                                             </button>
                                             <Link href={`/manual/${manual.id}/edit`}>
                                               <button
