@@ -97,65 +97,57 @@ export default function NewAuditSchedulePage() {
     }
   }
 
-  return (
-    <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
-      <div className="p-6">
-        <div className="max-w-4xl mx-auto">
-          {/* Back Button */}
-          <div className="mb-6">
-            <Link
-              href="/audit-schedule"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md"
-              style={{
-                background: COLORS.bgWhite,
-                color: COLORS.textPrimary,
-                border: `1px solid ${COLORS.border}`,
-              }}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Audit Schedule
-            </Link>
-          </div>
+  const inputCls = "w-full rounded-xl px-4 py-3 outline-none transition-all focus:ring-2 focus:ring-purple-300"
+  const inputStyle = { background: COLORS.bgGrayLight, border: `1px solid ${COLORS.border}`, color: COLORS.textPrimary }
+  const labelCls = "mb-2 block text-sm font-semibold"
 
-          {/* Create Form */}
-          <div
-            className="rounded-lg p-6 shadow-sm"
-            style={{
-              background: COLORS.bgWhite,
-              border: `1px solid ${COLORS.border}`,
-            }}
+  return (
+    <div className="min-h-screen" style={{ background: "linear-gradient(180deg,#f7f8fb 0%,#f3f5f9 100%)" }}>
+      <div className="mx-auto max-w-[1400px] p-4 sm:p-6">
+
+        {/* Header */}
+        <div className="mb-6 flex items-start gap-3">
+          <Link
+            href="/audit-schedule"
+            className="flex h-10 w-10 items-center justify-center rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-md"
+            style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}
           >
-            <h1 className="text-2xl font-bold mb-6" style={{ color: COLORS.textPrimary }}>
-              Schedule New Audit
-            </h1>
-            <p className="text-sm mb-6" style={{ color: COLORS.textSecondary }}>
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <div className="mb-1 flex items-center gap-2">
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-xl"
+                style={{ background: COLORS.purple50, color: COLORS.purple700, border: `1px solid ${COLORS.purple200}` }}
+              >
+                <span className="text-base font-bold">A</span>
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight" style={{ color: COLORS.textPrimary }}>
+                Schedule New Audit
+              </h1>
+            </div>
+            <p className="text-sm" style={{ color: COLORS.textSecondary }}>
               Plan a new internal or external audit.
             </p>
+          </div>
+        </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Form Card */}
+        <div className="rounded-2xl p-6 shadow-sm" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
+          <form onSubmit={handleSubmit} className="space-y-5">
+
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               {/* Category */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                  Category
-                </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{
-                    borderColor: COLORS.border,
-                    color: COLORS.textPrimary,
-                  }}
-                >
+                <label className={labelCls} style={{ color: COLORS.textPrimary }}>Category</label>
+                <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls} style={inputStyle}>
                   {categoriesLoading ? (
-                    <option value="">Loading categories...</option>
+                    <option value="">Loading categories…</option>
                   ) : categories.length === 0 ? (
                     <option value="">No audit categories found</option>
                   ) : (
                     categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </option>
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))
                   )}
                 </select>
@@ -163,188 +155,90 @@ export default function NewAuditSchedulePage() {
 
               {/* Title */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                  Audit Title
-                </label>
+                <label className={labelCls} style={{ color: COLORS.textPrimary }}>Audit Title</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. ISO 9001 Annual Review"
                   required
-                  className="w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{
-                    borderColor: COLORS.border,
-                    color: COLORS.textPrimary,
-                  }}
+                  className={inputCls}
+                  style={inputStyle}
                 />
               </div>
 
-              {/* Date */}
+              {/* Scheduled Date */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                  Scheduled Date
-                </label>
-                <input
-                  type="date"
-                  value={scheduledDate}
-                  onChange={(e) => setScheduledDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{
-                    borderColor: COLORS.border,
-                    color: COLORS.textPrimary,
-                  }}
-                />
+                <label className={labelCls} style={{ color: COLORS.textPrimary }}>Scheduled Date</label>
+                <input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className={inputCls} style={inputStyle} />
               </div>
 
-              {/* Department & Auditor */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                    Department / Area
-                  </label>
-                  <input
-                    type="text"
-                    value={department}
-                    onChange={(e) => setDepartment(e.target.value)}
-                    placeholder="e.g. Warehouse"
-                    className="w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    style={{
-                      borderColor: COLORS.border,
-                      color: COLORS.textPrimary,
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                    Lead Auditor
-                  </label>
-                  <input
-                    type="text"
-                    value={auditor}
-                    onChange={(e) => setAuditor(e.target.value)}
-                    placeholder="e.g. John Doe"
-                    className="w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    style={{
-                      borderColor: COLORS.border,
-                      color: COLORS.textPrimary,
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Scope */}
+              {/* Department */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                  Audit Scope
-                </label>
-                <textarea
-                  value={scope}
-                  onChange={(e) => setScope(e.target.value)}
-                  placeholder="Define scope boundaries..."
-                  rows={3}
-                  className="w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{
-                    borderColor: COLORS.border,
-                    color: COLORS.textPrimary,
-                  }}
-                />
+                <label className={labelCls} style={{ color: COLORS.textPrimary }}>Department / Area</label>
+                <input type="text" value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g. Warehouse" className={inputCls} style={inputStyle} />
               </div>
 
-              {/* Criteria */}
+              {/* Auditor */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                  Audit Criteria (Standards/Policies)
-                </label>
-                <textarea
-                  value={criteria}
-                  onChange={(e) => setCriteria(e.target.value)}
-                  placeholder="e.g. ISO 9001:2015 Clause 9.2"
-                  rows={3}
-                  className="w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{
-                    borderColor: COLORS.border,
-                    color: COLORS.textPrimary,
-                  }}
-                />
+                <label className={labelCls} style={{ color: COLORS.textPrimary }}>Lead Auditor</label>
+                <input type="text" value={auditor} onChange={(e) => setAuditor(e.target.value)} placeholder="e.g. John Doe" className={inputCls} style={inputStyle} />
               </div>
 
               {/* Status */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                  Status
-                </label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-3 py-2 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{
-                    borderColor: COLORS.border,
-                    color: COLORS.textPrimary,
-                  }}
-                >
+                <label className={labelCls} style={{ color: COLORS.textPrimary }}>Status</label>
+                <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls} style={inputStyle}>
                   <option value="Scheduled">Scheduled</option>
                   <option value="In Progress">In Progress</option>
                   <option value="Completed">Completed</option>
                 </select>
               </div>
 
-              {/* Checkboxes */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="highlighted"
-                    checked={highlighted}
-                    onChange={(e) => setHighlighted(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <label htmlFor="highlighted" className="text-sm font-medium" style={{ color: COLORS.textPrimary }}>
-                    Highlight this audit
-                  </label>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="approved"
-                    checked={approved}
-                    onChange={(e) => setApproved(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <label htmlFor="approved" className="text-sm font-medium" style={{ color: COLORS.textPrimary }}>
-                    Mark as approved
-                  </label>
-                </div>
+              {/* Scope */}
+              <div className="md:col-span-2">
+                <label className={labelCls} style={{ color: COLORS.textPrimary }}>Audit Scope</label>
+                <textarea value={scope} onChange={(e) => setScope(e.target.value)} placeholder="Define scope boundaries…" rows={3} className={inputCls} style={inputStyle} />
               </div>
 
-              {/* Buttons */}
-              <div className="flex gap-2 pt-4">
-                <button
-                  type="submit"
-                  disabled={saving || categoriesLoading || !category}
-                  className="px-6 py-2 rounded-lg font-medium hover:shadow-md transition-all"
-                  style={{
-                    background: COLORS.primary,
-                    color: COLORS.textWhite,
-                    opacity: saving || categoriesLoading || !category ? 0.7 : 1,
-                  }}
-                >
-                  {saving ? "Scheduling..." : "Schedule Audit"}
-                </button>
-                <Link
-                  href="/audit-schedule"
-                  className="px-6 py-2 rounded-lg font-medium hover:shadow-md transition-all inline-block"
-                  style={{
-                    background: COLORS.bgGray,
-                    color: COLORS.textPrimary,
-                  }}
-                >
-                  Cancel
-                </Link>
+              {/* Criteria */}
+              <div className="md:col-span-2">
+                <label className={labelCls} style={{ color: COLORS.textPrimary }}>Audit Criteria (Standards / Policies)</label>
+                <textarea value={criteria} onChange={(e) => setCriteria(e.target.value)} placeholder="e.g. ISO 9001:2015 Clause 9.2" rows={3} className={inputCls} style={inputStyle} />
               </div>
-            </form>
-          </div>
+            </div>
+
+            {/* Checkboxes */}
+            <div className="flex flex-wrap gap-5 pt-1">
+              <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+                <input type="checkbox" id="highlighted" checked={highlighted} onChange={(e) => setHighlighted(e.target.checked)} className="h-4 w-4 rounded border-gray-300" />
+                Highlight this audit
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+                <input type="checkbox" id="approved" checked={approved} onChange={(e) => setApproved(e.target.checked)} className="h-4 w-4 rounded border-gray-300" />
+                Mark as approved
+              </label>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex flex-wrap gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={saving || categoriesLoading || !category}
+                className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+                style={{ background: "#111827", color: COLORS.textWhite }}
+              >
+                {saving ? "Scheduling…" : "Schedule Audit"}
+              </button>
+              <Link
+                href="/audit-schedule"
+                className="inline-flex items-center rounded-xl px-5 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5"
+                style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}
+              >
+                Cancel
+              </Link>
+            </div>
+          </form>
         </div>
       </div>
     </div>

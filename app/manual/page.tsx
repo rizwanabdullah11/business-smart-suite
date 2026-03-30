@@ -833,9 +833,9 @@ export default function ManualPage() {
     if (manual.highlighted) {
       return {
         label: "Starred",
-        background: COLORS.indigo50,
-        color: COLORS.indigo700,
-        borderColor: COLORS.indigo200,
+        background: COLORS.purple50,
+        color: COLORS.purple700,
+        borderColor: COLORS.purple200,
       }
     }
 
@@ -911,8 +911,8 @@ export default function ManualPage() {
     if (tone === "purple") {
       return {
         background: "#f7f6ff",
-        color: COLORS.indigo700,
-        borderColor: COLORS.indigo200,
+        color: COLORS.purple700,
+        borderColor: COLORS.purple200,
       }
     }
 
@@ -957,9 +957,9 @@ export default function ManualPage() {
                 <div
                   className="flex h-10 w-10 items-center justify-center rounded-xl"
                   style={{
-                    background: COLORS.indigo50,
-                    color: COLORS.indigo700,
-                    border: `1px solid ${COLORS.indigo200}`,
+                    background: COLORS.purple50,
+                    color: COLORS.purple700,
+                    border: `1px solid ${COLORS.purple200}`,
                   }}
                 >
                   <FileText className="h-5 w-5" />
@@ -1117,7 +1117,7 @@ export default function ManualPage() {
                 onClick={() => setShowArchived(false)}
                 className="rounded-lg px-4 py-2 text-sm font-semibold transition-all"
                 style={{
-                  background: !showArchived ? COLORS.indigo700 : "transparent",
+                  background: !showArchived ? COLORS.purple700 : "transparent",
                   color: !showArchived ? COLORS.textWhite : COLORS.textSecondary,
                 }}
               >
@@ -1128,7 +1128,7 @@ export default function ManualPage() {
                 onClick={() => setShowArchived(true)}
                 className="rounded-lg px-4 py-2 text-sm font-semibold transition-all"
                 style={{
-                  background: showArchived ? COLORS.indigo700 : "transparent",
+                  background: showArchived ? COLORS.purple700 : "transparent",
                   color: showArchived ? COLORS.textWhite : COLORS.textSecondary,
                 }}
               >
@@ -1143,9 +1143,9 @@ export default function ManualPage() {
                 onClick={() => toggleSort("name")}
                 className="rounded-lg px-3 py-2 font-semibold"
                 style={{
-                  background: sortType === "name" ? COLORS.indigo50 : COLORS.bgWhite,
-                  color: sortType === "name" ? COLORS.indigo700 : COLORS.textPrimary,
-                  border: `1px solid ${sortType === "name" ? COLORS.indigo200 : COLORS.border}`,
+                  background: sortType === "name" ? COLORS.purple50 : COLORS.bgWhite,
+                  color: sortType === "name" ? COLORS.purple700 : COLORS.textPrimary,
+                  border: `1px solid ${sortType === "name" ? COLORS.purple200 : COLORS.border}`,
                 }}
               >
                 Name {sortType === "name" ? (sortDirection === "asc" ? "A-Z" : "Z-A") : ""}
@@ -1155,9 +1155,9 @@ export default function ManualPage() {
                 onClick={() => toggleSort("date")}
                 className="rounded-lg px-3 py-2 font-semibold"
                 style={{
-                  background: sortType === "date" ? COLORS.indigo50 : COLORS.bgWhite,
-                  color: sortType === "date" ? COLORS.indigo700 : COLORS.textPrimary,
-                  border: `1px solid ${sortType === "date" ? COLORS.indigo200 : COLORS.border}`,
+                  background: sortType === "date" ? COLORS.purple50 : COLORS.bgWhite,
+                  color: sortType === "date" ? COLORS.purple700 : COLORS.textPrimary,
+                  border: `1px solid ${sortType === "date" ? COLORS.purple200 : COLORS.border}`,
                 }}
               >
                 Date {sortType === "date" ? (sortDirection === "asc" ? "Old-New" : "New-Old") : ""}
@@ -1173,9 +1173,9 @@ export default function ManualPage() {
                 onClick={() => toggleSort("name")}
                 className="rounded-lg px-3 py-2 font-semibold"
                 style={{
-                  background: sortType === "name" ? COLORS.indigo50 : COLORS.bgWhite,
-                  color: sortType === "name" ? COLORS.indigo700 : COLORS.textPrimary,
-                  border: `1px solid ${sortType === "name" ? COLORS.indigo200 : COLORS.border}`,
+                  background: sortType === "name" ? COLORS.purple50 : COLORS.bgWhite,
+                  color: sortType === "name" ? COLORS.purple700 : COLORS.textPrimary,
+                  border: `1px solid ${sortType === "name" ? COLORS.purple200 : COLORS.border}`,
                 }}
               >
                 Name
@@ -1185,9 +1185,9 @@ export default function ManualPage() {
                 onClick={() => toggleSort("date")}
                 className="rounded-lg px-3 py-2 font-semibold"
                 style={{
-                  background: sortType === "date" ? COLORS.indigo50 : COLORS.bgWhite,
-                  color: sortType === "date" ? COLORS.indigo700 : COLORS.textPrimary,
-                  border: `1px solid ${sortType === "date" ? COLORS.indigo200 : COLORS.border}`,
+                  background: sortType === "date" ? COLORS.purple50 : COLORS.bgWhite,
+                  color: sortType === "date" ? COLORS.purple700 : COLORS.textPrimary,
+                  border: `1px solid ${sortType === "date" ? COLORS.purple200 : COLORS.border}`,
                 }}
               >
                 Date
@@ -1376,7 +1376,7 @@ export default function ManualPage() {
                       <button
                         onClick={() => saveEditCategory(category.id)}
                         className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold"
-                        style={{ background: COLORS.indigo700, color: COLORS.textWhite }}
+                        style={{ background: COLORS.purple700, color: COLORS.textWhite }}
                       >
                         <Check className="h-4 w-4" />
                         Save
@@ -1411,9 +1411,9 @@ export default function ManualPage() {
                           }
                           className="rounded-lg px-3 py-2 text-sm font-semibold"
                           style={{
-                            background: currentItemView === "active" ? "#f1f0ff" : COLORS.bgWhite,
-                            color: currentItemView === "active" ? COLORS.indigo700 : COLORS.textSecondary,
-                            border: `1px solid ${currentItemView === "active" ? COLORS.indigo200 : "#ececf3"}`,
+                            background: currentItemView === "active" ? "#faf5ff" : COLORS.bgWhite,
+                            color: currentItemView === "active" ? COLORS.purple700 : COLORS.textSecondary,
+                            border: `1px solid ${currentItemView === "active" ? COLORS.purple200 : "#ececf3"}`,
                           }}
                         >
                           Active ({(category.manuals || []).length})
@@ -1426,9 +1426,9 @@ export default function ManualPage() {
                             }
                             className="rounded-lg px-3 py-2 text-sm font-semibold"
                             style={{
-                              background: currentItemView === "archived" ? "#f1f0ff" : COLORS.bgWhite,
-                              color: currentItemView === "archived" ? COLORS.indigo700 : COLORS.textSecondary,
-                              border: `1px solid ${currentItemView === "archived" ? COLORS.indigo200 : "#ececf3"}`,
+                              background: currentItemView === "archived" ? "#faf5ff" : COLORS.bgWhite,
+                              color: currentItemView === "archived" ? COLORS.purple700 : COLORS.textSecondary,
+                              border: `1px solid ${currentItemView === "archived" ? COLORS.purple200 : "#ececf3"}`,
                             }}
                           >
                             Archived ({(category.archivedManuals || []).length})
@@ -1441,9 +1441,9 @@ export default function ManualPage() {
                           }
                           className="rounded-lg px-3 py-2 text-sm font-semibold"
                           style={{
-                            background: currentItemView === "completed" ? "#f1f0ff" : COLORS.bgWhite,
-                            color: currentItemView === "completed" ? COLORS.indigo700 : COLORS.textSecondary,
-                            border: `1px solid ${currentItemView === "completed" ? COLORS.indigo200 : "#ececf3"}`,
+                            background: currentItemView === "completed" ? "#faf5ff" : COLORS.bgWhite,
+                            color: currentItemView === "completed" ? COLORS.purple700 : COLORS.textSecondary,
+                            border: `1px solid ${currentItemView === "completed" ? COLORS.purple200 : "#ececf3"}`,
                           }}
                         >
                           Done ({(category.completedManuals || []).length})
@@ -1456,9 +1456,9 @@ export default function ManualPage() {
                             }
                             className="rounded-lg px-3 py-2 text-sm font-semibold"
                             style={{
-                              background: currentItemView === "highlighted" ? "#f1f0ff" : COLORS.bgWhite,
-                              color: currentItemView === "highlighted" ? COLORS.indigo700 : COLORS.textSecondary,
-                              border: `1px solid ${currentItemView === "highlighted" ? COLORS.indigo200 : "#ececf3"}`,
+                              background: currentItemView === "highlighted" ? "#faf5ff" : COLORS.bgWhite,
+                              color: currentItemView === "highlighted" ? COLORS.purple700 : COLORS.textSecondary,
+                              border: `1px solid ${currentItemView === "highlighted" ? COLORS.purple200 : "#ececf3"}`,
                             }}
                           >
                             Starred ({(category.highlightedManuals || []).length})
@@ -1670,9 +1670,9 @@ export default function ManualPage() {
                                         <div
                                           className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg"
                                           style={{
-                                            background: "#f4f2ff",
-                                            color: COLORS.indigo700,
-                                            border: `1px solid ${COLORS.indigo200}`,
+                                            background: "#faf5ff",
+                                            color: COLORS.purple700,
+                                            border: `1px solid ${COLORS.purple200}`,
                                           }}
                                         >
                                           <FileText className="h-4 w-4" />
@@ -1681,13 +1681,13 @@ export default function ManualPage() {
                                           <Link
                                             href={`/task/manuals/${manual.id}?back=${encodeURIComponent("/manual")}`}
                                             className="block text-sm font-semibold hover:underline sm:text-[15px] break-words"
-                                            style={{ color: COLORS.indigo700 }}
+                                            style={{ color: COLORS.purple700 }}
                                           >
                                             {manual.title}
                                           </Link>
                                           {manual.fileName ? (
                                             <div className="mt-1 flex items-center gap-1 text-xs" style={{ color: "#73788a" }}>
-                                              <FileText className="h-3 w-3 shrink-0" style={{ color: COLORS.indigo700 }} />
+                                              <FileText className="h-3 w-3 shrink-0" style={{ color: COLORS.purple700 }} />
                                               <span className="max-w-[160px] truncate" title={manual.fileName}>{manual.fileName}</span>
                                             </div>
                                           ) : null}

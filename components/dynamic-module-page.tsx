@@ -693,7 +693,7 @@ export default function DynamicModulePage({
   const getItemStatusTone = (item: any) => {
     if (item.paused) return { label: "Paused", bg: "#fffaf3", color: "#c2410c", border: "#fed7aa" }
     if (item.approved) return { label: "Done", bg: "#f4fcf6", color: "#047857", border: "#a7f3d0" }
-    if (item.highlighted) return { label: "Starred", bg: "#f7f6ff", color: "#4338ca", border: "#c7d2fe" }
+    if (item.highlighted) return { label: "Starred", bg: "#faf5ff", color: "#7c3aed", border: "#e9d5ff" }
     return { label: "Active", bg: "#f8fafc", color: "#475569", border: "#e2e8f0" }
   }
 
@@ -765,15 +765,15 @@ export default function DynamicModulePage({
         {!isEmployee ? (
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div className="inline-flex rounded-xl p-1" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
-              <button type="button" onClick={() => setShowArchived(false)} className="rounded-lg px-4 py-2 text-sm font-semibold transition-all" style={{ background: !showArchived ? COLORS.indigo700 : "transparent", color: !showArchived ? COLORS.textWhite : COLORS.textSecondary }}>Active</button>
-              <button type="button" onClick={() => setShowArchived(true)} className="rounded-lg px-4 py-2 text-sm font-semibold transition-all" style={{ background: showArchived ? COLORS.indigo700 : "transparent", color: showArchived ? COLORS.textWhite : COLORS.textSecondary }}>Archived</button>
+              <button type="button" onClick={() => setShowArchived(false)} className="rounded-lg px-4 py-2 text-sm font-semibold transition-all" style={{ background: !showArchived ? COLORS.purple700 : "transparent", color: !showArchived ? COLORS.textWhite : COLORS.textSecondary }}>Active</button>
+              <button type="button" onClick={() => setShowArchived(true)} className="rounded-lg px-4 py-2 text-sm font-semibold transition-all" style={{ background: showArchived ? COLORS.purple700 : "transparent", color: showArchived ? COLORS.textWhite : COLORS.textSecondary }}>Archived</button>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span style={{ color: COLORS.textSecondary }}>Sort by</span>
-              <button type="button" onClick={() => { setSortType("name"); setSortDirection((d) => sortType === "name" ? (d === "asc" ? "desc" : "asc") : "asc") }} className="rounded-lg px-3 py-2 font-semibold" style={{ background: sortType === "name" ? COLORS.indigo50 : COLORS.bgWhite, color: sortType === "name" ? COLORS.indigo700 : COLORS.textPrimary, border: `1px solid ${sortType === "name" ? COLORS.indigo200 : COLORS.border}` }}>
+              <button type="button" onClick={() => { setSortType("name"); setSortDirection((d) => sortType === "name" ? (d === "asc" ? "desc" : "asc") : "asc") }} className="rounded-lg px-3 py-2 font-semibold" style={{ background: sortType === "name" ? COLORS.purple50 : COLORS.bgWhite, color: sortType === "name" ? COLORS.purple700 : COLORS.textPrimary, border: `1px solid ${sortType === "name" ? COLORS.purple200 : COLORS.border}` }}>
                 Name {sortType === "name" ? (sortDirection === "asc" ? "A-Z" : "Z-A") : ""}
               </button>
-              <button type="button" onClick={() => { setSortType("date"); setSortDirection((d) => sortType === "date" ? (d === "asc" ? "desc" : "asc") : "asc") }} className="rounded-lg px-3 py-2 font-semibold" style={{ background: sortType === "date" ? COLORS.indigo50 : COLORS.bgWhite, color: sortType === "date" ? COLORS.indigo700 : COLORS.textPrimary, border: `1px solid ${sortType === "date" ? COLORS.indigo200 : COLORS.border}` }}>
+              <button type="button" onClick={() => { setSortType("date"); setSortDirection((d) => sortType === "date" ? (d === "asc" ? "desc" : "asc") : "asc") }} className="rounded-lg px-3 py-2 font-semibold" style={{ background: sortType === "date" ? COLORS.purple50 : COLORS.bgWhite, color: sortType === "date" ? COLORS.purple700 : COLORS.textPrimary, border: `1px solid ${sortType === "date" ? COLORS.purple200 : COLORS.border}` }}>
                 Date {sortType === "date" ? (sortDirection === "asc" ? "Old-New" : "New-Old") : ""}
               </button>
             </div>
@@ -782,8 +782,8 @@ export default function DynamicModulePage({
           <div className="mb-5 flex justify-end">
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span style={{ color: COLORS.textSecondary }}>Sort by</span>
-              <button type="button" onClick={() => setSortType("name")} className="rounded-lg px-3 py-2 font-semibold" style={{ background: sortType === "name" ? COLORS.indigo50 : COLORS.bgWhite, color: sortType === "name" ? COLORS.indigo700 : COLORS.textPrimary, border: `1px solid ${sortType === "name" ? COLORS.indigo200 : COLORS.border}` }}>Name</button>
-              <button type="button" onClick={() => setSortType("date")} className="rounded-lg px-3 py-2 font-semibold" style={{ background: sortType === "date" ? COLORS.indigo50 : COLORS.bgWhite, color: sortType === "date" ? COLORS.indigo700 : COLORS.textPrimary, border: `1px solid ${sortType === "date" ? COLORS.indigo200 : COLORS.border}` }}>Date</button>
+              <button type="button" onClick={() => setSortType("name")} className="rounded-lg px-3 py-2 font-semibold" style={{ background: sortType === "name" ? COLORS.purple50 : COLORS.bgWhite, color: sortType === "name" ? COLORS.purple700 : COLORS.textPrimary, border: `1px solid ${sortType === "name" ? COLORS.purple200 : COLORS.border}` }}>Name</button>
+              <button type="button" onClick={() => setSortType("date")} className="rounded-lg px-3 py-2 font-semibold" style={{ background: sortType === "date" ? COLORS.purple50 : COLORS.bgWhite, color: sortType === "date" ? COLORS.purple700 : COLORS.textPrimary, border: `1px solid ${sortType === "date" ? COLORS.purple200 : COLORS.border}` }}>Date</button>
             </div>
           </div>
         )}
@@ -852,7 +852,7 @@ export default function DynamicModulePage({
                     <div className="mb-3 text-sm font-semibold" style={{ color: COLORS.textPrimary }}>Rename Category</div>
                     <div className="flex flex-col gap-3 sm:flex-row">
                       <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="flex-1 rounded-xl px-4 py-3 outline-none transition-all focus:ring-2" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }} onKeyDown={(e) => e.key === "Enter" && saveEditCategory(category.id)} autoFocus />
-                      <button onClick={() => saveEditCategory(category.id)} className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold" style={{ background: COLORS.indigo700, color: COLORS.textWhite }}><Check className="h-4 w-4" />Save</button>
+                      <button onClick={() => saveEditCategory(category.id)} className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold" style={{ background: COLORS.purple700, color: COLORS.textWhite }}><Check className="h-4 w-4" />Save</button>
                       <button onClick={() => { setEditingCategory(null); setEditTitle("") }} className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}><X className="h-4 w-4" />Cancel</button>
                     </div>
                   </div>
@@ -869,7 +869,7 @@ export default function DynamicModulePage({
                           const count = view === "archived" ? (category.archivedItems || []).length : view === "completed" ? (category.completedItems || []).length : view === "highlighted" ? (category.highlightedItems || []).length : (category.items || []).length
                           const label = view === "archived" ? "Archived" : view === "completed" ? "Done" : view === "highlighted" ? "Starred" : "Active"
                           return (
-                            <button key={view} type="button" onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: view }))} className="rounded-lg px-3 py-2 text-sm font-semibold" style={{ background: currentItemView === view ? "#f1f0ff" : COLORS.bgWhite, color: currentItemView === view ? COLORS.indigo700 : COLORS.textSecondary, border: `1px solid ${currentItemView === view ? COLORS.indigo200 : "#ececf3"}` }}>
+                            <button key={view} type="button" onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: view }))} className="rounded-lg px-3 py-2 text-sm font-semibold" style={{ background: currentItemView === view ? "#faf5ff" : COLORS.bgWhite, color: currentItemView === view ? COLORS.purple700 : COLORS.textSecondary, border: `1px solid ${currentItemView === view ? COLORS.purple200 : "#ececf3"}` }}>
                               {label} ({count})
                             </button>
                           )
@@ -960,16 +960,16 @@ export default function DynamicModulePage({
                                     </td>
                                     <td className="px-2 py-1 align-top">
                                       <div className="flex items-start gap-3">
-                                        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "#f4f2ff", color: COLORS.indigo700, border: `1px solid ${COLORS.indigo200}` }}>
+                                        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "#faf5ff", color: COLORS.purple700, border: `1px solid ${COLORS.purple200}` }}>
                                           <Icon className="h-4 w-4" />
                                         </div>
                                         <div className="min-w-0">
-                                          <Link href={`/task/${moduleSlug}/${item.id}?back=${encodeURIComponent(itemHrefPrefix)}`} className="block text-sm font-semibold hover:underline sm:text-[15px] break-words" style={{ color: COLORS.indigo700 }}>
+                                          <Link href={`/task/${moduleSlug}/${item.id}?back=${encodeURIComponent(itemHrefPrefix)}`} className="block text-sm font-semibold hover:underline sm:text-[15px] break-words" style={{ color: COLORS.purple700 }}>
                                             {getItemTitle(item)}
                                           </Link>
                                           {item.fileName ? (
                                             <div className="mt-1 flex items-center gap-1 text-xs" style={{ color: "#73788a" }}>
-                                              <Icon className="h-3 w-3 shrink-0" style={{ color: COLORS.indigo700 }} />
+                                              <Icon className="h-3 w-3 shrink-0" style={{ color: COLORS.purple700 }} />
                                               <span className="max-w-[160px] truncate" title={item.fileName}>{item.fileName}</span>
                                             </div>
                                           ) : null}

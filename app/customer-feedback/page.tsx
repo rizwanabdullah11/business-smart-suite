@@ -58,7 +58,7 @@ function getStatusTone(status?: string) {
     return { label: "Resolved", background: "#f0fdf4", color: "#15803d", borderColor: "#bbf7d0" }
   if (status === "In Review")
     return { label: "In Review", background: "#fffaf3", color: "#c2410c", borderColor: "#fed7aa" }
-  return { label: "New", background: "#f7f6ff", color: "#4338ca", borderColor: "#c7d2fe" }
+  return { label: "New", background: "#faf5ff", color: "#7c3aed", borderColor: "#e9d5ff" }
 }
 
 function formatDate(value?: string) {
@@ -240,7 +240,7 @@ export default function CustomerFeedbackPage() {
               <div className="mb-1 flex items-center gap-2">
                 <div
                   className="flex h-10 w-10 items-center justify-center rounded-xl"
-                  style={{ background: COLORS.indigo50, color: COLORS.indigo700, border: `1px solid ${COLORS.indigo200}` }}
+                  style={{ background: COLORS.purple50, color: COLORS.purple700, border: `1px solid ${COLORS.purple200}` }}
                 >
                   <MessageSquare className="h-5 w-5" />
                 </div>
@@ -270,7 +270,7 @@ export default function CustomerFeedbackPage() {
         {/* ── Stats ── */}
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: "Total", value: stats.total, bg: COLORS.indigo50, color: COLORS.indigo700, border: COLORS.indigo200 },
+            { label: "Total", value: stats.total, bg: COLORS.purple50, color: COLORS.purple700, border: COLORS.purple200 },
             { label: "Avg Rating", value: stats.avgRating, bg: "#fffbeb", color: "#b45309", border: "#fde68a" },
             { label: "New", value: stats.newCount, bg: "#f0f9ff", color: "#0369a1", border: "#bae6fd" },
             { label: "Resolved", value: stats.resolvedCount, bg: "#f0fdf4", color: "#15803d", border: "#bbf7d0" },
@@ -299,7 +299,7 @@ export default function CustomerFeedbackPage() {
                 onClick={() => setStatusFilter(f)}
                 className="rounded-lg px-4 py-2 text-sm font-semibold transition-all"
                 style={{
-                  background: statusFilter === f ? COLORS.indigo700 : "transparent",
+                  background: statusFilter === f ? COLORS.purple700 : "transparent",
                   color: statusFilter === f ? COLORS.textWhite : COLORS.textSecondary,
                 }}
               >
@@ -458,7 +458,7 @@ export default function CustomerFeedbackPage() {
                                       <div className="flex items-start gap-3">
                                         <div
                                           className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-                                          style={{ background: "#f4f2ff", color: COLORS.indigo700, border: `1px solid ${COLORS.indigo200}` }}
+                                          style={{ background: "#f4f2ff", color: COLORS.purple700, border: `1px solid ${COLORS.purple200}` }}
                                         >
                                           <MessageSquare className="h-4 w-4" />
                                         </div>
@@ -466,7 +466,7 @@ export default function CustomerFeedbackPage() {
                                           <Link
                                             href={`/customer-feedback/${itemId}`}
                                             className="block text-sm font-semibold hover:underline sm:text-[15px] break-words"
-                                            style={{ color: COLORS.indigo700 }}
+                                            style={{ color: COLORS.purple700 }}
                                           >
                                             {item.title || item.customerName || "Untitled Feedback"}
                                           </Link>
@@ -484,9 +484,9 @@ export default function CustomerFeedbackPage() {
                                         <span
                                           className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
                                           style={{
-                                            background: item.feedbackType === "Complaint" ? "#fdf2f8" : item.feedbackType === "Suggestion" ? COLORS.indigo50 : "#fff7ed",
-                                            color: item.feedbackType === "Complaint" ? "#be185d" : item.feedbackType === "Suggestion" ? COLORS.indigo700 : "#c2410c",
-                                            border: `1px solid ${item.feedbackType === "Complaint" ? "#fbcfe8" : item.feedbackType === "Suggestion" ? COLORS.indigo200 : "#fed7aa"}`,
+                                            background: item.feedbackType === "Complaint" ? "#fdf2f8" : item.feedbackType === "Suggestion" ? COLORS.purple50 : "#fff7ed",
+                                            color: item.feedbackType === "Complaint" ? "#be185d" : item.feedbackType === "Suggestion" ? COLORS.purple700 : "#c2410c",
+                                            border: `1px solid ${item.feedbackType === "Complaint" ? "#fbcfe8" : item.feedbackType === "Suggestion" ? COLORS.purple200 : "#fed7aa"}`,
                                           }}
                                         >
                                           {item.feedbackType}

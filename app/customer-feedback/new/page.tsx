@@ -92,275 +92,162 @@ export default function NewCustomerFeedbackPage() {
     }
   }
 
-  return (
-    <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
-      <div className="p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="mb-6">
-            <Link
-              href="/customer-feedback"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md"
-              style={{
-                background: COLORS.bgWhite,
-                color: COLORS.textPrimary,
-                border: `1px solid ${COLORS.border}`,
-              }}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back Customer Feedback
-            </Link>
-          </div>
+  const inputCls = "w-full rounded-xl px-4 py-3 outline-none transition-all focus:ring-2 focus:ring-purple-300"
+  const inputStyle = { background: COLORS.bgGrayLight, border: `1px solid ${COLORS.border}`, color: COLORS.textPrimary }
+  const labelCls = "mb-2 block text-sm font-semibold"
 
-          <div
-            className="rounded-lg p-6 shadow-sm"
-            style={{
-              background: COLORS.bgWhite,
-              border: `1px solid ${COLORS.border}`,
-            }}
+  return (
+    <div className="min-h-screen" style={{ background: "linear-gradient(180deg,#f7f8fb 0%,#f3f5f9 100%)" }}>
+      <div className="mx-auto max-w-[1400px] p-4 sm:p-6">
+
+        {/* Header */}
+        <div className="mb-6 flex items-start gap-3">
+          <Link
+            href="/customer-feedback"
+            className="flex h-10 w-10 items-center justify-center rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-md"
+            style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}
           >
-            <h1 className="text-2xl font-bold mb-6" style={{ color: COLORS.textPrimary }}>
-              Add Customer Feedback
-            </h1>
-            <p className="text-sm mb-6" style={{ color: COLORS.textSecondary }}>
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <div className="mb-1 flex items-center gap-2">
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-xl"
+                style={{ background: COLORS.purple50, color: COLORS.purple700, border: `1px solid ${COLORS.purple200}` }}
+              >
+                <span className="text-base font-bold">C</span>
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight" style={{ color: COLORS.textPrimary }}>
+                Add Customer Feedback
+              </h1>
+            </div>
+            <p className="text-sm" style={{ color: COLORS.textSecondary }}>
               Add a real customer response with contact details, feedback type, rating, and planned follow-up.
             </p>
+          </div>
+        </div>
 
-            <div className="space-y-4">
+        {/* Form Card */}
+        <div className="rounded-2xl p-6 shadow-sm" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
+          <div className="space-y-5">
+
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              {/* Category */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                  Category
-                </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2 rounded border"
-                  style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}
-                >
+                <label className={labelCls} style={{ color: COLORS.textPrimary }}>Category</label>
+                <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls} style={inputStyle}>
                   {categoriesLoading ? (
-                    <option value="">Loading categories...</option>
+                    <option value="">Loading categories…</option>
                   ) : (
                     <>
                       <option value="">Select feedback category</option>
                       {categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </option>
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
                       ))}
                     </>
                   )}
                 </select>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                    Feedback Title
-                  </label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Feedback summary..."
-                    className="w-full px-3 py-2 rounded border"
-                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                    Feedback Type
-                  </label>
-                  <select
-                    value={feedbackType}
-                    onChange={(e) => setFeedbackType(e.target.value)}
-                    className="w-full px-3 py-2 rounded border"
-                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}
-                  >
-                    {["Compliment", "Complaint", "Suggestion", "Support"].map((value) => (
-                      <option key={value} value={value}>
-                        {value}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                    Customer Name
-                  </label>
-                  <input
-                    type="text"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Customer name..."
-                    className="w-full px-3 py-2 rounded border"
-                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                    Company Name
-                  </label>
-                  <input
-                    type="text"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="Company or account name..."
-                    className="w-full px-3 py-2 rounded border"
-                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="customer@example.com"
-                    className="w-full px-3 py-2 rounded border"
-                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                    Phone
-                  </label>
-                  <input
-                    type="text"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="Phone number..."
-                    className="w-full px-3 py-2 rounded border"
-                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                    Channel
-                  </label>
-                  <select
-                    value={channel}
-                    onChange={(e) => setChannel(e.target.value)}
-                    className="w-full px-3 py-2 rounded border"
-                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}
-                  >
-                    {["Email", "Phone", "Website", "In Person", "Social Media"].map((value) => (
-                      <option key={value} value={value}>
-                        {value}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                    Rating
-                  </label>
-                  <select
-                    value={rating}
-                    onChange={(e) => setRating(e.target.value)}
-                    className="w-full px-3 py-2 rounded border"
-                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}
-                  >
-                    {["1", "2", "3", "4", "5"].map((value) => (
-                      <option key={value} value={value}>
-                        {value} Star{value === "1" ? "" : "s"}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                    Status
-                  </label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    className="w-full px-3 py-2 rounded border"
-                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}
-                  >
-                    {["New", "In Review", "Resolved"].map((value) => (
-                      <option key={value} value={value}>
-                        {value}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                    Submitted Date
-                  </label>
-                  <input
-                    type="date"
-                    value={submittedDate}
-                    onChange={(e) => setSubmittedDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded border"
-                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}
-                  />
-                </div>
-              </div>
-
+              {/* Feedback Title */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                  Customer Feedback
-                </label>
-                <textarea
-                  value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
-                  placeholder="What did the customer say?"
-                  rows={5}
-                  className="w-full px-3 py-2 rounded border"
-                  style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}
-                />
+                <label className={labelCls} style={{ color: COLORS.textPrimary }}>Feedback Title</label>
+                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Feedback summary…" className={inputCls} style={inputStyle} />
               </div>
 
+              {/* Feedback Type */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                  Follow-up Action
-                </label>
-                <textarea
-                  value={followUpAction}
-                  onChange={(e) => setFollowUpAction(e.target.value)}
-                  placeholder="Planned response or improvement..."
-                  rows={4}
-                  className="w-full px-3 py-2 rounded border"
-                  style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}
-                />
+                <label className={labelCls} style={{ color: COLORS.textPrimary }}>Feedback Type</label>
+                <select value={feedbackType} onChange={(e) => setFeedbackType(e.target.value)} className={inputCls} style={inputStyle}>
+                  {["Compliment", "Complaint", "Suggestion", "Support"].map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
               </div>
 
-              <div className="flex gap-2 pt-4">
-                <button
-                  type="button"
-                  onClick={handleCreate}
-                  disabled={saving || categoriesLoading}
-                  className="px-6 py-2 rounded-lg font-medium"
-                  style={{
-                    background: COLORS.primary,
-                    color: COLORS.textWhite,
-                    opacity: saving || categoriesLoading ? 0.7 : 1,
-                  }}
-                >
-                  {saving ? "Creating..." : "Create Feedback"}
-                </button>
-                <Link
-                  href="/customer-feedback"
-                  className="px-6 py-2 rounded-lg font-medium"
-                  style={{
-                    background: COLORS.bgGray,
-                    color: COLORS.textPrimary,
-                  }}
-                >
-                  Cancel
-                </Link>
+              {/* Customer Name */}
+              <div>
+                <label className={labelCls} style={{ color: COLORS.textPrimary }}>Customer Name</label>
+                <input type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Customer name…" className={inputCls} style={inputStyle} />
               </div>
+
+              {/* Company Name */}
+              <div>
+                <label className={labelCls} style={{ color: COLORS.textPrimary }}>Company Name</label>
+                <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Company or account name…" className={inputCls} style={inputStyle} />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className={labelCls} style={{ color: COLORS.textPrimary }}>Email</label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="customer@example.com" className={inputCls} style={inputStyle} />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className={labelCls} style={{ color: COLORS.textPrimary }}>Phone</label>
+                <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone number…" className={inputCls} style={inputStyle} />
+              </div>
+
+              {/* Channel */}
+              <div>
+                <label className={labelCls} style={{ color: COLORS.textPrimary }}>Channel</label>
+                <select value={channel} onChange={(e) => setChannel(e.target.value)} className={inputCls} style={inputStyle}>
+                  {["Email", "Phone", "Website", "In Person", "Social Media"].map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </div>
+
+              {/* Rating */}
+              <div>
+                <label className={labelCls} style={{ color: COLORS.textPrimary }}>Rating</label>
+                <select value={rating} onChange={(e) => setRating(e.target.value)} className={inputCls} style={inputStyle}>
+                  {["1","2","3","4","5"].map((v) => <option key={v} value={v}>{v} Star{v === "1" ? "" : "s"}</option>)}
+                </select>
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className={labelCls} style={{ color: COLORS.textPrimary }}>Status</label>
+                <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls} style={inputStyle}>
+                  {["New", "In Review", "Resolved"].map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </div>
+
+              {/* Submitted Date */}
+              <div>
+                <label className={labelCls} style={{ color: COLORS.textPrimary }}>Submitted Date</label>
+                <input type="date" value={submittedDate} onChange={(e) => setSubmittedDate(e.target.value)} className={inputCls} style={inputStyle} />
+              </div>
+            </div>
+
+            {/* Feedback Text */}
+            <div>
+              <label className={labelCls} style={{ color: COLORS.textPrimary }}>Customer Feedback</label>
+              <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} placeholder="What did the customer say?" rows={5} className={inputCls} style={inputStyle} />
+            </div>
+
+            {/* Follow-up */}
+            <div>
+              <label className={labelCls} style={{ color: COLORS.textPrimary }}>Follow-up Action</label>
+              <textarea value={followUpAction} onChange={(e) => setFollowUpAction(e.target.value)} placeholder="Planned response or improvement…" rows={4} className={inputCls} style={inputStyle} />
+            </div>
+
+            {/* Buttons */}
+            <div className="flex flex-wrap gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleCreate}
+                disabled={saving || categoriesLoading}
+                className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+                style={{ background: "#111827", color: COLORS.textWhite }}
+              >
+                {saving ? "Creating…" : "Create Feedback"}
+              </button>
+              <Link
+                href="/customer-feedback"
+                className="inline-flex items-center rounded-xl px-5 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5"
+                style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}
+              >
+                Cancel
+              </Link>
             </div>
           </div>
         </div>
