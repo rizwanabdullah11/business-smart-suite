@@ -276,7 +276,7 @@ export function Sidebar({}: SidebarProps = {}) {
                                 }}
                             >
                                 <LayoutDashboard className="w-5 h-5 shrink-0" />
-                                <span className="text-sm">Analytics</span>
+                                <span className="text-sm">Dashboard</span>
                             </div>
                         </Link>
 

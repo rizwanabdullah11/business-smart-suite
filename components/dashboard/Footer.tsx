@@ -1,7 +1,16 @@
 "use client"
 
+import Link from "next/link"
 import { COLORS } from "@/constant/colors"
 import { Mail, Phone, MapPin, Globe } from "lucide-react"
+
+const QUICK_LINKS: { label: string; href: string }[] = [
+  { label: "Home", href: "/dashboard" },
+  { label: "Dashboard", href: "/dashboard/analytics" },
+  { label: "Policies", href: "/policies" },
+  { label: "Procedures", href: "/procedures" },
+  { label: "Support", href: "mailto:support@businesssmart.com" },
+]
 
 export function Footer() {
     const currentYear = new Date().getFullYear()
@@ -44,15 +53,15 @@ export function Footer() {
                             Quick Links
                         </h4>
                         <ul className="space-y-3">
-                            {['Dashboard', 'Analytics', 'Policies', 'Procedures', 'Support'].map((link) => (
-                                <li key={link}>
-                                    <a
-                                        href="#"
+                            {QUICK_LINKS.map(({ label, href }) => (
+                                <li key={href}>
+                                    <Link
+                                        href={href}
                                         className="text-sm transition-colors hover:text-white"
                                         style={{ color: "rgba(255,255,255,0.55)" }}
                                     >
-                                        {link}
-                                    </a>
+                                        {label}
+                                    </Link>
                                 </li>
                             ))}
                         </ul>

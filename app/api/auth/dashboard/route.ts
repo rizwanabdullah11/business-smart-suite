@@ -66,29 +66,16 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     await connectToDatabase()
 
     const { filter: ownershipFilter } = await buildModuleAccessFilter(request, user)
-    const activeQuery =
-      Object.keys(ownershipFilter).length > 0
-        ? {
-            $and: [
-              { $or: [{ archived: { $exists: false } }, { archived: false }] },
-              { $or: [{ isArchived: { $exists: false } }, { isArchived: false }] },
-              ownershipFilter,
-            ],
-          }
-        : {
-            $and: [
-              { $or: [{ archived: { $exists: false } }, { archived: false }] },
-              { $or: [{ isArchived: { $exists: false } }, { isArchived: false }] },
-            ],
-          }
+    const allDocsQuery =
+      Object.keys(ownershipFilter).length > 0 ? ownershipFilter : {}
 
     const selectFields = "_id title approved archived isArchived createdAt updatedAt"
 
     const [manuals, ...moduleDocs] = await Promise.all([
-      Manual.find(activeQuery).select(selectFields).sort({ createdAt: -1 }).lean(),
+      Manual.find(allDocsQuery).select(selectFields).sort({ createdAt: -1 }).lean(),
       ...DASHBOARD_MODULES.map((module) =>
         getModuleModel(module)
-          .find(activeQuery)
+          .find(allDocsQuery)
           .select(selectFields)
           .sort({ createdAt: -1 })
           .lean()
@@ -100,8 +87,10 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       ...(manuals as DashboardDoc[]).map((doc) => ({ ...doc, _module: "manual" })),
       ...moduleDocs.flat(),
     ] as DashboardDoc[]
-    const completedCount = allDocs.filter((doc) => Boolean(doc.approved)).length
-    const pendingCount = allDocs.filter((doc) => !doc.approved).length
+
+    const activeDocs = allDocs.filter((doc) => !doc.archived && !doc.isArchived)
+    const completedCount = activeDocs.filter((doc) => Boolean(doc.approved)).length
+    const pendingCount = activeDocs.filter((doc) => !doc.approved).length
 
     let userCount: number | null = null
     if (hasPermission(user, Permission.VIEW_USERS)) {
@@ -127,7 +116,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     const stats = [
       {
         title: "Total Documents",
-        value: String(allDocs.length),
+        value: String(activeDocs.length),
         change: "live",
         trend: "up",
         color: "#3b82f6",
@@ -159,7 +148,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       },
     ]
 
-    const recentActivities = allDocs
+    const recentActivities = activeDocs
       .map((doc) => {
         const createdAt = doc.createdAt ? new Date(doc.createdAt).getTime() : 0
         const updatedAt = doc.updatedAt ? new Date(doc.updatedAt).getTime() : 0
@@ -181,19 +170,24 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       .sort((a, b) => b.sortTime - a.sortTime)
       .map(({ sortTime, ...rest }) => rest)
 
+    const serializeDoc = (doc: DashboardDoc) => ({
+      _id: String(doc._id || ""),
+      _module: doc._module || "",
+      title: doc.title || "",
+      approved: Boolean(doc.approved),
+      archived: Boolean(doc.archived),
+      isArchived: Boolean(doc.isArchived),
+      createdAt: doc.createdAt ? String(doc.createdAt) : undefined,
+      updatedAt: doc.updatedAt ? String(doc.updatedAt) : undefined,
+    })
+
+    const archivedOnlyDocs = allDocs.filter((doc) => Boolean(doc.archived) || Boolean(doc.isArchived))
+
     return NextResponse.json({
       stats,
       recentActivities,
-      docs: allDocs.map((doc) => ({
-        _id: String(doc._id || ""),
-        _module: doc._module || "",
-        title: doc.title || "",
-        approved: Boolean(doc.approved),
-        archived: Boolean(doc.archived),
-        isArchived: Boolean(doc.isArchived),
-        createdAt: doc.createdAt ? String(doc.createdAt) : undefined,
-        updatedAt: doc.updatedAt ? String(doc.updatedAt) : undefined,
-      })),
+      docs: activeDocs.map(serializeDoc),
+      archivedDocs: archivedOnlyDocs.map(serializeDoc),
     })
   } catch (error) {
     return NextResponse.json(
