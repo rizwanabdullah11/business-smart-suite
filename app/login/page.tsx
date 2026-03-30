@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import {
     Loader2,
@@ -42,8 +42,7 @@ const features = [
     },
 ]
 
-const stats = [
-    { value: "500+", label: "Companies" },
+const baseStats = [
     { value: "99.9%", label: "Uptime" },
     { value: "24/7", label: "Support" },
 ]
@@ -57,6 +56,14 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false)
     const [rememberMe, setRememberMe] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
+    const [companies, setCompanies] = useState<{ id: string; name: string }[]>([])
+
+    useEffect(() => {
+        fetch("/api/public/organizations")
+            .then((r) => r.json())
+            .then((data) => Array.isArray(data) && setCompanies(data))
+            .catch(() => {})
+    }, [])
 
     async function handleLogin(e: React.FormEvent) {
         e.preventDefault()
@@ -140,19 +147,14 @@ export default function LoginPage() {
                 {/* Brand */}
                 <div className="relative z-10 flex items-center gap-3">
                     <div
-                        className="h-11 w-11 rounded-xl flex items-center justify-center shadow-lg"
+                        className="h-11 w-11 rounded-xl flex items-center justify-center shadow-lg shrink-0"
                         style={{ background: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)" }}
                     >
                         <span className="font-black text-xl text-white">B</span>
                     </div>
-                    <div>
-                        <span className="text-xl font-bold text-white tracking-tight leading-none block">
-                            Business Smart
-                        </span>
-                        <span className="text-[11px] font-medium tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.45)" }}>
-                            Suite
-                        </span>
-                    </div>
+                    <span className="text-xl font-bold text-white tracking-tight leading-none whitespace-nowrap">
+                        Business Smart Suite
+                    </span>
                 </div>
 
                 {/* Hero text */}
@@ -206,16 +208,24 @@ export default function LoginPage() {
                     </div>
                 </div>
 
-                {/* Stats row */}
-                <div className="relative z-10 flex items-center gap-0 pt-8" style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-                    {stats.map((s, i) => (
+                {/* Stats row — real company count + uptime + support */}
+                <div className="relative z-10 flex items-center gap-0 pt-7" style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+                    {/* Real company count from DB */}
+                    <div className="flex-1 text-center relative">
+                        <div className="text-3xl font-black text-white">
+                            {companies.length > 0 ? `${companies.length}+` : "—"}
+                        </div>
+                        <div className="text-[11px] font-semibold uppercase tracking-widest mt-0.5" style={{ color: "rgba(255,255,255,0.45)" }}>
+                            Companies
+                        </div>
+                    </div>
+
+                    {baseStats.map((s) => (
                         <div key={s.label} className="flex-1 text-center relative">
-                            {i > 0 && (
-                                <div
-                                    className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-px"
-                                    style={{ background: "rgba(255,255,255,0.12)" }}
-                                />
-                            )}
+                            <div
+                                className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-px"
+                                style={{ background: "rgba(255,255,255,0.12)" }}
+                            />
                             <div className="text-3xl font-black text-white">{s.value}</div>
                             <div className="text-[11px] font-semibold uppercase tracking-widest mt-0.5" style={{ color: "rgba(255,255,255,0.45)" }}>
                                 {s.label}
@@ -329,13 +339,13 @@ export default function LoginPage() {
                                         Remember me
                                     </Label>
                                 </div>
-                                <Link
+                                {/* <Link
                                     href="/forgot-password"
                                     className="text-sm font-semibold hover:underline transition-colors"
                                     style={{ color: "#7c3aed" }}
                                 >
                                     Forgot password?
-                                </Link>
+                                </Link> */}
                             </div>
 
                             {/* Submit */}
