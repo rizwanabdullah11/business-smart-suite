@@ -1661,6 +1661,12 @@ export default function ManualPage() {
                                           >
                                             {manual.title}
                                           </Link>
+                                          {manual.fileName ? (
+                                            <div className="mt-1 flex items-center gap-1 text-xs" style={{ color: "#73788a" }}>
+                                              <FileText className="h-3 w-3 shrink-0" style={{ color: COLORS.indigo700 }} />
+                                              <span className="max-w-[160px] truncate" title={manual.fileName}>{manual.fileName}</span>
+                                            </div>
+                                          ) : null}
                                           {(manual.highlighted || manual.paused) ? (
                                             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs" style={{ color: "#73788a" }}>
                                               {manual.highlighted ? <span>Starred</span> : null}
