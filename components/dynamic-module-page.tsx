@@ -105,6 +105,7 @@ export default function DynamicModulePage({
   const [addingItemToCategory, setAddingItemToCategory] = useState<string | null>(null)
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [newItemData, setNewItemData] = useState<Record<string, any>>({})
+  const [selectedItems, setSelectedItems] = useState<Record<string, Set<string>>>({})
   const [showAskMe, setShowAskMe] = useState(false)
   const [selectedCategoryId, setSelectedCategoryId] = useState("")
   const [selectedItemId, setSelectedItemId] = useState("")
@@ -915,7 +916,20 @@ export default function DynamicModulePage({
                           <table className="min-w-full text-left">
                             <thead style={{ background: "#fff" }}>
                               <tr style={{ color: "#707685" }}>
-                                <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wide"><input type="checkbox" className="h-4 w-4 rounded" /></th>
+                                <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wide">
+                                  <input
+                                    type="checkbox"
+                                    className="h-4 w-4 rounded cursor-pointer"
+                                    checked={sortedItems.length > 0 && sortedItems.every((i: any) => selectedItems[category.id]?.has(i.id))}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedItems((prev) => ({ ...prev, [category.id]: new Set(sortedItems.map((i: any) => i.id)) }))
+                                      } else {
+                                        setSelectedItems((prev) => ({ ...prev, [category.id]: new Set() }))
+                                      }
+                                    }}
+                                  />
+                                </th>
                                 <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">{itemLabel}</th>
                                 {displayKeys.map((key) => (
                                   <th key={key} className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">{fieldLabelMap[key] || key}</th>
@@ -929,7 +943,21 @@ export default function DynamicModulePage({
                                 const statusTone = getItemStatusTone(item)
                                 return (
                                   <tr key={item.id} style={{ background: item.paused ? "#fffaf2" : item.highlighted ? "#faf7ff" : "#fff", borderTop: index === 0 ? "none" : "1px solid #efeff5", borderBottom: index === sortedItems.length - 1 ? "1px solid #efeff5" : "none" }}>
-                                    <td className="px-2 py-1 align-top"><input type="checkbox" className="mt-1 h-4 w-4 rounded" /></td>
+                                    <td className="px-2 py-1 align-top">
+                                      <input
+                                        type="checkbox"
+                                        className="mt-1 h-4 w-4 rounded cursor-pointer"
+                                        checked={selectedItems[category.id]?.has(item.id) ?? false}
+                                        onChange={(e) => {
+                                          setSelectedItems((prev) => {
+                                            const current = new Set(prev[category.id] ?? [])
+                                            if (e.target.checked) current.add(item.id)
+                                            else current.delete(item.id)
+                                            return { ...prev, [category.id]: current }
+                                          })
+                                        }}
+                                      />
+                                    </td>
                                     <td className="px-2 py-1 align-top">
                                       <div className="flex items-start gap-3">
                                         <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "#f4f2ff", color: COLORS.indigo700, border: `1px solid ${COLORS.indigo200}` }}>
@@ -939,6 +967,12 @@ export default function DynamicModulePage({
                                           <Link href={`/task/${moduleSlug}/${item.id}?back=${encodeURIComponent(itemHrefPrefix)}`} className="block text-sm font-semibold hover:underline sm:text-[15px] break-words" style={{ color: COLORS.indigo700 }}>
                                             {getItemTitle(item)}
                                           </Link>
+                                          {item.fileName ? (
+                                            <div className="mt-1 flex items-center gap-1 text-xs" style={{ color: "#73788a" }}>
+                                              <Icon className="h-3 w-3 shrink-0" style={{ color: COLORS.indigo700 }} />
+                                              <span className="max-w-[160px] truncate" title={item.fileName}>{item.fileName}</span>
+                                            </div>
+                                          ) : null}
                                           {(item.highlighted || item.paused) ? (
                                             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs" style={{ color: "#73788a" }}>
                                               {item.highlighted ? <span>Starred</span> : null}

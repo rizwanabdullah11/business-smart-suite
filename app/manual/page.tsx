@@ -71,6 +71,7 @@ export default function ManualPage() {
     location: "",
     issueDate: new Date().toISOString().split('T')[0]
   })
+  const [selectedManuals, setSelectedManuals] = useState<Record<string, Set<string>>>({})
   const [showAskMe, setShowAskMe] = useState(false)
   const [selectedCategoryId, setSelectedCategoryId] = useState("")
   const [aiQuestion, setAiQuestion] = useState("")
@@ -1611,7 +1612,18 @@ export default function ManualPage() {
                             <thead style={{ background: "#ffffff" }}>
                               <tr style={{ color: "#707685" }}>
                                 <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wide">
-                                  <input type="checkbox" className="h-4 w-4 rounded" />
+                                  <input
+                                    type="checkbox"
+                                    className="h-4 w-4 rounded cursor-pointer"
+                                    checked={sortedManuals.length > 0 && sortedManuals.every((m) => selectedManuals[category.id]?.has(m.id))}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedManuals((prev) => ({ ...prev, [category.id]: new Set(sortedManuals.map((m) => m.id)) }))
+                                      } else {
+                                        setSelectedManuals((prev) => ({ ...prev, [category.id]: new Set() }))
+                                      }
+                                    }}
+                                  />
                                 </th>
                                 <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Manual</th>
                                 <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Issue Level</th>
@@ -1639,7 +1651,19 @@ export default function ManualPage() {
                                     }}
                                   >
                                     <td className="px-2 py-1 align-top">
-                                      <input type="checkbox" className="mt-1 h-4 w-4 rounded" />
+                                      <input
+                                        type="checkbox"
+                                        className="mt-1 h-4 w-4 rounded cursor-pointer"
+                                        checked={selectedManuals[category.id]?.has(manual.id) ?? false}
+                                        onChange={(e) => {
+                                          setSelectedManuals((prev) => {
+                                            const current = new Set(prev[category.id] ?? [])
+                                            if (e.target.checked) current.add(manual.id)
+                                            else current.delete(manual.id)
+                                            return { ...prev, [category.id]: current }
+                                          })
+                                        }}
+                                      />
                                     </td>
                                     <td className="px-2 py-1 align-top">
                                       <div className="flex items-start gap-3">
