@@ -173,19 +173,24 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       .sort((a, b) => b.sortTime - a.sortTime)
       .map(({ sortTime, ...rest }) => rest)
 
+    const serializeDoc = (doc: DashboardDoc) => ({
+      _id: String(doc._id || ""),
+      _module: doc._module || "",
+      title: doc.title || "",
+      approved: Boolean(doc.approved),
+      archived: Boolean(doc.archived),
+      isArchived: Boolean(doc.isArchived),
+      createdAt: doc.createdAt ? String(doc.createdAt) : undefined,
+      updatedAt: doc.updatedAt ? String(doc.updatedAt) : undefined,
+    })
+
+    const archivedOnlyDocs = allDocs.filter((doc) => Boolean(doc.archived) || Boolean(doc.isArchived))
+
     return NextResponse.json({
       stats,
       recentActivities,
-      docs: allDocs.map((doc) => ({
-        _id: String(doc._id || ""),
-        _module: doc._module || "",
-        title: doc.title || "",
-        approved: Boolean(doc.approved),
-        archived: Boolean(doc.archived),
-        isArchived: Boolean(doc.isArchived),
-        createdAt: doc.createdAt ? String(doc.createdAt) : undefined,
-        updatedAt: doc.updatedAt ? String(doc.updatedAt) : undefined,
-      })),
+      docs: activeDocs.map(serializeDoc),           // active only — used for module breakdown, compliance, totals
+      archivedDocs: archivedOnlyDocs.map(serializeDoc), // archived only — used for the archived card
     })
   } catch (error) {
     return NextResponse.json(

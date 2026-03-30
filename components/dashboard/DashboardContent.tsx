@@ -92,13 +92,14 @@ const PDF_MODULE_LABELS: Record<string, string> = {
   "customer-feedback": "Customer Feedback",
 }
 
-const DASHBOARD_CACHE_KEY_PREFIX = "dashboardCache:v1"
+const DASHBOARD_CACHE_KEY_PREFIX = "dashboardCache:v2"
 const DASHBOARD_CACHE_TTL_MS = 2 * 60 * 1000
 
 type DashboardCachePayload = {
   stats: Omit<DashboardStat, "icon">[]
   recentActivities: ActivityItem[]
   docs: AnyDoc[]
+  archivedDocs: AnyDoc[]
   cachedAt: number
 }
 
@@ -125,6 +126,7 @@ type DashboardApiResponse = {
   stats?: Omit<DashboardStat, "icon">[]
   recentActivities?: ActivityItem[]
   docs?: AnyDoc[]
+  archivedDocs?: AnyDoc[]
 }
 
 type MonthlyActivityPoint = {
@@ -184,6 +186,7 @@ export function DashboardContent() {
   ])
   const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([])
   const [dashboardDocs, setDashboardDocs] = useState<AnyDoc[]>([])
+  const [archivedDocsFromApi, setArchivedDocsFromApi] = useState<AnyDoc[]>([])
   const [showAllActivities, setShowAllActivities] = useState(false)
   const [loading, setLoading] = useState(true)
   const [exportingPdf, setExportingPdf] = useState(false)
@@ -214,11 +217,12 @@ export function DashboardContent() {
         const parsed = JSON.parse(raw) as DashboardCachePayload
         if (!parsed?.cachedAt) return false
         if (Date.now() - parsed.cachedAt > DASHBOARD_CACHE_TTL_MS) return false
-        if (!Array.isArray(parsed.stats) || !Array.isArray(parsed.recentActivities) || !Array.isArray(parsed.docs)) return false
+        if (!Array.isArray(parsed.stats) || !Array.isArray(parsed.recentActivities) || !Array.isArray(parsed.docs) || !Array.isArray(parsed.archivedDocs)) return false
         if (cancelled) return true
         setStats(hydrateCachedStats(parsed.stats))
         setRecentActivities(parsed.recentActivities)
         setDashboardDocs(parsed.docs)
+        setArchivedDocsFromApi(parsed.archivedDocs)
         setLoading(false)
         return true
       } catch {
@@ -245,20 +249,23 @@ export function DashboardContent() {
         const payload = (await response.json()) as DashboardApiResponse
         const nextStats = hydrateCachedStats(Array.isArray(payload.stats) ? payload.stats : [])
         const docs = Array.isArray(payload.docs) ? payload.docs : []
+        const archivedDocs = Array.isArray(payload.archivedDocs) ? payload.archivedDocs : []
         const activities = Array.isArray(payload.recentActivities) ? payload.recentActivities : []
 
         if (cancelled) return
         setStats(nextStats)
         setDashboardDocs(docs)
+        setArchivedDocsFromApi(archivedDocs)
         setRecentActivities(activities)
         try {
-          const payload: DashboardCachePayload = {
+          const cachePayload: DashboardCachePayload = {
             stats: toSerializableStats(nextStats),
             recentActivities: activities,
             docs,
+            archivedDocs,
             cachedAt: Date.now(),
           }
-          sessionStorage.setItem(cacheKey, JSON.stringify(payload))
+          sessionStorage.setItem(cacheKey, JSON.stringify(cachePayload))
         } catch {
           // Ignore cache write failures.
         }
@@ -291,14 +298,13 @@ export function DashboardContent() {
     []
   )
   const visibleActivities = showAllActivities ? recentActivities : recentActivities.slice(0, 6)
+  // dashboardDocs contains ONLY active (non-archived) docs from the API
   const pendingReviewDocs = useMemo(
-    () => dashboardDocs.filter((doc) => !doc.approved && !doc.archived && !doc.isArchived),
+    () => dashboardDocs.filter((doc) => !doc.approved),
     [dashboardDocs]
   )
-  const archivedDocs = useMemo(
-    () => dashboardDocs.filter((doc) => Boolean(doc.archived || doc.isArchived)),
-    [dashboardDocs]
-  )
+  // archivedDocs comes directly from the API as a separate list
+  const archivedDocs = archivedDocsFromApi
   const staleDocs = useMemo(
     () =>
       dashboardDocs.filter((doc) => {
@@ -1352,18 +1358,17 @@ export function DashboardContent() {
 
       {/* ── COMPLIANCE SCORE + MODULE BREAKDOWN ── */}
       {(() => {
-        const activeDocs = dashboardDocs.filter((d) => !d.archived && !d.isArchived)
-        const total = activeDocs.length
-        const approved = activeDocs.filter((d) => d.approved).length
+        // dashboardDocs is already active-only (no archived) — no extra filter needed
+        const total = dashboardDocs.length
+        const approved = dashboardDocs.filter((d) => d.approved).length
         const score = total > 0 ? Math.round((approved / total) * 100) : 0
         const radius = 54
         const circumference = 2 * Math.PI * radius
         const offset = circumference - (score / 100) * circumference
 
-        // Group ACTIVE (non-archived) docs by module, sort by count desc
+        // Group docs by module, sort by count desc
         const moduleMap: Record<string, number> = {}
         dashboardDocs
-          .filter((d) => !d.archived && !d.isArchived)
           .forEach((d) => { if (d._module) moduleMap[d._module] = (moduleMap[d._module] || 0) + 1 })
         const topModules = Object.entries(moduleMap).sort((a, b) => b[1] - a[1])
         const maxCount = topModules[0]?.[1] || 1
@@ -1481,11 +1486,11 @@ export function DashboardContent() {
 
       {/* ── SYSTEM HEALTH STRIP — dynamic ── */}
       {(() => {
-        const activeHealthDocs = dashboardDocs.filter((d) => !d.archived && !d.isArchived)
-        const totalDocs = activeHealthDocs.length
-        const approvedDocs = activeHealthDocs.filter((d) => d.approved).length
+        // dashboardDocs is already active-only — no extra filter needed
+        const totalDocs = dashboardDocs.length
+        const approvedDocs = dashboardDocs.filter((d) => d.approved).length
         const compliancePct = totalDocs > 0 ? Math.round((approvedDocs / totalDocs) * 100) : 0
-        const uniqueModules = new Set(activeHealthDocs.map((d) => d._module).filter(Boolean)).size
+        const uniqueModules = new Set(dashboardDocs.map((d) => d._module).filter(Boolean)).size
         const activityCount = recentActivities.length
 
         const healthItems = [
@@ -1651,7 +1656,7 @@ export function DashboardContent() {
 
           {/* Total Documents — static info */}
           {[
-            { label: "Total Documents", value: dashboardDocs.filter((d) => !d.archived && !d.isArchived).length, gradient: "linear-gradient(135deg,#7c3aed,#a855f7)", shadow: "0 4px 14px rgba(124,58,237,0.3)", sub: "active records" },
+            { label: "Total Documents", value: dashboardDocs.length, gradient: "linear-gradient(135deg,#7c3aed,#a855f7)", shadow: "0 4px 14px rgba(124,58,237,0.3)", sub: "active records" },
             { label: "Pending Review", value: pendingReviewDocs.length, gradient: "linear-gradient(135deg,#ea580c,#f97316)", shadow: "0 4px 14px rgba(234,88,12,0.3)", sub: "awaiting sign-off" },
           ].map((item) => (
             <div
