@@ -10,15 +10,11 @@ import {
   Trash2,
   Check,
   X,
-  GripVertical,
   Star,
   Pause,
-  ArrowUpDown,
   Calendar,
-  Type,
   ChevronDown,
   ChevronRight,
-  MoreVertical,
   Copy,
   Download,
   ArrowLeft,
@@ -75,6 +71,7 @@ export default function ManualPage() {
     location: "",
     issueDate: new Date().toISOString().split('T')[0]
   })
+  const [selectedManuals, setSelectedManuals] = useState<Record<string, Set<string>>>({})
   const [showAskMe, setShowAskMe] = useState(false)
   const [selectedCategoryId, setSelectedCategoryId] = useState("")
   const [aiQuestion, setAiQuestion] = useState("")
@@ -233,7 +230,9 @@ export default function ManualPage() {
       setCategories(cached.categories)
       setArchivedCategories(cached.archivedCategories)
       setCategoryItemView(cached.categoryItemView)
-      setExpandedCategories(cached.expandedCategories?.length ? cached.expandedCategories : ["1"])
+      setExpandedCategories(
+        cached.expandedCategories?.length ? [cached.expandedCategories[0]] : ["1"]
+      )
     }
     loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -249,11 +248,7 @@ export default function ManualPage() {
   }, [archivedCategories, categories, categoryItemView, expandedCategories])
 
   const toggleCategory = (categoryId: string) => {
-    setExpandedCategories(prev =>
-      prev.includes(categoryId)
-        ? prev.filter(id => id !== categoryId)
-        : [...prev, categoryId]
-    )
+    setExpandedCategories((prev) => (prev.includes(categoryId) ? [] : [categoryId]))
   }
 
   const toggleHighlight = async (_categoryId: string, manualId: string, currentHighlighted: boolean) => {
@@ -807,43 +802,211 @@ export default function ManualPage() {
     }
   }, [showAskMe])
 
+  const visibleCategories = showArchived ? archivedCategories : categories
+
+  const formatDisplayDate = (value?: string) => {
+    if (!value) return "N/A"
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return value
+    return parsed.toLocaleDateString("en-GB")
+  }
+
+  const getStatusTone = (manual: any) => {
+    if (manual.paused) {
+      return {
+        label: "Paused",
+        background: COLORS.orange50,
+        color: COLORS.orange700,
+        borderColor: COLORS.orange200,
+      }
+    }
+
+    if (manual.approved) {
+      return {
+        label: "Done",
+        background: COLORS.emerald50,
+        color: COLORS.emerald700,
+        borderColor: COLORS.emerald200,
+      }
+    }
+
+    if (manual.highlighted) {
+      return {
+        label: "Starred",
+        background: COLORS.purple50,
+        color: COLORS.purple700,
+        borderColor: COLORS.purple200,
+      }
+    }
+
+    return {
+      label: "Active",
+      background: COLORS.bgWhite,
+      color: COLORS.textSecondary,
+      borderColor: COLORS.border,
+    }
+  }
+
+  const getEmptyStateText = (currentItemView: "active" | "archived" | "completed" | "highlighted") => {
+    if (currentItemView === "archived") {
+      return {
+        title: "No archived manuals in this category",
+        description: "Archived manuals will appear here.",
+      }
+    }
+
+    if (currentItemView === "completed") {
+      return {
+        title: "No completed manuals in this category",
+        description: "Completed manuals will appear here once approved.",
+      }
+    }
+
+    if (currentItemView === "highlighted") {
+      return {
+        title: "No starred manuals in this category",
+        description: "Highlighted manuals will appear here.",
+      }
+    }
+
+    return {
+      title: "No manuals in this category",
+      description: "Use the add button to create the first manual.",
+    }
+  }
+
+  const actionButtonStyle = (tone: "neutral" | "blue" | "amber" | "green" | "red" | "purple" | "gray") => {
+    if (tone === "blue") {
+      return {
+        background: "#f8fbff",
+        color: COLORS.blue700,
+        borderColor: COLORS.blue200,
+      }
+    }
+
+    if (tone === "amber") {
+      return {
+        background: "#fffaf3",
+        color: COLORS.orange700,
+        borderColor: COLORS.orange200,
+      }
+    }
+
+    if (tone === "green") {
+      return {
+        background: "#f4fcf6",
+        color: COLORS.green600,
+        borderColor: COLORS.green200,
+      }
+    }
+
+    if (tone === "red") {
+      return {
+        background: "#fff5f6",
+        color: COLORS.pink600,
+        borderColor: COLORS.pink200,
+      }
+    }
+
+    if (tone === "purple") {
+      return {
+        background: "#f7f6ff",
+        color: COLORS.purple700,
+        borderColor: COLORS.purple200,
+      }
+    }
+
+    if (tone === "gray") {
+      return {
+        background: "#fafafa",
+        color: COLORS.gray600,
+        borderColor: COLORS.gray200,
+      }
+    }
+
+    return {
+      background: "#ffffff",
+      color: "#7b8190",
+      borderColor: "#ececf3",
+    }
+  }
+
   return (
-    <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
-      <div className="p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard">
+    <div
+      className="min-h-screen"
+      style={{ background: "linear-gradient(180deg, #f7f8fb 0%, #f3f5f9 100%)" }}
+    >
+      <div className="mx-auto max-w-[1400px] p-4 sm:p-6">
+        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex items-start gap-3">
+            {/* <Link href="/dashboard">
               <button
-                className="flex items-center justify-center w-10 h-10 rounded-xl transition-all hover:shadow-md"
+                className="flex h-10 w-10 items-center justify-center rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-md"
                 style={{
-                  backgroundColor: COLORS.bgWhite,
+                  background: COLORS.bgWhite,
                   color: COLORS.textPrimary,
                   border: `1px solid ${COLORS.border}`,
                 }}
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="h-4 w-4" />
               </button>
-            </Link>
-            <div
-              className="flex items-center justify-center w-12 h-12 rounded-xl"
-              style={{
-                backgroundColor: `${COLORS.primary}15`,
-                color: COLORS.primary,
-              }}
-            >
-              <FileText className="w-6 h-6" />
-            </div>
+            </Link> */}
+
             <div>
-              <h1 className="text-3xl font-bold" style={{ color: COLORS.textPrimary }}>
-                Manuals
-              </h1>
+              <div className="mb-1 flex items-center gap-2">
+                <div
+                  className="flex h-10 w-10 items-center justify-center rounded-xl"
+                  style={{
+                    background: COLORS.purple50,
+                    color: COLORS.purple700,
+                    border: `1px solid ${COLORS.purple200}`,
+                  }}
+                >
+                  <FileText className="h-5 w-5" />
+                </div>
+                <h1 className="text-3xl font-bold tracking-tight" style={{ color: COLORS.textPrimary }}>
+                  Manuals
+                </h1>
+              </div>
               <p className="text-sm" style={{ color: COLORS.textSecondary }}>
-                Manage your documentation and manuals
+                Manage documentation, categories, and publication status in one place.
               </p>
             </div>
           </div>
-          <div className="flex gap-3 flex-wrap">
+
+          <div className="flex flex-wrap gap-2">
+            {!isEmployee ? (
+              <button
+                type="button"
+                onClick={() => setShowAddCategory(!showAddCategory)}
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-sm"
+                style={{
+                  background: COLORS.bgWhite,
+                  color: COLORS.textPrimary,
+                  border: `1px solid ${COLORS.border}`,
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                Add Category
+              </button>
+            ) : null}
+
+            {!isEmployee ? (
+              <button
+                type="button"
+                onClick={() => setShowArchived(!showArchived)}
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-sm"
+                style={{
+                  background: COLORS.bgWhite,
+                  color: COLORS.textPrimary,
+                  border: `1px solid ${COLORS.border}`,
+                }}
+              >
+                <Archive className="h-4 w-4" />
+                {showArchived ? "Show Active" : "Show Archived"}
+              </button>
+            ) : null}
+
             {!isEmployee ? (
               <button
                 type="button"
@@ -859,93 +1022,69 @@ export default function ManualPage() {
                   setAiReply("")
                   setShowAskMe(true)
                 }}
-                className="px-4 py-2.5 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2"
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-sm"
                 style={{
                   background: COLORS.bgWhite,
                   color: COLORS.textPrimary,
                   border: `1px solid ${COLORS.border}`,
                 }}
               >
-                <Bot className="w-4 h-4" />
+                <Bot className="h-4 w-4" />
                 Ask Me
               </button>
             ) : null}
-            <button
-              type="button"
-              onClick={() => setShowAddCategory(!showAddCategory)}
-              className="px-4 py-2.5 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2"
-              style={{
-                background: COLORS.bgWhite,
-                color: COLORS.textPrimary,
-                border: `1px solid ${COLORS.border}`,
-              }}
-            >
-              <Plus className="w-4 h-4" />
-              Add Category
-            </button>
-            {!isEmployee ? (
-              <button
-                type="button"
-                onClick={() => setShowArchived(!showArchived)}
-                className="px-4 py-2.5 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2"
-                style={{
-                  background: COLORS.bgWhite,
-                  color: COLORS.textPrimary,
-                  border: `1px solid ${COLORS.border}`,
-                }}
-              >
-                <Archive className="w-4 h-4" />
-                {showArchived ? "Show Active" : "Show Archived"}
-              </button>
-            ) : null}
+
             <Link href="/manual/new">
               <button
                 type="button"
-                className="px-5 py-2.5 rounded-lg font-medium transition-all hover:shadow-lg flex items-center gap-2"
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-md"
                 style={{
-                  background: COLORS.primaryGradient,
+                  background: "#111827",
                   color: COLORS.textWhite,
+                  border: "1px solid #111827",
                 }}
               >
-                <Plus className="w-4 h-4" />
-                New Manual
+                <Plus className="h-4 w-4" />
+                Add New
               </button>
             </Link>
           </div>
         </div>
 
-        {/* Add Category Form */}
-        {showAddCategory && (
+        {showAddCategory && !isEmployee && (
           <div
-            className="mb-6 p-5 rounded-xl shadow-sm"
+            className="mb-5 rounded-2xl p-5 shadow-sm"
             style={{
               background: COLORS.bgWhite,
               border: `1px solid ${COLORS.border}`,
             }}
           >
-            <h3 className="text-lg font-semibold mb-4" style={{ color: COLORS.textPrimary }}>
-              Create New Category
-            </h3>
-            <div className="flex gap-3">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
+                Create New Category
+              </h3>
+              <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                Add a new manual group to keep related documents together.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
               <input
                 type="text"
                 value={newCategoryTitle}
                 onChange={(e) => setNewCategoryTitle(e.target.value)}
-                placeholder="Enter category name..."
-                className="flex-1 px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter category name"
+                className="flex-1 rounded-xl px-4 py-3 outline-none transition-all focus:ring-2"
                 style={{
-                  borderColor: COLORS.border,
+                  background: COLORS.bgGrayLight,
+                  border: `1px solid ${COLORS.border}`,
                   color: COLORS.textPrimary,
                 }}
-                onKeyPress={(e) => e.key === "Enter" && addCategory()}
+                onKeyDown={(e) => e.key === "Enter" && addCategory()}
               />
               <button
                 onClick={addCategory}
-                className="px-6 py-2.5 rounded-lg font-medium hover:shadow-md transition-all"
-                style={{
-                  background: COLORS.primaryGradient,
-                  color: COLORS.textWhite,
-                }}
+                className="rounded-xl px-5 py-3 text-sm font-semibold"
+                style={{ background: "#111827", color: COLORS.textWhite }}
               >
                 Create
               </button>
@@ -954,10 +1093,11 @@ export default function ManualPage() {
                   setShowAddCategory(false)
                   setNewCategoryTitle("")
                 }}
-                className="px-6 py-2.5 rounded-lg font-medium hover:shadow-md transition-all"
+                className="rounded-xl px-5 py-3 text-sm font-semibold"
                 style={{
-                  background: COLORS.bgGray,
+                  background: COLORS.bgWhite,
                   color: COLORS.textPrimary,
+                  border: `1px solid ${COLORS.border}`,
                 }}
               >
                 Cancel
@@ -966,76 +1106,98 @@ export default function ManualPage() {
           </div>
         )}
 
-        {/* Tabs */}
         {!isEmployee ? (
-          <div className="mb-6">
-            <div className="flex gap-1 border-b-2" style={{ borderColor: COLORS.border }}>
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div
+              className="inline-flex rounded-xl p-1"
+              style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}
+            >
               <button
                 type="button"
-                className="px-6 py-3 font-semibold border-b-2 transition-all"
-                style={{
-                  borderColor: !showArchived ? COLORS.primary : "transparent",
-                  color: !showArchived ? COLORS.primary : COLORS.textSecondary,
-                }}
                 onClick={() => setShowArchived(false)}
+                className="rounded-lg px-4 py-2 text-sm font-semibold transition-all"
+                style={{
+                  background: !showArchived ? COLORS.purple700 : "transparent",
+                  color: !showArchived ? COLORS.textWhite : COLORS.textSecondary,
+                }}
               >
-                Active ({categories.length})
+                Active
               </button>
               <button
                 type="button"
-                className="px-6 py-3 font-semibold border-b-2 transition-all"
-                style={{
-                  borderColor: showArchived ? COLORS.primary : "transparent",
-                  color: showArchived ? COLORS.primary : COLORS.textSecondary,
-                }}
                 onClick={() => setShowArchived(true)}
+                className="rounded-lg px-4 py-2 text-sm font-semibold transition-all"
+                style={{
+                  background: showArchived ? COLORS.purple700 : "transparent",
+                  color: showArchived ? COLORS.textWhite : COLORS.textSecondary,
+                }}
               >
-                Archived ({archivedCategories.length})
+                Archived
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span style={{ color: COLORS.textSecondary }}>Sort by</span>
+              <button
+                type="button"
+                onClick={() => toggleSort("name")}
+                className="rounded-lg px-3 py-2 font-semibold"
+                style={{
+                  background: sortType === "name" ? COLORS.purple50 : COLORS.bgWhite,
+                  color: sortType === "name" ? COLORS.purple700 : COLORS.textPrimary,
+                  border: `1px solid ${sortType === "name" ? COLORS.purple200 : COLORS.border}`,
+                }}
+              >
+                Name {sortType === "name" ? (sortDirection === "asc" ? "A-Z" : "Z-A") : ""}
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleSort("date")}
+                className="rounded-lg px-3 py-2 font-semibold"
+                style={{
+                  background: sortType === "date" ? COLORS.purple50 : COLORS.bgWhite,
+                  color: sortType === "date" ? COLORS.purple700 : COLORS.textPrimary,
+                  border: `1px solid ${sortType === "date" ? COLORS.purple200 : COLORS.border}`,
+                }}
+              >
+                Date {sortType === "date" ? (sortDirection === "asc" ? "Old-New" : "New-Old") : ""}
               </button>
             </div>
           </div>
-        ) : null}
+        ) : (
+          <div className="mb-5 flex justify-end">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span style={{ color: COLORS.textSecondary }}>Sort by</span>
+              <button
+                type="button"
+                onClick={() => toggleSort("name")}
+                className="rounded-lg px-3 py-2 font-semibold"
+                style={{
+                  background: sortType === "name" ? COLORS.purple50 : COLORS.bgWhite,
+                  color: sortType === "name" ? COLORS.purple700 : COLORS.textPrimary,
+                  border: `1px solid ${sortType === "name" ? COLORS.purple200 : COLORS.border}`,
+                }}
+              >
+                Name
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleSort("date")}
+                className="rounded-lg px-3 py-2 font-semibold"
+                style={{
+                  background: sortType === "date" ? COLORS.purple50 : COLORS.bgWhite,
+                  color: sortType === "date" ? COLORS.purple700 : COLORS.textPrimary,
+                  border: `1px solid ${sortType === "date" ? COLORS.purple200 : COLORS.border}`,
+                }}
+              >
+                Date
+              </button>
+            </div>
+          </div>
+        )}
 
-        {/* Sort Controls */}
-        <div className="mb-4 flex items-center gap-3">
-          <span className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>
-            Sort by:
-          </span>
-          <button
-            onClick={() => toggleSort("name")}
-            className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2"
-            style={{
-              background: sortType === "name" ? COLORS.primaryGradient : COLORS.bgWhite,
-              color: sortType === "name" ? COLORS.textWhite : COLORS.textPrimary,
-              border: `1px solid ${sortType === "name" ? COLORS.primary : COLORS.border}`,
-            }}
-          >
-            <Type className="w-4 h-4" />
-            Name
-            {sortType === "name" && (
-              <ArrowUpDown className={`w-3 h-3 ${sortDirection === "desc" ? "rotate-180" : ""}`} />
-            )}
-          </button>
-          <button
-            onClick={() => toggleSort("date")}
-            className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2"
-            style={{
-              background: sortType === "date" ? COLORS.primaryGradient : COLORS.bgWhite,
-              color: sortType === "date" ? COLORS.textWhite : COLORS.textPrimary,
-              border: `1px solid ${sortType === "date" ? COLORS.primary : COLORS.border}`,
-            }}
-          >
-            <Calendar className="w-4 h-4" />
-            Date
-            {sortType === "date" && (
-              <ArrowUpDown className={`w-3 h-3 ${sortDirection === "desc" ? "rotate-180" : ""}`} />
-            )}
-          </button>
-        </div>
-
-        {/* Categories */}
         <div className="space-y-4">
-          {(showArchived ? archivedCategories : categories).map((category) => {
+          {visibleCategories.map((category) => {
             const currentItemView = categoryItemView[category.id] ?? "active"
             const currentManuals =
               currentItemView === "archived"
@@ -1048,37 +1210,59 @@ export default function ManualPage() {
             const sortedManuals = sortManuals(currentManuals)
             const isViewingArchivedItems = currentItemView === "archived"
             const isExpanded = expandedCategories.includes(category.id)
+            const emptyState = getEmptyStateText(currentItemView)
 
             return (
               <div
                 key={category.id}
-                className="rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all"
+                className="overflow-hidden rounded-2xl shadow-sm"
                 style={{
                   background: COLORS.bgWhite,
-                  border: `1px solid ${COLORS.border}`,
+                  border: `1px solid #ececf3`,
+                  boxShadow: "0 10px 30px rgba(31, 41, 55, 0.05)",
                 }}
               >
-                {/* Category Header */}
                 <div
-                  className="p-5 flex items-center justify-between cursor-pointer"
+                  className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                   style={{
-                    background: COLORS.primaryGradient,
+                    background: "#341746",
                     color: COLORS.textWhite,
                   }}
-                  onClick={() => toggleCategory(category.id)}
                 >
-                  <div className="flex items-center gap-3">
-                    {isExpanded ? (
-                      <ChevronDown className="w-5 h-5" />
-                    ) : (
-                      <ChevronRight className="w-5 h-5" />
-                    )}
-                    <h2 className="text-2xl font-bold">{category.title}</h2>
-                    <span className="px-3 py-1 rounded-full text-base font-medium bg-white bg-opacity-20">
-                      {currentManuals.length} manuals
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleCategory(category.id)}
+                    className="flex items-center gap-3 text-left"
+                  >
+                    <div
+                      className="flex h-7 w-7 items-center justify-center rounded-md"
+                      style={{ background: "rgba(255,255,255,0.14)" }}
+                    >
+                      {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </div>
+                    <div>
+                      <div className="text-base font-semibold">{category.title}</div>
+                      <div className="text-xs text-white/70">
+                        {currentManuals.length} manual{currentManuals.length === 1 ? "" : "s"} in view
+                      </div>
+                    </div>
+                  </button>
+
+                  <div className="flex items-center gap-1.5">
+                    {/* Drag/grip handle */}
+                    <div className="mr-1 flex h-7 w-5 items-center justify-center opacity-50">
+                      <svg width="12" height="14" viewBox="0 0 12 14" fill="white">
+                        <circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/>
+                        <circle cx="3" cy="7" r="1.5"/><circle cx="9" cy="7" r="1.5"/>
+                        <circle cx="3" cy="12" r="1.5"/><circle cx="9" cy="12" r="1.5"/>
+                      </svg>
+                    </div>
+                    {/* White toggle square */}
+                    <div
+                      className="h-6 w-6 rounded"
+                      style={{ background: "rgba(255,255,255,0.92)", border: "1px solid rgba(255,255,255,0.4)" }}
+                    />
+
                     {!isEmployee ? (
                       <button
                         type="button"
@@ -1086,31 +1270,35 @@ export default function ManualPage() {
                           e.stopPropagation()
                           startEditCategory(category.id, category.title)
                         }}
-                        className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
+                        className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
+                        style={{ background: "#22c55e" }}
                         title="Edit Category"
-                        style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
                       >
-                        <Edit className="w-5 h-5" />
+                        <Edit className="h-3.5 w-3.5 text-white" />
                       </button>
                     ) : null}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        if (isViewingArchivedItems) {
-                          setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))
-                        }
-                        setAddingManualToCategory(category.id)
-                        if (!expandedCategories.includes(category.id)) {
-                          setExpandedCategories(prev => [...prev, category.id])
-                        }
-                      }}
-                      className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
-                      title="Add Manual"
-                      style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
-                    >
-                      <Plus className="w-5 h-5" />
-                    </button>
+
+                    {!showArchived ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (isViewingArchivedItems) {
+                            setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))
+                          }
+                          setAddingManualToCategory(category.id)
+                          if (!expandedCategories.includes(category.id)) {
+                            setExpandedCategories([category.id])
+                          }
+                        }}
+                        className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
+                        style={{ background: "#22c55e" }}
+                        title="Add Manual"
+                      >
+                        <Plus className="h-3.5 w-3.5 text-white" />
+                      </button>
+                    ) : null}
+
                     {!isEmployee ? (
                       showArchived ? (
                         <button
@@ -1119,11 +1307,11 @@ export default function ManualPage() {
                             e.stopPropagation()
                             unarchiveCategory(category.id)
                           }}
-                          className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
+                          className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
+                          style={{ background: "#f59e0b" }}
                           title="Unarchive Category"
-                          style={{ background: COLORS.bgWhite, color: COLORS.green600 }}
                         >
-                          <Archive className="w-5 h-5" />
+                          <Archive className="h-3.5 w-3.5 text-white" />
                         </button>
                       ) : (
                         <button
@@ -1132,14 +1320,15 @@ export default function ManualPage() {
                             e.stopPropagation()
                             archiveCategory(category.id)
                           }}
-                          className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
+                          className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
+                          style={{ background: "#f59e0b" }}
                           title="Archive Category"
-                          style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}
                         >
-                          <Archive className="w-5 h-5" />
+                          <Archive className="h-3.5 w-3.5 text-white" />
                         </button>
                       )
                     ) : null}
+
                     {!isEmployee ? (
                       <button
                         type="button"
@@ -1147,41 +1336,37 @@ export default function ManualPage() {
                           e.stopPropagation()
                           deleteCategory(category.id)
                         }}
-                        className="p-2.5 rounded-lg transition-all hover:scale-110 shadow-sm border border-white/20 cursor-pointer"
+                        className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
+                        style={{ background: "#ef4444" }}
                         title="Delete Category"
-                        style={{ background: COLORS.bgWhite, color: COLORS.pink600 }}
                       >
-                        <Trash2 className="w-5 h-5" />
+                        <X className="h-3.5 w-3.5 text-white" />
                       </button>
                     ) : null}
                   </div>
                 </div>
 
-                {/* Edit Category Form */}
                 {editingCategory === category.id && (
                   <div
-                    className="p-5"
-                    style={{
-                      background: COLORS.bgGray,
-                      borderBottom: `1px solid ${COLORS.border}`,
-                    }}
+                    className="border-b px-4 py-4"
+                    style={{ background: COLORS.bgGrayLight, borderColor: COLORS.border }}
                   >
-                    <h3 className="text-lg font-semibold mb-4" style={{ color: COLORS.textPrimary }}>
-                      Edit Category Name
-                    </h3>
-                    <div className="flex gap-3">
+                    <div className="mb-3 text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+                      Rename Category
+                    </div>
+                    <div className="flex flex-col gap-3 sm:flex-row">
                       <input
                         type="text"
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
-                        placeholder="Enter category name..."
-                        className="flex-1 px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter category name"
+                        className="flex-1 rounded-xl px-4 py-3 outline-none transition-all focus:ring-2"
                         style={{
-                          borderColor: COLORS.border,
-                          color: COLORS.textPrimary,
                           background: COLORS.bgWhite,
+                          color: COLORS.textPrimary,
+                          border: `1px solid ${COLORS.border}`,
                         }}
-                        onKeyPress={(e) => {
+                        onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             saveEditCategory(category.id)
                           }
@@ -1190,13 +1375,10 @@ export default function ManualPage() {
                       />
                       <button
                         onClick={() => saveEditCategory(category.id)}
-                        className="px-6 py-2.5 rounded-lg font-medium hover:shadow-md transition-all flex items-center gap-2"
-                        style={{
-                          background: COLORS.primary,
-                          color: COLORS.textWhite,
-                        }}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold"
+                        style={{ background: COLORS.purple700, color: COLORS.textWhite }}
                       >
-                        <Check className="w-4 h-4" />
+                        <Check className="h-4 w-4" />
                         Save
                       </button>
                       <button
@@ -1204,179 +1386,183 @@ export default function ManualPage() {
                           setEditingCategory(null)
                           setEditTitle("")
                         }}
-                        className="px-6 py-2.5 rounded-lg font-medium hover:shadow-md transition-all flex items-center gap-2"
+                        className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold"
                         style={{
                           background: COLORS.bgWhite,
                           color: COLORS.textPrimary,
                           border: `1px solid ${COLORS.border}`,
                         }}
                       >
-                        <X className="w-4 h-4" />
+                        <X className="h-4 w-4" />
                         Cancel
                       </button>
                     </div>
                   </div>
                 )}
 
-                {/* Manuals List */}
-                {isExpanded && (
-                  <div className="p-5">
-                    <div className="mb-4 flex gap-2 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))
-                        }
-                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
-                        style={{
-                          background: currentItemView === "active" ? COLORS.primaryGradient : COLORS.bgWhite,
-                          color: currentItemView === "active" ? COLORS.textWhite : COLORS.textPrimary,
-                          borderColor: currentItemView === "active" ? COLORS.primary : COLORS.border,
-                        }}
-                      >
-                        To do ({(category.manuals || []).length})
-                      </button>
-                      {!isEmployee ? (
+                {isExpanded ? (
+                  <div className="p-4 sm:p-5">
+                    <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
                           onClick={() =>
-                            setCategoryItemView((prev) => ({ ...prev, [category.id]: "archived" }))
+                            setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))
                           }
-                          className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                          className="rounded-lg px-3 py-2 text-sm font-semibold"
                           style={{
-                            background: currentItemView === "archived" ? COLORS.primaryGradient : COLORS.bgWhite,
-                            color: currentItemView === "archived" ? COLORS.textWhite : COLORS.textPrimary,
-                            borderColor: currentItemView === "archived" ? COLORS.primary : COLORS.border,
+                            background: currentItemView === "active" ? "#faf5ff" : COLORS.bgWhite,
+                            color: currentItemView === "active" ? COLORS.purple700 : COLORS.textSecondary,
+                            border: `1px solid ${currentItemView === "active" ? COLORS.purple200 : "#ececf3"}`,
                           }}
                         >
-                          Archived ({(category.archivedManuals || []).length})
+                          Active ({(category.manuals || []).length})
                         </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setCategoryItemView((prev) => ({ ...prev, [category.id]: "completed" }))
-                        }
-                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
-                        style={{
-                          background: currentItemView === "completed" ? COLORS.primaryGradient : COLORS.bgWhite,
-                          color: currentItemView === "completed" ? COLORS.textWhite : COLORS.textPrimary,
-                          borderColor: currentItemView === "completed" ? COLORS.primary : COLORS.border,
-                        }}
-                      >
-                        Done ({(category.completedManuals || []).length})
-                      </button>
-                      {!isEmployee ? (
+                        {!isEmployee ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCategoryItemView((prev) => ({ ...prev, [category.id]: "archived" }))
+                            }
+                            className="rounded-lg px-3 py-2 text-sm font-semibold"
+                            style={{
+                              background: currentItemView === "archived" ? "#faf5ff" : COLORS.bgWhite,
+                              color: currentItemView === "archived" ? COLORS.purple700 : COLORS.textSecondary,
+                              border: `1px solid ${currentItemView === "archived" ? COLORS.purple200 : "#ececf3"}`,
+                            }}
+                          >
+                            Archived ({(category.archivedManuals || []).length})
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() =>
-                            setCategoryItemView((prev) => ({ ...prev, [category.id]: "highlighted" }))
+                            setCategoryItemView((prev) => ({ ...prev, [category.id]: "completed" }))
                           }
-                          className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                          className="rounded-lg px-3 py-2 text-sm font-semibold"
                           style={{
-                            background: currentItemView === "highlighted" ? COLORS.primaryGradient : COLORS.bgWhite,
-                            color: currentItemView === "highlighted" ? COLORS.textWhite : COLORS.textPrimary,
-                            borderColor: currentItemView === "highlighted" ? COLORS.primary : COLORS.border,
+                            background: currentItemView === "completed" ? "#faf5ff" : COLORS.bgWhite,
+                            color: currentItemView === "completed" ? COLORS.purple700 : COLORS.textSecondary,
+                            border: `1px solid ${currentItemView === "completed" ? COLORS.purple200 : "#ececf3"}`,
                           }}
                         >
-                          Starred ({(category.highlightedManuals || []).length})
+                          Done ({(category.completedManuals || []).length})
                         </button>
-                      ) : null}
+                        {!isEmployee ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCategoryItemView((prev) => ({ ...prev, [category.id]: "highlighted" }))
+                            }
+                            className="rounded-lg px-3 py-2 text-sm font-semibold"
+                            style={{
+                              background: currentItemView === "highlighted" ? "#faf5ff" : COLORS.bgWhite,
+                              color: currentItemView === "highlighted" ? COLORS.purple700 : COLORS.textSecondary,
+                              border: `1px solid ${currentItemView === "highlighted" ? COLORS.purple200 : "#ececf3"}`,
+                            }}
+                          >
+                            Starred ({(category.highlightedManuals || []).length})
+                          </button>
+                        ) : null}
+                      </div>
+
+                      <div className="text-xs sm:text-sm" style={{ color: COLORS.textSecondary }}>
+                        Showing {sortedManuals.length} result{sortedManuals.length === 1 ? "" : "s"}
+                      </div>
                     </div>
 
-                    {/* Add Manual Form */}
-                    {addingManualToCategory === category.id && currentItemView === "active" && (
+                    {addingManualToCategory === category.id && currentItemView === "active" ? (
                       <div
-                        className="mb-8 p-8 rounded-2xl shadow-sm"
+                        className="mb-5 rounded-2xl p-5"
                         style={{
-                          background: "#F9FAFB",
-                          border: `2px dashed ${COLORS.border}`,
+                          background: COLORS.bgGrayLight,
+                          border: `1px dashed ${COLORS.borderHover}`,
                         }}
                       >
-                        <div className="mb-6">
-                          <h3 className="text-xl font-bold" style={{ color: COLORS.textPrimary }}>
+                        <div className="mb-4">
+                          <h3 className="text-base font-semibold" style={{ color: COLORS.textPrimary }}>
                             Add New Manual
                           </h3>
-                          <p className="text-sm text-gray-500 font-medium">Create a new documentation entry in this category</p>
+                          <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                            Create a new document entry in this category.
+                          </p>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                           <div>
-                            <label className="block text-base font-bold mb-2.5" style={{ color: COLORS.textPrimary }}>
-                              Manual Title <span className="text-red-500">*</span>
+                            <label className="mb-2 block text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+                              Manual Title
                             </label>
                             <input
                               type="text"
                               value={newManualData.title}
-                              onChange={(e) => setNewManualData(prev => ({ ...prev, title: e.target.value }))}
-                              placeholder="Enter manual title..."
-                              className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium shadow-sm"
+                              onChange={(e) => setNewManualData((prev) => ({ ...prev, title: e.target.value }))}
+                              placeholder="Enter manual title"
+                              className="w-full rounded-xl px-4 py-3 outline-none transition-all focus:ring-2"
                               style={{
-                                borderColor: COLORS.border,
-                                color: COLORS.textPrimary,
                                 background: COLORS.bgWhite,
+                                color: COLORS.textPrimary,
+                                border: `1px solid ${COLORS.border}`,
                               }}
                             />
                           </div>
                           <div>
-                            <label className="block text-base font-bold mb-2.5" style={{ color: COLORS.textPrimary }}>
+                            <label className="mb-2 block text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
                               Version
                             </label>
                             <input
                               type="text"
                               value={newManualData.version}
-                              onChange={(e) => setNewManualData(prev => ({ ...prev, version: e.target.value }))}
-                              placeholder="e.g., v1.0"
-                              className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium shadow-sm"
+                              onChange={(e) => setNewManualData((prev) => ({ ...prev, version: e.target.value }))}
+                              placeholder="e.g. 1.0"
+                              className="w-full rounded-xl px-4 py-3 outline-none transition-all focus:ring-2"
                               style={{
-                                borderColor: COLORS.border,
-                                color: COLORS.textPrimary,
                                 background: COLORS.bgWhite,
+                                color: COLORS.textPrimary,
+                                border: `1px solid ${COLORS.border}`,
                               }}
                             />
                           </div>
                           <div>
-                            <label className="block text-base font-bold mb-2.5" style={{ color: COLORS.textPrimary }}>
+                            <label className="mb-2 block text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
                               Location
                             </label>
                             <input
                               type="text"
                               value={newManualData.location}
-                              onChange={(e) => setNewManualData(prev => ({ ...prev, location: e.target.value }))}
-                              placeholder="e.g., QMS"
-                              className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium shadow-sm"
+                              onChange={(e) => setNewManualData((prev) => ({ ...prev, location: e.target.value }))}
+                              placeholder="Enter location"
+                              className="w-full rounded-xl px-4 py-3 outline-none transition-all focus:ring-2"
                               style={{
-                                borderColor: COLORS.border,
-                                color: COLORS.textPrimary,
                                 background: COLORS.bgWhite,
+                                color: COLORS.textPrimary,
+                                border: `1px solid ${COLORS.border}`,
                               }}
                             />
                           </div>
                           <div>
-                            <label className="block text-base font-bold mb-2.5" style={{ color: COLORS.textPrimary }}>
+                            <label className="mb-2 block text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
                               Issue Date
                             </label>
                             <input
                               type="date"
                               value={newManualData.issueDate}
-                              onChange={(e) => setNewManualData(prev => ({ ...prev, issueDate: e.target.value }))}
-                              className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium shadow-sm"
+                              onChange={(e) => setNewManualData((prev) => ({ ...prev, issueDate: e.target.value }))}
+                              className="w-full rounded-xl px-4 py-3 outline-none transition-all focus:ring-2"
                               style={{
-                                borderColor: COLORS.border,
-                                color: COLORS.textPrimary,
                                 background: COLORS.bgWhite,
+                                color: COLORS.textPrimary,
+                                border: `1px solid ${COLORS.border}`,
                               }}
                             />
                           </div>
                         </div>
-                        <div className="flex gap-4">
+
+                        <div className="mt-4 flex flex-wrap gap-3">
                           <button
                             onClick={() => addManualToCategory(category.id)}
-                            className="px-8 py-3.5 rounded-xl font-bold hover:shadow-lg transition-all focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                            style={{
-                              background: COLORS.primaryGradient,
-                              color: COLORS.textWhite,
-                            }}
+                            className="rounded-xl px-5 py-3 text-sm font-semibold"
+                            style={{ background: "#111827", color: COLORS.textWhite }}
                           >
                             Add Manual
                           </button>
@@ -1387,10 +1573,10 @@ export default function ManualPage() {
                                 title: "",
                                 version: "",
                                 location: "",
-                                issueDate: new Date().toISOString().split('T')[0]
+                                issueDate: new Date().toISOString().split("T")[0],
                               })
                             }}
-                            className="px-8 py-3.5 rounded-xl font-bold hover:bg-gray-100 transition-all"
+                            className="rounded-xl px-5 py-3 text-sm font-semibold"
                             style={{
                               background: COLORS.bgWhite,
                               color: COLORS.textPrimary,
@@ -1401,272 +1587,311 @@ export default function ManualPage() {
                           </button>
                         </div>
                       </div>
-                    )}
+                    ) : null}
 
                     {sortedManuals.length === 0 ? (
-                      <div className="text-center py-12">
-                        <FileText className="w-12 h-12 mx-auto mb-3" style={{ color: COLORS.textLight }} />
-                        <p className="font-medium" style={{ color: COLORS.textSecondary }}>
-                          {isViewingArchivedItems
-                            ? "No archived manuals in this category"
-                            : currentItemView === "completed"
-                              ? "No completed manuals in this category"
-                              : currentItemView === "highlighted"
-                                ? "No highlighted manuals in this category"
-                                : "No manuals in this category"}
-                        </p>
-                        <p className="text-sm mt-1" style={{ color: COLORS.textLight }}>
-                          {isViewingArchivedItems
-                            ? "Archive a manual to see it here"
-                            : currentItemView === "completed"
-                              ? "Mark a manual as completed to see it here"
-                              : currentItemView === "highlighted"
-                                ? "Star a manual to see it here"
-                                : "Click the + button above to add your first manual"}
+                      <div
+                        className="rounded-2xl px-6 py-12 text-center"
+                        style={{ background: COLORS.bgGrayLight, border: `1px solid ${COLORS.border}` }}
+                      >
+                        <FileText className="mx-auto mb-3 h-10 w-10" style={{ color: COLORS.textLight }} />
+                        <div className="mb-1 text-base font-semibold" style={{ color: COLORS.textPrimary }}>
+                          {emptyState.title}
+                        </div>
+                        <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                          {emptyState.description}
                         </p>
                       </div>
                     ) : (
-                      <div className="space-y-3">
-                        {sortedManuals.map((manual) => (
-                          <div
-                            key={manual.id}
-                            className="flex items-center gap-3 p-4 rounded-lg hover:shadow-md transition-all"
-                            style={{
-                              background: manual.paused ? `${COLORS.orange500}05` : manual.highlighted ? `${COLORS.primary}05` : COLORS.bgWhite,
-                              border: `1px solid ${COLORS.border}`,
-                            }}
-                          >
-                            <button type="button" className="cursor-move hover:bg-gray-100 p-1 rounded">
-                              <GripVertical className="w-4 h-4" style={{ color: COLORS.textSecondary }} />
-                            </button>
-                            <div className="flex-1 min-w-0">
-                              <Link
-                                href={`/task/manuals/${manual.id}?back=${encodeURIComponent("/manual")}`}
-                                className="font-bold hover:underline text-xl"
-                                style={{ color: COLORS.textPrimary }}
-                              >
-                                {manual.title}
-                              </Link>
-                              <div className="flex gap-5 text-base mt-2 flex-wrap" style={{ color: COLORS.textSecondary }}>
-                                <span className="flex items-center gap-1.5">
-                                  <span className="font-semibold text-gray-400">Version:</span> {manual.version}
-                                </span>
-                                <span className="flex items-center gap-1.5">
-                                  <>
-                                    <Calendar className="w-4 h-4 text-primary" style={{ color: COLORS.primary }} />
-                                    {manual.issueDate}
-                                  </>
-                                </span>
-                                <span className="flex items-center gap-1.5">
-                                  <span className="font-semibold text-gray-400">Location:</span> {manual.location}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 flex-shrink-0">
-                              {isEmployee ? (
-                                <>
-                                  <div className="flex items-center gap-1 mr-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => toggleApprove(category.id, manual.id, manual.approved)}
-                                      disabled={loadingAction === `approve-${manual.id}`}
-                                      className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `approve-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                                      style={{
-                                        background: COLORS.bgWhite,
-                                        color: manual.approved ? "#22c55e" : "#94a3b8",
-                                        borderColor: manual.approved ? "#bbf7d0" : "#e2e8f0",
-                                      }}
-                                      title={manual.approved ? "Reopen" : "Mark done"}
-                                    >
-                                      <Check className="w-5 h-5" />
-                                    </button>
-                                  </div>
-                                  <div className="w-px h-6 bg-gray-300 mx-1"></div>
-                                  <div className="flex items-center gap-1">
-                                    <Link href={`/manual/${manual.id}/edit`}>
-                                      <button type="button" className="p-3 rounded-lg bg-white border border-gray-200 hover:scale-110 transition-all shadow-sm" style={{ color: "#3b82f6" }} title="Edit">
-                                        <Edit className="w-5 h-5" />
-                                      </button>
-                                    </Link>
-                                    <button
-                                      type="button"
-                                      onClick={() => downloadManual(manual)}
-                                      disabled={loadingAction === `download-${manual.id}`}
-                                      className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `download-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                                      style={{
-                                        background: COLORS.bgWhite,
-                                        color: "#3b82f6",
-                                        borderColor: "#e2e8f0",
-                                        opacity: loadingAction === `download-${manual.id}` ? 0.6 : 1,
-                                      }}
-                                      title="Download"
-                                    >
-                                      <Download className="w-5 h-5" />
-                                    </button>
-                                  </div>
-                                </>
-                              ) : (
-                                <>
-                              {/* Primary Actions */}
-                              <div className="flex items-center gap-1 mr-2">
-                                <button
-                                  type="button"
-                                  onClick={() => toggleHighlight(category.id, manual.id, manual.highlighted)}
-                                  disabled={loadingAction === `highlight-${manual.id}`}
-                                  className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `highlight-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                                  style={{
-                                    background: COLORS.bgWhite,
-                                    color: manual.highlighted ? "#f59e0b" : "#94a3b8",
-                                    borderColor: manual.highlighted ? "#fde047" : "#e2e8f0",
-                                  }}
-                                  title={manual.highlighted ? "Remove Highlight" : "Highlight"}
-                                >
-                                  <Star className={`w-5 h-5 ${manual.highlighted ? "fill-current" : ""}`} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => toggleApprove(category.id, manual.id, manual.approved)}
-                                  disabled={loadingAction === `approve-${manual.id}`}
-                                  className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `approve-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                                  style={{
-                                    background: COLORS.bgWhite,
-                                    color: manual.approved ? COLORS.emerald600 : "#94a3b8",
-                                    borderColor: manual.approved ? COLORS.emerald200 : "#e2e8f0",
-                                  }}
-                                  title={manual.approved ? "Mark as Incomplete" : "Mark as Completed"}
-                                >
-                                  <Check className="w-5 h-5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => togglePause(category.id, manual.id, manual.paused)}
-                                  disabled={loadingAction === `pause-${manual.id}`}
-                                  className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `pause-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                                  style={{
-                                    background: COLORS.bgWhite,
-                                    color: manual.paused ? COLORS.orange600 : "#94a3b8",
-                                    borderColor: manual.paused ? COLORS.orange200 : "#e2e8f0",
-                                  }}
-                                  title={manual.paused ? "Resume" : "Pause"}
-                                >
-                                  <Pause className="w-5 h-5" />
-                                </button>
-                              </div>
+                      <div
+                        className="overflow-hidden rounded-2xl"
+                        style={{ border: `1px solid #efeff5`, background: "#fcfcff" }}
+                      >
+                        <div className="overflow-x-auto p-3">
+                          <table className="min-w-full text-left">
+                            <thead style={{ background: "#ffffff" }}>
+                              <tr style={{ color: "#707685" }}>
+                                <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wide">
+                                  <input
+                                    type="checkbox"
+                                    className="h-4 w-4 rounded cursor-pointer"
+                                    checked={sortedManuals.length > 0 && sortedManuals.every((m) => selectedManuals[category.id]?.has(m.id))}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedManuals((prev) => ({ ...prev, [category.id]: new Set(sortedManuals.map((m) => m.id)) }))
+                                      } else {
+                                        setSelectedManuals((prev) => ({ ...prev, [category.id]: new Set() }))
+                                      }
+                                    }}
+                                  />
+                                </th>
+                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Manual</th>
+                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Issue Level</th>
+                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Issue Date</th>
+                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Location</th>
+                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Status</th>
+                                <th className="px-2 py-2 text-right text-[11px] font-semibold uppercase tracking-wide">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sortedManuals.map((manual, index) => {
+                                const statusTone = getStatusTone(manual)
+                                return (
+                                  <tr
+                                    key={manual.id}
+                                    style={{
+                                      background:
+                                        manual.paused
+                                          ? "#fffaf2"
+                                          : manual.highlighted
+                                            ? "#faf7ff"
+                                            : "#ffffff",
+                                      borderTop: index === 0 ? "none" : "1px solid #efeff5",
+                                      borderBottom: index === sortedManuals.length - 1 ? "1px solid #efeff5" : "none",
+                                    }}
+                                  >
+                                    <td className="px-2 py-1 align-top">
+                                      <input
+                                        type="checkbox"
+                                        className="mt-1 h-4 w-4 rounded cursor-pointer"
+                                        checked={selectedManuals[category.id]?.has(manual.id) ?? false}
+                                        onChange={(e) => {
+                                          setSelectedManuals((prev) => {
+                                            const current = new Set(prev[category.id] ?? [])
+                                            if (e.target.checked) current.add(manual.id)
+                                            else current.delete(manual.id)
+                                            return { ...prev, [category.id]: current }
+                                          })
+                                        }}
+                                      />
+                                    </td>
+                                    <td className="px-2 py-1 align-top">
+                                      <div className="flex items-start gap-3">
+                                        <div
+                                          className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg"
+                                          style={{
+                                            background: "#faf5ff",
+                                            color: COLORS.purple700,
+                                            border: `1px solid ${COLORS.purple200}`,
+                                          }}
+                                        >
+                                          <FileText className="h-4 w-4" />
+                                        </div>
+                                        <div className="min-w-0">
+                                          <Link
+                                            href={`/task/manuals/${manual.id}?back=${encodeURIComponent("/manual")}`}
+                                            className="block text-sm font-semibold hover:underline sm:text-[15px] break-words"
+                                            style={{ color: COLORS.purple700 }}
+                                          >
+                                            {manual.title}
+                                          </Link>
+                                          {manual.fileName ? (
+                                            <div className="mt-1 flex items-center gap-1 text-xs" style={{ color: "#73788a" }}>
+                                              <FileText className="h-3 w-3 shrink-0" style={{ color: COLORS.purple700 }} />
+                                              <span className="max-w-[160px] truncate" title={manual.fileName}>{manual.fileName}</span>
+                                            </div>
+                                          ) : null}
+                                          {(manual.highlighted || manual.paused) ? (
+                                            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs" style={{ color: "#73788a" }}>
+                                              {manual.highlighted ? <span>Starred</span> : null}
+                                              {manual.paused ? <span>Paused</span> : null}
+                                            </div>
+                                          ) : null}
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="px-2 py-1 align-top text-sm" style={{ color: COLORS.textPrimary }}>
+                                      {manual.version || "1.0"}
+                                    </td>
+                                    <td className="px-2 py-1 align-top text-sm" style={{ color: COLORS.textPrimary }}>
+                                      <div className="flex items-center gap-2">
+                                        <Calendar className="h-4 w-4" style={{ color: COLORS.textLight }} />
+                                        {formatDisplayDate(manual.issueDate)}
+                                      </div>
+                                    </td>
+                                    <td className="px-2 py-1 align-top text-sm" style={{ color: COLORS.textPrimary }}>
+                                      {manual.location || "Default Location"}
+                                    </td>
+                                    <td className="px-2 py-1 align-top">
+                                      <span
+                                        className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                                        style={{
+                                          background: statusTone.background,
+                                          color: statusTone.color,
+                                          border: `1px solid ${statusTone.borderColor}`,
+                                        }}
+                                      >
+                                        {statusTone.label}
+                                      </span>
+                                    </td>
+                                    <td className="px-2 py-1">
+                                      <div className="flex items-center justify-end gap-1">
+                                        {/* Drag handle */}
+                                        <div className="mr-1 flex h-6 w-5 cursor-move items-center justify-center opacity-30 hover:opacity-60">
+                                          <svg width="10" height="14" viewBox="0 0 10 14" fill="#374151">
+                                            <circle cx="2.5" cy="2" r="1.5"/><circle cx="7.5" cy="2" r="1.5"/>
+                                            <circle cx="2.5" cy="7" r="1.5"/><circle cx="7.5" cy="7" r="1.5"/>
+                                            <circle cx="2.5" cy="12" r="1.5"/><circle cx="7.5" cy="12" r="1.5"/>
+                                          </svg>
+                                        </div>
 
-                              {/* Divider */}
-                              <div className="w-px h-6 bg-gray-300 mx-1"></div>
-
-                              {/* Secondary Actions */}
-                              <div className="flex items-center gap-1">
-                                <Link href={`/manual/${manual.id}/edit`}>
-                                  <button
-                                    type="button"
-                                    className="p-3 rounded-lg transition-all hover:scale-110 shadow-sm border cursor-pointer"
-                                    style={{
-                                      background: COLORS.bgWhite,
-                                      color: COLORS.blue600,
-                                      borderColor: COLORS.blue200,
-                                    }}
-                                    title="Edit"
-                                  >
-                                    <Edit className="w-5 h-5" />
-                                  </button>
-                                </Link>
-                                <button
-                                  type="button"
-                                  onClick={() => copyManual(category.id, manual.id)}
-                                  disabled={loadingAction === `copy-${manual.id}`}
-                                  className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `copy-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                                  style={{
-                                    background: COLORS.bgWhite,
-                                    color: COLORS.gray600,
-                                    borderColor: COLORS.gray200,
-                                  }}
-                                  title="Duplicate"
-                                >
-                                  <Copy className="w-5 h-5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => downloadManual(manual)}
-                                  disabled={loadingAction === `download-${manual.id}`}
-                                  className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `download-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                                  style={{
-                                    background: COLORS.bgWhite,
-                                    color: COLORS.indigo600,
-                                    borderColor: COLORS.indigo200,
-                                  }}
-                                  title="Download"
-                                >
-                                  <Download className="w-5 h-5" />
-                                </button>
-                                {!isViewingArchivedItems ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => archiveManual(category.id, manual.id)}
-                                    disabled={loadingAction === `archive-${manual.id}`}
-                                    className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `archive-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                                    style={{
-                                      background: COLORS.bgWhite,
-                                      color: COLORS.orange700,
-                                      borderColor: COLORS.orange200,
-                                    }}
-                                    title="Archive"
-                                  >
-                                    <Archive className="w-5 h-5" />
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => unarchiveManual(category.id, manual.id)}
-                                    disabled={loadingAction === `unarchive-${manual.id}`}
-                                    className={`p-3 rounded-lg transition-all hover:scale-110 shadow-sm border ${loadingAction === `unarchive-${manual.id}` ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                                    style={{
-                                      background: COLORS.bgWhite,
-                                      color: COLORS.emerald600,
-                                      borderColor: COLORS.emerald200,
-                                    }}
-                                    title="Unarchive"
-                                  >
-                                    <Archive className="w-5 h-5" />
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => deleteManual(category.id, manual.id)}
-                                  className="p-3 rounded-lg transition-all hover:scale-110 shadow-sm border cursor-pointer"
-                                  style={{
-                                    background: COLORS.bgWhite,
-                                    color: COLORS.pink600,
-                                    borderColor: COLORS.pink200,
-                                  }}
-                                  title="Delete"
-                                >
-                                  <Trash2 className="w-5 h-5" />
-                                </button>
-                              </div>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        ))}
+                                        {isEmployee ? (
+                                          <>
+                                            <button
+                                              type="button"
+                                              onClick={() => toggleApprove(category.id, manual.id, manual.approved)}
+                                              disabled={loadingAction === `approve-${manual.id}`}
+                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                              style={{ background: "#22c55e" }}
+                                              title={manual.approved ? "Reopen" : "Mark done"}
+                                            >
+                                              <Check className="h-3.5 w-3.5 text-white" />
+                                            </button>
+                                            <Link href={`/manual/${manual.id}/edit`}>
+                                              <button
+                                                type="button"
+                                                className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
+                                                style={{ background: "#4f46e5" }}
+                                                title="Edit"
+                                              >
+                                                <Edit className="h-3.5 w-3.5 text-white" />
+                                              </button>
+                                            </Link>
+                                            <button
+                                              type="button"
+                                              onClick={() => downloadManual(manual)}
+                                              disabled={loadingAction === `download-${manual.id}`}
+                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                              style={{ background: "#6366f1" }}
+                                              title="Download"
+                                            >
+                                              <Download className="h-3.5 w-3.5 text-white" />
+                                            </button>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <button
+                                              type="button"
+                                              onClick={() => toggleHighlight(category.id, manual.id, manual.highlighted)}
+                                              disabled={loadingAction === `highlight-${manual.id}`}
+                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                              style={{ background: "#f59e0b" }}
+                                              title={manual.highlighted ? "Remove Highlight" : "Highlight"}
+                                            >
+                                              <Star className={`h-3.5 w-3.5 text-white ${manual.highlighted ? "fill-white" : ""}`} />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => toggleApprove(category.id, manual.id, manual.approved)}
+                                              disabled={loadingAction === `approve-${manual.id}`}
+                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                              style={{ background: "#22c55e" }}
+                                              title={manual.approved ? "Mark as Incomplete" : "Mark as Completed"}
+                                            >
+                                              <Check className="h-3.5 w-3.5 text-white" />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => togglePause(category.id, manual.id, manual.paused)}
+                                              disabled={loadingAction === `pause-${manual.id}`}
+                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                              style={{ background: "#f97316" }}
+                                              title={manual.paused ? "Resume" : "Pause"}
+                                            >
+                                              <Pause className="h-3.5 w-3.5 text-white" />
+                                            </button>
+                                            <Link href={`/manual/${manual.id}/edit`}>
+                                              <button
+                                                type="button"
+                                                className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
+                                                style={{ background: "#4f46e5" }}
+                                                title="Edit"
+                                              >
+                                                <Edit className="h-3.5 w-3.5 text-white" />
+                                              </button>
+                                            </Link>
+                                            <button
+                                              type="button"
+                                              onClick={() => copyManual(category.id, manual.id)}
+                                              disabled={loadingAction === `copy-${manual.id}`}
+                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                              style={{ background: "#6366f1" }}
+                                              title="Duplicate"
+                                            >
+                                              <Copy className="h-3.5 w-3.5 text-white" />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => downloadManual(manual)}
+                                              disabled={loadingAction === `download-${manual.id}`}
+                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                              style={{ background: "#6366f1" }}
+                                              title="Download"
+                                            >
+                                              <Download className="h-3.5 w-3.5 text-white" />
+                                            </button>
+                                            {!isViewingArchivedItems ? (
+                                              <button
+                                                type="button"
+                                                onClick={() => archiveManual(category.id, manual.id)}
+                                                disabled={loadingAction === `archive-${manual.id}`}
+                                                className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                                style={{ background: "#f59e0b" }}
+                                                title="Archive"
+                                              >
+                                                <Archive className="h-3.5 w-3.5 text-white" />
+                                              </button>
+                                            ) : (
+                                              <button
+                                                type="button"
+                                                onClick={() => unarchiveManual(category.id, manual.id)}
+                                                disabled={loadingAction === `unarchive-${manual.id}`}
+                                                className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                                style={{ background: "#22c55e" }}
+                                                title="Unarchive"
+                                              >
+                                                <Archive className="h-3.5 w-3.5 text-white" />
+                                              </button>
+                                            )}
+                                            <button
+                                              type="button"
+                                              onClick={() => deleteManual(category.id, manual.id)}
+                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
+                                              style={{ background: "#ef4444" }}
+                                              title="Delete"
+                                            >
+                                              <Trash2 className="h-3.5 w-3.5 text-white" />
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
                   </div>
-                )}
+                ) : null}
               </div>
             )
           })}
         </div>
 
         {showArchived && archivedCategories.length === 0 && (
-          <div className="mt-12 text-center py-16">
-            <Archive className="w-16 h-16 mx-auto mb-4" style={{ color: COLORS.textLight }} />
-            <h3 className="text-xl font-semibold mb-2" style={{ color: COLORS.textPrimary }}>
-              No archived items
+          <div
+            className="mt-8 rounded-2xl px-6 py-16 text-center"
+            style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}
+          >
+            <Archive className="mx-auto mb-4 h-14 w-14" style={{ color: COLORS.textLight }} />
+            <h3 className="mb-2 text-xl font-semibold" style={{ color: COLORS.textPrimary }}>
+              No archived categories
             </h3>
             <p style={{ color: COLORS.textSecondary }}>
-              Archived manuals and categories will appear here
+              Archived manual groups will appear here once you archive them.
             </p>
           </div>
         )}

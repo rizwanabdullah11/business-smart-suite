@@ -226,105 +226,101 @@ export default function DynamicModuleEditPage({
   }
 
   return (
-    <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
-      <div className="p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="mb-8">
+    <div className="min-h-screen" style={{ background: "linear-gradient(180deg,#f7f8fb 0%,#f3f5f9 100%)" }}>
+      <div className="mx-auto max-w-[1400px] p-4 sm:p-6">
+
+        {/* Header */}
+        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex items-start gap-3">
             <Link
               href={backHref}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold transition-all hover:bg-white hover:shadow-md"
-              style={{
-                background: COLORS.bgWhite,
-                color: COLORS.textPrimary,
-                border: `1px solid ${COLORS.border}`,
-              }}
+              className="flex h-10 w-10 items-center justify-center rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-md"
+              style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}
             >
-              <ArrowLeft className="w-5 h-5" />
-              {backLabel}
+              <ArrowLeft className="h-4 w-4" />
             </Link>
-          </div>
-
-          <div
-            className="rounded-2xl p-8 shadow-sm"
-            style={{
-              background: COLORS.bgWhite,
-              border: `1px solid ${COLORS.border}`,
-            }}
-          >
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold mb-2" style={{ color: COLORS.textPrimary }}>
-                {pageTitle}
-              </h1>
-              <p className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>
+            <div>
+              <div className="mb-1 flex items-center gap-2">
+                <div
+                  className="flex h-10 w-10 items-center justify-center rounded-xl"
+                  style={{ background: COLORS.purple50, color: COLORS.purple700, border: `1px solid ${COLORS.purple200}` }}
+                >
+                  <Loader2 className="h-5 w-5 opacity-0 absolute" aria-hidden />
+                  <span className="text-base font-bold">{pageTitle.charAt(0)}</span>
+                </div>
+                <h1 className="text-3xl font-bold tracking-tight" style={{ color: COLORS.textPrimary }}>
+                  {pageTitle}
+                </h1>
+              </div>
+              <p className="text-sm" style={{ color: COLORS.textSecondary }}>
                 Update the details for this record
               </p>
             </div>
-
-            {loading ? (
-              <div className="py-12 flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin" style={{ color: COLORS.primary }} />
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {error ? (
-                  <div className="p-4 rounded-xl font-medium" style={{ background: "#FEE2E2", color: "#991B1B", border: "1px solid #FECACA" }}>
-                    {error}
-                  </div>
-                ) : null}
-
-                {success ? (
-                  <div className="p-4 rounded-xl font-medium" style={{ background: "#DCFCE7", color: "#15803D", border: "1px solid #BBF7D0" }}>
-                    Changes saved successfully. Redirecting...
-                  </div>
-                ) : null}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {fields.map((field) => (
-                    <div key={field.key} className={field.type === "textarea" || field.type === "checkbox" ? "md:col-span-2" : ""}>
-                      {field.type !== "checkbox" ? (
-                        <label className="block text-base font-bold mb-2.5" style={{ color: COLORS.textPrimary }}>
-                          {field.label}
-                          {field.required ? <span className="text-red-500"> *</span> : null}
-                        </label>
-                      ) : null}
-                      {renderField(field)}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex gap-4 pt-6">
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="flex-1 px-8 py-4 rounded-xl font-bold transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
-                    style={{
-                      background: COLORS.primaryGradient,
-                      color: COLORS.textWhite,
-                    }}
-                  >
-                    {saving ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Saving Changes...
-                      </>
-                    ) : (
-                      "Save Changes"
-                    )}
-                  </button>
-                  <Link
-                    href={backHref}
-                    className="px-8 py-4 rounded-xl font-bold transition-all hover:bg-gray-200 text-lg"
-                    style={{
-                      background: COLORS.bgGray,
-                      color: COLORS.textPrimary,
-                    }}
-                  >
-                    Cancel
-                  </Link>
-                </div>
-              </div>
-            )}
           </div>
+        </div>
+
+        {/* Form Card */}
+        <div
+          className="rounded-2xl p-6 shadow-sm"
+          style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}
+        >
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin" style={{ color: COLORS.primary }} />
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {error ? (
+                <div className="rounded-xl p-4 text-sm font-medium" style={{ background: "#FEE2E2", color: "#991B1B", border: "1px solid #FECACA" }}>
+                  {error}
+                </div>
+              ) : null}
+              {success ? (
+                <div className="rounded-xl p-4 text-sm font-medium" style={{ background: "#DCFCE7", color: "#15803D", border: "1px solid #BBF7D0" }}>
+                  Changes saved successfully. Redirecting…
+                </div>
+              ) : null}
+
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                {fields.map((field) => (
+                  <div key={field.key} className={field.type === "textarea" || field.type === "checkbox" ? "md:col-span-2" : ""}>
+                    {field.type !== "checkbox" ? (
+                      <label className="mb-2 block text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+                        {field.label}
+                        {field.required ? <span className="text-red-500"> *</span> : null}
+                      </label>
+                    ) : null}
+                    {renderField(field)}
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap gap-3 pt-2">
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{ background: "#111827", color: COLORS.textWhite }}
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Saving…
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </button>
+                <Link
+                  href={backHref}
+                  className="inline-flex items-center rounded-xl px-5 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5"
+                  style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}
+                >
+                  Cancel
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

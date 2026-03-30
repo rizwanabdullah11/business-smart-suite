@@ -105,6 +105,7 @@ export default function DynamicModulePage({
   const [addingItemToCategory, setAddingItemToCategory] = useState<string | null>(null)
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [newItemData, setNewItemData] = useState<Record<string, any>>({})
+  const [selectedItems, setSelectedItems] = useState<Record<string, Set<string>>>({})
   const [showAskMe, setShowAskMe] = useState(false)
   const [selectedCategoryId, setSelectedCategoryId] = useState("")
   const [selectedItemId, setSelectedItemId] = useState("")
@@ -229,7 +230,7 @@ export default function DynamicModulePage({
       setArchivedCategories(mergedArchived)
       setExpandedCategories((prev) => {
         const firstCategoryId = merged[0]?.id
-        const nextExpanded = prev.length ? prev : firstCategoryId ? [String(firstCategoryId)] : []
+        const nextExpanded = prev.length ? [prev[0]] : firstCategoryId ? [String(firstCategoryId)] : []
         writeModulePageCache(cacheKey, {
           categories: merged,
           archivedCategories: mergedArchived,
@@ -266,7 +267,7 @@ export default function DynamicModulePage({
   }, [archivedCategories, cacheKey, categories, categoryItemView, expandedCategories])
 
   const toggleCategory = (categoryId: string) => {
-    setExpandedCategories((prev) => (prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId]))
+    setExpandedCategories((prev) => (prev.includes(categoryId) ? [] : [categoryId]))
   }
 
   const updateItem = async (itemId: string, payload: Record<string, unknown>, actionKey: string) => {
@@ -680,88 +681,116 @@ export default function DynamicModulePage({
     return { title, details }
   }
 
+  const fieldLabelMap = Object.fromEntries(formFields.map((f) => [f.key, f.label]))
+
+  const formatDisplayDate = (value?: string) => {
+    if (!value) return "—"
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return value
+    return parsed.toLocaleDateString("en-GB")
+  }
+
+  const getItemStatusTone = (item: any) => {
+    if (item.paused) return { label: "Paused", bg: "#fffaf3", color: "#c2410c", border: "#fed7aa" }
+    if (item.approved) return { label: "Done", bg: "#f4fcf6", color: "#047857", border: "#a7f3d0" }
+    if (item.highlighted) return { label: "Starred", bg: "#faf5ff", color: "#7c3aed", border: "#e9d5ff" }
+    return { label: "Active", bg: "#f8fafc", color: "#475569", border: "#e2e8f0" }
+  }
+
+  const visibleCategories = showArchived ? archivedCategories : categories
+
   return (
-    <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
+    <div className="min-h-screen" style={{ background: "linear-gradient(180deg,#f7f8fb 0%,#f3f5f9 100%)" }}>
+      <div className="mx-auto max-w-[1400px] p-4 sm:p-6">
+
+        {/* ── Header ── */}
+        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex items-start gap-3">
             <Link href="/dashboard">
-              <button className="flex items-center justify-center w-10 h-10 rounded-xl transition-all hover:shadow-md" style={{ backgroundColor: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>
-                <ArrowLeft className="w-5 h-5" />
+              <button className="flex h-10 w-10 items-center justify-center rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-md" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>
+                <ArrowLeft className="h-4 w-4" />
               </button>
             </Link>
-            <div className="flex items-center justify-center w-12 h-12 rounded-xl" style={{ backgroundColor: `${COLORS.primary}15`, color: COLORS.primary }}>
-              <Icon className="w-6 h-6" />
-            </div>
             <div>
-              <h1 className="text-3xl font-bold" style={{ color: COLORS.textPrimary }}>{title}</h1>
+              <div className="mb-1 flex items-center gap-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "#eef2ff", color: "#4338ca", border: "1px solid #c7d2fe" }}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <h1 className="text-3xl font-bold tracking-tight" style={{ color: COLORS.textPrimary }}>{title}</h1>
+              </div>
               <p className="text-sm" style={{ color: COLORS.textSecondary }}>{description}</p>
             </div>
           </div>
-          <div className="flex gap-3">
+
+          <div className="flex flex-wrap gap-2">
             {!isEmployee ? (
-              <button
-                type="button"
-                onClick={() => {
-                  const firstCategoryId = allCategoryOptions[0]?.id || ""
-                  setSelectedCategoryId(firstCategoryId)
-                  const firstItem =
-                    allItemsForAi.find((item: any) => item.categoryId === firstCategoryId) ||
-                    allItemsForAi[0]
-                  setSelectedItemId(firstItem?.id || "")
-                  setAiQuestion("")
-                  setAiReply("")
-                  setShowAskMe(true)
-                }}
-                className="px-4 py-2.5 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2"
-                style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}
-              >
-                <Bot className="w-4 h-4" /> Ask Me
+              <button type="button" onClick={() => setShowAddCategory(!showAddCategory)} className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-sm" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>
+                <Plus className="h-4 w-4" /> Add Category
               </button>
             ) : null}
-            <button type="button" onClick={() => setShowAddCategory(!showAddCategory)} className="px-4 py-2.5 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>
-              <Plus className="w-4 h-4" /> Add Category
-            </button>
             {!isEmployee ? (
-              <button type="button" onClick={() => setShowArchived(!showArchived)} className="px-4 py-2.5 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>
-                <Archive className="w-4 h-4" /> {showArchived ? "Show Active" : "Show Archived"}
+              <button type="button" onClick={() => setShowArchived(!showArchived)} className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-sm" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>
+                <Archive className="h-4 w-4" /> {showArchived ? "Show Active" : "Show Archived"}
+              </button>
+            ) : null}
+            {!isEmployee ? (
+              <button type="button" onClick={() => { const firstCategoryId = allCategoryOptions[0]?.id || ""; setSelectedCategoryId(firstCategoryId); const firstItem = allItemsForAi.find((i: any) => i.categoryId === firstCategoryId) || allItemsForAi[0]; setSelectedItemId(firstItem?.id || ""); setAiQuestion(""); setAiReply(""); setShowAskMe(true) }} className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-sm" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>
+                <Bot className="h-4 w-4" /> Ask Me
               </button>
             ) : null}
             <Link href={newItemHref}>
-              <button type="button" className="px-5 py-2.5 rounded-lg font-medium transition-all hover:shadow-lg flex items-center gap-2" style={{ background: COLORS.primaryGradient, color: COLORS.textWhite }}>
-                <Plus className="w-4 h-4" /> New {itemLabel}
+              <button type="button" className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-md" style={{ background: "#111827", color: "#fff", border: "1px solid #111827" }}>
+                <Plus className="h-4 w-4" /> Add New
               </button>
             </Link>
           </div>
         </div>
 
-        {showAddCategory && (
-          <div className="mb-6 p-5 rounded-xl shadow-sm" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
-            <div className="flex gap-3">
-              <input type="text" value={newCategoryTitle} onChange={(e) => setNewCategoryTitle(e.target.value)} placeholder="Enter category name..." className="flex-1 px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500" style={{ borderColor: COLORS.border, color: COLORS.textPrimary }} />
-              <button onClick={addCategory} className="px-6 py-2.5 rounded-lg font-medium" style={{ background: COLORS.primary, color: COLORS.textWhite }}>Create</button>
+        {/* ── Add Category Form ── */}
+        {showAddCategory && !isEmployee && (
+          <div className="mb-5 rounded-2xl p-5 shadow-sm" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>Create New Category</h3>
+              <p className="text-sm" style={{ color: COLORS.textSecondary }}>Add a new group to keep related items together.</p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <input type="text" value={newCategoryTitle} onChange={(e) => setNewCategoryTitle(e.target.value)} placeholder="Enter category name" className="flex-1 rounded-xl px-4 py-3 outline-none focus:ring-2" style={{ background: COLORS.bgGrayLight, border: `1px solid ${COLORS.border}`, color: COLORS.textPrimary }} onKeyDown={(e) => e.key === "Enter" && addCategory()} />
+              <button onClick={addCategory} className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ background: "#111827", color: "#fff" }}>Create</button>
+              <button onClick={() => { setShowAddCategory(false); setNewCategoryTitle("") }} className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>Cancel</button>
             </div>
           </div>
         )}
 
+        {/* ── Tabs + Sort ── */}
         {!isEmployee ? (
-          <div className="mb-6">
-            <div className="flex gap-1 border-b-2" style={{ borderColor: COLORS.border }}>
-              <button type="button" className="px-6 py-3 font-semibold border-b-2" style={{ borderColor: !showArchived ? COLORS.primary : "transparent", color: !showArchived ? COLORS.primary : COLORS.textSecondary }} onClick={() => setShowArchived(false)}>Active ({categories.length})</button>
-              <button type="button" className="px-6 py-3 font-semibold border-b-2" style={{ borderColor: showArchived ? COLORS.primary : "transparent", color: showArchived ? COLORS.primary : COLORS.textSecondary }} onClick={() => setShowArchived(true)}>Archived ({archivedCategories.length})</button>
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="inline-flex rounded-xl p-1" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
+              <button type="button" onClick={() => setShowArchived(false)} className="rounded-lg px-4 py-2 text-sm font-semibold transition-all" style={{ background: !showArchived ? COLORS.purple700 : "transparent", color: !showArchived ? COLORS.textWhite : COLORS.textSecondary }}>Active</button>
+              <button type="button" onClick={() => setShowArchived(true)} className="rounded-lg px-4 py-2 text-sm font-semibold transition-all" style={{ background: showArchived ? COLORS.purple700 : "transparent", color: showArchived ? COLORS.textWhite : COLORS.textSecondary }}>Archived</button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span style={{ color: COLORS.textSecondary }}>Sort by</span>
+              <button type="button" onClick={() => { setSortType("name"); setSortDirection((d) => sortType === "name" ? (d === "asc" ? "desc" : "asc") : "asc") }} className="rounded-lg px-3 py-2 font-semibold" style={{ background: sortType === "name" ? COLORS.purple50 : COLORS.bgWhite, color: sortType === "name" ? COLORS.purple700 : COLORS.textPrimary, border: `1px solid ${sortType === "name" ? COLORS.purple200 : COLORS.border}` }}>
+                Name {sortType === "name" ? (sortDirection === "asc" ? "A-Z" : "Z-A") : ""}
+              </button>
+              <button type="button" onClick={() => { setSortType("date"); setSortDirection((d) => sortType === "date" ? (d === "asc" ? "desc" : "asc") : "asc") }} className="rounded-lg px-3 py-2 font-semibold" style={{ background: sortType === "date" ? COLORS.purple50 : COLORS.bgWhite, color: sortType === "date" ? COLORS.purple700 : COLORS.textPrimary, border: `1px solid ${sortType === "date" ? COLORS.purple200 : COLORS.border}` }}>
+                Date {sortType === "date" ? (sortDirection === "asc" ? "Old-New" : "New-Old") : ""}
+              </button>
             </div>
           </div>
-        ) : null}
+        ) : (
+          <div className="mb-5 flex justify-end">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span style={{ color: COLORS.textSecondary }}>Sort by</span>
+              <button type="button" onClick={() => setSortType("name")} className="rounded-lg px-3 py-2 font-semibold" style={{ background: sortType === "name" ? COLORS.purple50 : COLORS.bgWhite, color: sortType === "name" ? COLORS.purple700 : COLORS.textPrimary, border: `1px solid ${sortType === "name" ? COLORS.purple200 : COLORS.border}` }}>Name</button>
+              <button type="button" onClick={() => setSortType("date")} className="rounded-lg px-3 py-2 font-semibold" style={{ background: sortType === "date" ? COLORS.purple50 : COLORS.bgWhite, color: sortType === "date" ? COLORS.purple700 : COLORS.textPrimary, border: `1px solid ${sortType === "date" ? COLORS.purple200 : COLORS.border}` }}>Date</button>
+            </div>
+          </div>
+        )}
 
-        <div className="mb-4 flex items-center gap-3">
-          <span className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Sort by:</span>
-          <button onClick={() => setSortType("name")} className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2" style={{ background: sortType === "name" ? COLORS.primaryGradient : COLORS.bgWhite, color: sortType === "name" ? COLORS.textWhite : COLORS.textPrimary, border: `1px solid ${sortType === "name" ? COLORS.primary : COLORS.border}` }}><Type className="w-4 h-4" />Name <ArrowUpDown className={`w-3 h-3 ${sortDirection === "desc" ? "rotate-180" : ""}`} /></button>
-          <button onClick={() => setSortType("date")} className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md flex items-center gap-2" style={{ background: sortType === "date" ? COLORS.primaryGradient : COLORS.bgWhite, color: sortType === "date" ? COLORS.textWhite : COLORS.textPrimary, border: `1px solid ${sortType === "date" ? COLORS.primary : COLORS.border}` }}><Calendar className="w-4 h-4" />Date</button>
-          <button onClick={() => setSortDirection((d) => (d === "asc" ? "desc" : "asc"))} className="px-3 py-2 rounded-lg border" style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}>Toggle</button>
-        </div>
-
+        {/* ── Category List ── */}
         <div className="space-y-4">
-          {(showArchived ? archivedCategories : categories).map((category) => {
+          {visibleCategories.map((category) => {
             const currentItemView = categoryItemView[category.id] ?? "active"
             const currentItems = currentItemView === "archived" ? (category.archivedItems || []) : currentItemView === "completed" ? (category.completedItems || []) : currentItemView === "highlighted" ? (category.highlightedItems || []) : (category.items || [])
             const sortedItems = sortItems(currentItems)
@@ -769,143 +798,244 @@ export default function DynamicModulePage({
             const isExpanded = expandedCategories.includes(category.id)
 
             return (
-              <div key={category.id} className="rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
-                <div className="p-5 flex items-center justify-between cursor-pointer" style={{ background: COLORS.primaryGradient, color: COLORS.textWhite }} onClick={() => toggleCategory(category.id)}>
-                  <div className="flex items-center gap-3">
-                    {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-                    <h2 className="text-2xl font-bold">{category.title}</h2>
-                    <span className="px-3 py-1 rounded-full text-base font-medium bg-white bg-opacity-20">{currentItems.length} {itemLabel.toLowerCase()}s</span>
-                  </div>
-                  <div className="flex items-center gap-2">
+              <div key={category.id} className="overflow-hidden rounded-2xl" style={{ background: COLORS.bgWhite, border: "1px solid #ececf3", boxShadow: "0 10px 30px rgba(31,41,55,0.05)" }}>
+
+                {/* Category Header */}
+                <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between" style={{ background: "#341746", color: "#fff" }}>
+                  <button type="button" onClick={() => toggleCategory(category.id)} className="flex items-center gap-3 text-left">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-md" style={{ background: "rgba(255,255,255,0.14)" }}>
+                      {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </div>
+                    <div>
+                      <div className="text-base font-semibold">{category.title}</div>
+                      <div className="text-xs" style={{ color: "rgba(255,255,255,0.65)" }}>{currentItems.length} {itemLabel.toLowerCase()}{currentItems.length === 1 ? "" : "s"} in view</div>
+                    </div>
+                  </button>
+
+                  <div className="flex items-center gap-1.5">
+                    <div className="mr-1 flex h-7 w-5 items-center justify-center opacity-50">
+                      <svg width="12" height="14" viewBox="0 0 12 14" fill="white"><circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/><circle cx="3" cy="7" r="1.5"/><circle cx="9" cy="7" r="1.5"/><circle cx="3" cy="12" r="1.5"/><circle cx="9" cy="12" r="1.5"/></svg>
+                    </div>
+                    <div className="h-6 w-6 rounded" style={{ background: "rgba(255,255,255,0.92)", border: "1px solid rgba(255,255,255,0.4)" }} />
                     {!isEmployee ? (
-                      <button type="button" onClick={(e) => { e.stopPropagation(); setEditingCategory(category.id); setEditTitle(category.title) }} className="p-2.5 rounded-lg shadow-sm border border-white/20" style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}><Edit className="w-5 h-5" /></button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setEditingCategory(category.id); setEditTitle(category.title) }} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#22c55e" }} title="Edit Category">
+                        <Edit className="h-3.5 w-3.5 text-white" />
+                      </button>
                     ) : null}
-                    <button type="button" onClick={(e) => { e.stopPropagation(); if (isViewingArchivedItems) setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" })); setAddingItemToCategory(category.id) }} className="p-2.5 rounded-lg shadow-sm border border-white/20" style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}><Plus className="w-5 h-5" /></button>
+                    {!showArchived ? (
+                      <button type="button" onClick={(e) => { e.stopPropagation(); if (isViewingArchivedItems) setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" })); setAddingItemToCategory(category.id); if (!expandedCategories.includes(category.id)) setExpandedCategories([category.id]) }} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#22c55e" }} title="Add Item">
+                        <Plus className="h-3.5 w-3.5 text-white" />
+                      </button>
+                    ) : null}
                     {!isEmployee ? (
                       showArchived ? (
-                        <button type="button" onClick={(e) => { e.stopPropagation(); unarchiveCategory(category.id) }} className="p-2.5 rounded-lg shadow-sm border border-white/20" style={{ background: COLORS.bgWhite, color: COLORS.green600 }}><Archive className="w-5 h-5" /></button>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); unarchiveCategory(category.id) }} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#f59e0b" }} title="Unarchive Category">
+                          <Archive className="h-3.5 w-3.5 text-white" />
+                        </button>
                       ) : (
-                        <button type="button" onClick={(e) => { e.stopPropagation(); archiveCategory(category.id) }} className="p-2.5 rounded-lg shadow-sm border border-white/20" style={{ background: COLORS.bgWhite, color: COLORS.indigo600 }}><Archive className="w-5 h-5" /></button>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); archiveCategory(category.id) }} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#f59e0b" }} title="Archive Category">
+                          <Archive className="h-3.5 w-3.5 text-white" />
+                        </button>
                       )
                     ) : null}
                     {!isEmployee ? (
-                      <button type="button" onClick={(e) => { e.stopPropagation(); deleteCategory(category.id) }} className="p-2.5 rounded-lg shadow-sm border border-white/20" style={{ background: COLORS.bgWhite, color: COLORS.pink600 }}><Trash2 className="w-5 h-5" /></button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); deleteCategory(category.id) }} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#ef4444" }} title="Delete Category">
+                        <X className="h-3.5 w-3.5 text-white" />
+                      </button>
                     ) : null}
                   </div>
                 </div>
 
+                {/* Edit Category */}
                 {editingCategory === category.id && (
-                  <div className="p-5" style={{ background: COLORS.bgGray, borderBottom: `1px solid ${COLORS.border}` }}>
-                    <div className="flex gap-3">
-                      <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="flex-1 px-4 py-2.5 rounded-lg border" style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }} />
-                      <button onClick={() => saveEditCategory(category.id)} className="px-6 py-2.5 rounded-lg font-medium flex items-center gap-2" style={{ background: COLORS.primary, color: COLORS.textWhite }}><Check className="w-4 h-4" />Save</button>
-                      <button onClick={() => { setEditingCategory(null); setEditTitle("") }} className="px-6 py-2.5 rounded-lg font-medium flex items-center gap-2" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}><X className="w-4 h-4" />Cancel</button>
+                  <div className="border-b px-4 py-4" style={{ background: COLORS.bgGrayLight, borderColor: COLORS.border }}>
+                    <div className="mb-3 text-sm font-semibold" style={{ color: COLORS.textPrimary }}>Rename Category</div>
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="flex-1 rounded-xl px-4 py-3 outline-none transition-all focus:ring-2" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }} onKeyDown={(e) => e.key === "Enter" && saveEditCategory(category.id)} autoFocus />
+                      <button onClick={() => saveEditCategory(category.id)} className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold" style={{ background: COLORS.purple700, color: COLORS.textWhite }}><Check className="h-4 w-4" />Save</button>
+                      <button onClick={() => { setEditingCategory(null); setEditTitle("") }} className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}><X className="h-4 w-4" />Cancel</button>
                     </div>
                   </div>
                 )}
 
-                {isExpanded && (
-                  <div className="p-5">
-                    <div className="mb-4 flex gap-2 flex-wrap">
-                      <button type="button" onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border" style={{ background: currentItemView === "active" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "active" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "active" ? COLORS.primary : COLORS.border }}>To do ({(category.items || []).length})</button>
-                      {!isEmployee ? (
-                        <button type="button" onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "archived" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border" style={{ background: currentItemView === "archived" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "archived" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "archived" ? COLORS.primary : COLORS.border }}>Archived ({(category.archivedItems || []).length})</button>
-                      ) : null}
-                      <button type="button" onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "completed" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border" style={{ background: currentItemView === "completed" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "completed" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "completed" ? COLORS.primary : COLORS.border }}>Done ({(category.completedItems || []).length})</button>
-                      {!isEmployee ? (
-                        <button type="button" onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: "highlighted" }))} className="px-4 py-2 rounded-lg text-sm font-semibold border" style={{ background: currentItemView === "highlighted" ? COLORS.primaryGradient : COLORS.bgWhite, color: currentItemView === "highlighted" ? COLORS.textWhite : COLORS.textPrimary, borderColor: currentItemView === "highlighted" ? COLORS.primary : COLORS.border }}>Starred ({(category.highlightedItems || []).length})</button>
-                      ) : null}
+                {/* Expanded Body */}
+                {isExpanded ? (
+                  <div className="p-4 sm:p-5">
+
+                    {/* Sub-tabs + count */}
+                    <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="flex flex-wrap gap-2">
+                        {(["active","archived","completed","highlighted"] as const).filter((v) => v !== "archived" || !isEmployee).filter((v) => v !== "highlighted" || !isEmployee).map((view) => {
+                          const count = view === "archived" ? (category.archivedItems || []).length : view === "completed" ? (category.completedItems || []).length : view === "highlighted" ? (category.highlightedItems || []).length : (category.items || []).length
+                          const label = view === "archived" ? "Archived" : view === "completed" ? "Done" : view === "highlighted" ? "Starred" : "Active"
+                          return (
+                            <button key={view} type="button" onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: view }))} className="rounded-lg px-3 py-2 text-sm font-semibold" style={{ background: currentItemView === view ? "#faf5ff" : COLORS.bgWhite, color: currentItemView === view ? COLORS.purple700 : COLORS.textSecondary, border: `1px solid ${currentItemView === view ? COLORS.purple200 : "#ececf3"}` }}>
+                              {label} ({count})
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <div className="text-xs sm:text-sm" style={{ color: COLORS.textSecondary }}>Showing {sortedItems.length} result{sortedItems.length === 1 ? "" : "s"}</div>
                     </div>
 
-                    {addingItemToCategory === category.id && currentItemView === "active" && (
-                      <div className="mb-5 p-5 rounded-xl shadow-sm" style={{ background: COLORS.bgGray, border: `2px dashed ${COLORS.border}` }}>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    {/* Add Item Form */}
+                    {addingItemToCategory === category.id && currentItemView === "active" ? (
+                      <div className="mb-5 rounded-2xl p-5" style={{ background: COLORS.bgGrayLight, border: `1px dashed ${COLORS.borderHover}` }}>
+                        <div className="mb-4">
+                          <h3 className="text-base font-semibold" style={{ color: COLORS.textPrimary }}>Add New {itemLabel}</h3>
+                          <p className="text-sm" style={{ color: COLORS.textSecondary }}>Create a new entry in this category.</p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                           {formFields.map((field) => (
                             <div key={field.key} className={field.type === "textarea" ? "md:col-span-2" : ""}>
-                              <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                                {field.label}
-                                {field.required ? " *" : ""}
-                              </label>
+                              <label className="mb-2 block text-sm font-semibold" style={{ color: COLORS.textPrimary }}>{field.label}{field.required ? " *" : ""}</label>
                               {renderInputField(field)}
                             </div>
                           ))}
                         </div>
-                        <div className="flex gap-3">
-                          <button onClick={() => addItemToCategory(category.id)} className="px-6 py-2.5 rounded-lg font-medium" style={{ background: COLORS.primary, color: COLORS.textWhite }}>Add {itemLabel}</button>
-                          <button onClick={() => setAddingItemToCategory(null)} className="px-6 py-2.5 rounded-lg font-medium" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>Cancel</button>
+                        <div className="mt-4 flex flex-wrap gap-3">
+                          <button onClick={() => addItemToCategory(category.id)} className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ background: "#111827", color: "#fff" }}>Add {itemLabel}</button>
+                          <button onClick={() => setAddingItemToCategory(null)} className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>Cancel</button>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {/* Empty State */}
+                    {sortedItems.length === 0 ? (
+                      <div className="rounded-2xl px-6 py-12 text-center" style={{ background: COLORS.bgGrayLight, border: `1px solid ${COLORS.border}` }}>
+                        <Icon className="mx-auto mb-3 h-10 w-10" style={{ color: COLORS.textLight }} />
+                        <div className="mb-1 text-base font-semibold" style={{ color: COLORS.textPrimary }}>
+                          {isViewingArchivedItems ? `No archived ${itemLabel.toLowerCase()}s` : currentItemView === "completed" ? `No completed ${itemLabel.toLowerCase()}s` : currentItemView === "highlighted" ? `No starred ${itemLabel.toLowerCase()}s` : `No ${itemLabel.toLowerCase()}s in this category`}
+                        </div>
+                        <p className="text-sm" style={{ color: COLORS.textSecondary }}>Use the + button to add the first one.</p>
+                      </div>
+                    ) : (
+                      /* Table */
+                      <div className="overflow-hidden rounded-2xl" style={{ border: "1px solid #efeff5", background: "#fcfcff" }}>
+                        <div className="overflow-x-auto p-3">
+                          <table className="min-w-full text-left">
+                            <thead style={{ background: "#fff" }}>
+                              <tr style={{ color: "#707685" }}>
+                                <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wide">
+                                  <input
+                                    type="checkbox"
+                                    className="h-4 w-4 rounded cursor-pointer"
+                                    checked={sortedItems.length > 0 && sortedItems.every((i: any) => selectedItems[category.id]?.has(i.id))}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedItems((prev) => ({ ...prev, [category.id]: new Set(sortedItems.map((i: any) => i.id)) }))
+                                      } else {
+                                        setSelectedItems((prev) => ({ ...prev, [category.id]: new Set() }))
+                                      }
+                                    }}
+                                  />
+                                </th>
+                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">{itemLabel}</th>
+                                {displayKeys.map((key) => (
+                                  <th key={key} className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">{fieldLabelMap[key] || key}</th>
+                                ))}
+                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Status</th>
+                                <th className="px-2 py-2 text-right text-[11px] font-semibold uppercase tracking-wide">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sortedItems.map((item: any, index: number) => {
+                                const statusTone = getItemStatusTone(item)
+                                return (
+                                  <tr key={item.id} style={{ background: item.paused ? "#fffaf2" : item.highlighted ? "#faf7ff" : "#fff", borderTop: index === 0 ? "none" : "1px solid #efeff5", borderBottom: index === sortedItems.length - 1 ? "1px solid #efeff5" : "none" }}>
+                                    <td className="px-2 py-1 align-top">
+                                      <input
+                                        type="checkbox"
+                                        className="mt-1 h-4 w-4 rounded cursor-pointer"
+                                        checked={selectedItems[category.id]?.has(item.id) ?? false}
+                                        onChange={(e) => {
+                                          setSelectedItems((prev) => {
+                                            const current = new Set(prev[category.id] ?? [])
+                                            if (e.target.checked) current.add(item.id)
+                                            else current.delete(item.id)
+                                            return { ...prev, [category.id]: current }
+                                          })
+                                        }}
+                                      />
+                                    </td>
+                                    <td className="px-2 py-1 align-top">
+                                      <div className="flex items-start gap-3">
+                                        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "#faf5ff", color: COLORS.purple700, border: `1px solid ${COLORS.purple200}` }}>
+                                          <Icon className="h-4 w-4" />
+                                        </div>
+                                        <div className="min-w-0">
+                                          <Link href={`/task/${moduleSlug}/${item.id}?back=${encodeURIComponent(itemHrefPrefix)}`} className="block text-sm font-semibold hover:underline sm:text-[15px] break-words" style={{ color: COLORS.purple700 }}>
+                                            {getItemTitle(item)}
+                                          </Link>
+                                          {item.fileName ? (
+                                            <div className="mt-1 flex items-center gap-1 text-xs" style={{ color: "#73788a" }}>
+                                              <Icon className="h-3 w-3 shrink-0" style={{ color: COLORS.purple700 }} />
+                                              <span className="max-w-[160px] truncate" title={item.fileName}>{item.fileName}</span>
+                                            </div>
+                                          ) : null}
+                                          {(item.highlighted || item.paused) ? (
+                                            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs" style={{ color: "#73788a" }}>
+                                              {item.highlighted ? <span>Starred</span> : null}
+                                              {item.paused ? <span>Paused</span> : null}
+                                            </div>
+                                          ) : null}
+                                        </div>
+                                      </div>
+                                    </td>
+                                    {displayKeys.map((key) => (
+                                      <td key={key} className="px-2 py-1 align-top text-sm" style={{ color: COLORS.textPrimary }}>
+                                        {key.toLowerCase().includes("date") ? (
+                                          <div className="flex items-center gap-2">
+                                            <Calendar className="h-4 w-4" style={{ color: COLORS.textLight }} />
+                                            {formatDisplayDate(item?.[key])}
+                                          </div>
+                                        ) : (
+                                          String(item?.[key] ?? "—")
+                                        )}
+                                      </td>
+                                    ))}
+                                    <td className="px-2 py-1 align-top">
+                                      <span className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: statusTone.bg, color: statusTone.color, border: `1px solid ${statusTone.border}` }}>{statusTone.label}</span>
+                                    </td>
+                                    <td className="px-2 py-1">
+                                      <div className="flex items-center justify-end gap-1">
+                                        <div className="mr-1 flex h-6 w-5 cursor-move items-center justify-center opacity-30 hover:opacity-60">
+                                          <svg width="10" height="14" viewBox="0 0 10 14" fill="#374151"><circle cx="2.5" cy="2" r="1.5"/><circle cx="7.5" cy="2" r="1.5"/><circle cx="2.5" cy="7" r="1.5"/><circle cx="7.5" cy="7" r="1.5"/><circle cx="2.5" cy="12" r="1.5"/><circle cx="7.5" cy="12" r="1.5"/></svg>
+                                        </div>
+                                        {isEmployee ? (
+                                          <>
+                                            <button type="button" onClick={() => updateItem(item.id, { approved: !item.approved }, "approve")} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#22c55e" }} title={item.approved ? "Reopen" : "Mark done"}><Check className="h-3.5 w-3.5 text-white" /></button>
+                                            <Link href={`${itemHrefPrefix}/${item.id}/edit`}><button type="button" className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#4f46e5" }} title="Edit"><Edit className="h-3.5 w-3.5 text-white" /></button></Link>
+                                            <button type="button" onClick={() => downloadItem(item)} disabled={loadingAction === `download-${item.id}`} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50" style={{ background: "#6366f1" }} title="Download"><Download className="h-3.5 w-3.5 text-white" /></button>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <button type="button" onClick={() => updateItem(item.id, { highlighted: !item.highlighted }, "highlight")} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#f59e0b" }} title={item.highlighted ? "Remove Highlight" : "Highlight"}><Star className={`h-3.5 w-3.5 text-white ${item.highlighted ? "fill-white" : ""}`} /></button>
+                                            <button type="button" onClick={() => updateItem(item.id, { approved: !item.approved }, "approve")} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#22c55e" }} title={item.approved ? "Mark as Incomplete" : "Mark as Completed"}><Check className="h-3.5 w-3.5 text-white" /></button>
+                                            <button type="button" onClick={() => updateItem(item.id, { paused: !item.paused }, "pause")} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#f97316" }} title={item.paused ? "Resume" : "Pause"}><Pause className="h-3.5 w-3.5 text-white" /></button>
+                                            <Link href={`${itemHrefPrefix}/${item.id}/edit`}><button type="button" className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#4f46e5" }} title="Edit"><Edit className="h-3.5 w-3.5 text-white" /></button></Link>
+                                            <button type="button" onClick={() => copyItem(category.id, item)} disabled={loadingAction === `copy-${item.id}`} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50" style={{ background: "#6366f1" }} title="Duplicate"><Copy className="h-3.5 w-3.5 text-white" /></button>
+                                            <button type="button" onClick={() => downloadItem(item)} disabled={loadingAction === `download-${item.id}`} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50" style={{ background: "#6366f1" }} title="Download"><Download className="h-3.5 w-3.5 text-white" /></button>
+                                            {!isViewingArchivedItems ? (
+                                              <button type="button" onClick={() => updateItem(item.id, { archived: true, isArchived: true }, "archive")} disabled={loadingAction === `archive-${item.id}`} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50" style={{ background: "#f59e0b" }} title="Archive"><Archive className="h-3.5 w-3.5 text-white" /></button>
+                                            ) : (
+                                              <button type="button" onClick={() => updateItem(item.id, { archived: false, isArchived: false }, "unarchive")} disabled={loadingAction === `unarchive-${item.id}`} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50" style={{ background: "#22c55e" }} title="Unarchive"><Archive className="h-3.5 w-3.5 text-white" /></button>
+                                            )}
+                                            <button type="button" onClick={() => deleteItem(item.id)} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#ef4444" }} title="Delete"><Trash2 className="h-3.5 w-3.5 text-white" /></button>
+                                          </>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
                         </div>
                       </div>
                     )}
-
-                    {sortedItems.length === 0 ? (
-                      <div className="text-center py-12">
-                        <p className="font-medium" style={{ color: COLORS.textSecondary }}>
-                          {isViewingArchivedItems ? `No archived ${itemLabel.toLowerCase()}s in this category` : currentItemView === "completed" ? `No completed ${itemLabel.toLowerCase()}s in this category` : currentItemView === "highlighted" ? `No highlighted ${itemLabel.toLowerCase()}s in this category` : `No ${itemLabel.toLowerCase()}s in this category`}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {sortedItems.map((item: any) => (
-                          <div key={item.id} className="flex items-center gap-3 p-4 rounded-lg hover:shadow-md transition-all" style={{ background: item.paused ? `${COLORS.warning}05` : item.highlighted ? `${COLORS.primary}05` : COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
-                            <button type="button" className="cursor-move hover:bg-gray-50 h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200"><GripVertical className="w-5 h-5" style={{ color: "#9CA3AF" }} /></button>
-                            <div className="flex-1 min-w-0">
-                              <Link href={`/task/${moduleSlug}/${item.id}?back=${encodeURIComponent(itemHrefPrefix)}`} className="font-semibold hover:underline text-lg" style={{ color: COLORS.textPrimary }}>{getItemTitle(item)}</Link>
-                              <div className="flex gap-4 text-sm mt-1.5 flex-wrap" style={{ color: COLORS.textSecondary }}>
-                                {displayKeys.map((key) => (
-                                  <span key={key}>
-                                    <span className="font-medium">{key}:</span> {String(item?.[key] ?? "-")}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 flex-shrink-0">
-                              {isEmployee ? (
-                                <>
-                                  <div className="flex items-center gap-1 mr-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => updateItem(item.id, { approved: !item.approved }, "approve")}
-                                      className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200"
-                                      style={{ color: item.approved ? "#22C55E" : "#D1D5DB" }}
-                                      title={item.approved ? "Reopen" : "Mark done"}
-                                    >
-                                      <Check className="w-5 h-5" />
-                                    </button>
-                                  </div>
-                                  <div className="w-px h-6 bg-gray-300 mx-1"></div>
-                                  <div className="flex items-center gap-1">
-                                    <Link href={`${itemHrefPrefix}/${item.id}/edit`}><button type="button" className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#3B82F6" }} title="Edit"><Edit className="w-5 h-5" /></button></Link>
-                                    <button type="button" onClick={() => downloadItem(item)} disabled={loadingAction === `download-${item.id}`} className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#3B82F6", opacity: loadingAction === `download-${item.id}` ? 0.6 : 1 }} title="Download"><Download className="w-5 h-5" /></button>
-                                  </div>
-                                </>
-                              ) : (
-                                <>
-                                  <div className="flex items-center gap-1 mr-2">
-                                    <button type="button" onClick={() => updateItem(item.id, { highlighted: !item.highlighted }, "highlight")} className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: item.highlighted ? "#EAB308" : "#D1D5DB" }}><Star className={`w-5 h-5 ${item.highlighted ? "fill-current" : ""}`} /></button>
-                                    <button type="button" onClick={() => updateItem(item.id, { approved: !item.approved }, "approve")} className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: item.approved ? "#22C55E" : "#D1D5DB" }} title={item.approved ? "Mark as Incomplete" : "Mark as Completed"}><Check className="w-5 h-5" /></button>
-                                    <button type="button" onClick={() => updateItem(item.id, { paused: !item.paused }, "pause")} className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: item.paused ? "#F59E0B" : "#D1D5DB" }}><Pause className="w-5 h-5" /></button>
-                                  </div>
-                                  <div className="w-px h-6 bg-gray-300 mx-1"></div>
-                                  <div className="flex items-center gap-1">
-                                    <Link href={`${itemHrefPrefix}/${item.id}/edit`}><button type="button" className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#3B82F6" }}><Edit className="w-5 h-5" /></button></Link>
-                                    <button type="button" onClick={() => copyItem(category.id, item)} disabled={loadingAction === `copy-${item.id}`} className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#6B7280", opacity: loadingAction === `copy-${item.id}` ? 0.6 : 1 }}><Copy className="w-5 h-5" /></button>
-                                    <button type="button" onClick={() => downloadItem(item)} disabled={loadingAction === `download-${item.id}`} className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#3B82F6", opacity: loadingAction === `download-${item.id}` ? 0.6 : 1 }}><Download className="w-5 h-5" /></button>
-                                    {!isViewingArchivedItems ? (
-                                      <button type="button" onClick={() => updateItem(item.id, { archived: true, isArchived: true }, "archive")} disabled={loadingAction === `archive-${item.id}`} className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#F97316" }}><Archive className="w-5 h-5" /></button>
-                                    ) : (
-                                      <button type="button" onClick={() => updateItem(item.id, { archived: false, isArchived: false }, "unarchive")} disabled={loadingAction === `unarchive-${item.id}`} className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#22C55E" }}><Archive className="w-5 h-5" /></button>
-                                    )}
-                                    <button type="button" onClick={() => deleteItem(item.id)} className="h-10 w-10 flex items-center justify-center rounded-lg bg-white border border-gray-200" style={{ color: "#F97316" }}><Trash2 className="w-5 h-5" /></button>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
-                )}
+                ) : null}
               </div>
             )
           })}

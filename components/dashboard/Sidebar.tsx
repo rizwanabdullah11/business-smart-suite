@@ -219,150 +219,131 @@ export function Sidebar({}: SidebarProps = {}) {
 
     return (
         <aside
-            className="fixed left-0 top-0 h-screen border-r flex flex-col"
+            className="fixed left-0 top-0 h-screen flex flex-col"
             style={{
                 width: '280px',
-                background: COLORS.bgWhite,
-                borderColor: COLORS.border,
+                background: "#341746",
+                borderRight: "1px solid rgba(255,255,255,0.08)",
                 zIndex: 50
             }}
         >
-            {/* Sidebar Header */}
+            {/* Sidebar Header / Brand */}
             <div
-                className="flex items-center justify-between p-6 border-b"
-                style={{ borderColor: COLORS.border }}
+                className="flex items-center gap-3 p-6"
+                style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
             >
-                <div className="flex items-center gap-3">
-                    <div
-                        className="h-12 w-12 rounded-lg flex items-center justify-center"
-                        style={{ background: COLORS.gradientIndigo }}
-                    >
-                        <span className="font-bold text-2xl text-white">B</span>
-                    </div>
-                    <div>
-                        <h2 className="font-bold text-xl" style={{ color: COLORS.textPrimary }}>
-                            Business
-                        </h2>
-                        <p className="text-sm" style={{ color: COLORS.textSecondary }}>
-                            Smart Suite
-                        </p>
-                    </div>
+                <div
+                    className="h-12 w-12 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)" }}
+                >
+                    <span className="font-bold text-2xl text-white">B</span>
+                </div>
+                <div>
+                    <h2 className="font-bold text-xl text-white">Business</h2>
+                    <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>Smart Suite</p>
                 </div>
             </div>
+
             {/* Navigation */}
-            <nav className="flex-1 overflow-y-auto py-6 px-3">
+            <nav className="flex-1 overflow-y-auto py-4 px-3">
                 {loading ? (
-                    <div className="px-4 py-3 text-sm text-gray-500">
-                        Loading permissions...
+                    <div className="px-4 py-3 text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+                        Loading…
                     </div>
                 ) : (
                     <>
                         {/* Dashboard Link */}
                         <Link href="/dashboard">
-                    <div
-                        className={`flex items-center gap-3 px-4 py-3.5 rounded-lg mb-3 cursor-pointer transition-all duration-200 ${isActive('/dashboard') ? 'font-bold' : 'font-medium'
-                            }`}
-                        style={{
-                            background: isActive('/dashboard') ? `${COLORS.primary}15` : 'transparent',
-                            color: isActive('/dashboard') ? COLORS.primary : COLORS.textSecondary
-                        }}
-                    >
-                        <LayoutDashboard className="w-6 h-6 flex-shrink-0" />
-                        <span className="text-base">Dashboard</span>
-                    </div>
-                </Link>
-
-                {/* Navigation Sections */}
-                {visibleSections.map((section) => {
-                    const SectionIcon = section.icon
-                    const isSectionExpanded = expandedSection === section.title
-                    
-                    // Filter visible items for this section
-                    const visibleItems = section.items.filter(item => {
-                        if (item.permission) {
-                            return can(item.permission)
-                        }
-                        return true
-                    })
-
-                    return (
-                        <div key={section.title} className="mb-2">
-                            {/* Section Header */}
-                            <button
-                                onClick={() => toggleSection(section.title)}
-                                className="w-full flex items-center justify-between px-4 py-3.5 rounded-lg transition-all duration-200 hover:bg-opacity-50"
+                            <div
+                                className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-2 cursor-pointer transition-all duration-200 ${isActive('/dashboard') ? 'font-bold' : 'font-medium'}`}
                                 style={{
-                                    background: isSectionExpanded ? `${COLORS.neutral100}` : 'transparent',
-                                    color: COLORS.textPrimary
+                                    background: isActive('/dashboard') ? "rgba(168,85,247,0.25)" : 'transparent',
+                                    color: isActive('/dashboard') ? "#e9d5ff" : "rgba(255,255,255,0.7)",
                                 }}
                             >
-                                <div className="flex items-center gap-3">
-                                    <SectionIcon className="w-6 h-6 flex-shrink-0" />
-                                    <span className="text-base font-bold">{section.title}</span>
-                                </div>
-                                <ChevronRight
-                                    className={`w-4 h-4 transition-transform duration-200 ${isSectionExpanded ? 'rotate-90' : ''
-                                        }`}
-                                    style={{ color: COLORS.textSecondary }}
-                                />
-                            </button>
+                                <LayoutDashboard className="w-5 h-5 shrink-0" />
+                                <span className="text-sm">Dashboard</span>
+                            </div>
+                        </Link>
 
-                            {/* Section Items */}
-                            {isSectionExpanded && (
-                                <div className="mt-2 ml-4 space-y-1">
-                                    {visibleItems.map((item) => {
-                                        const ItemIcon = item.icon
-                                        return (
-                                            <Link key={item.href} href={item.href}>
-                                                <div
-                                                    className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 ${isActive(item.href) ? 'font-bold' : 'font-medium'
-                                                        }`}
-                                                    style={{
-                                                        background: isActive(item.href)
-                                                            ? `${COLORS.primary}15`
-                                                            : 'transparent',
-                                                        color: isActive(item.href)
-                                                            ? COLORS.primary
-                                                            : COLORS.textSecondary
-                                                    }}
-                                                >
-                                                    <ItemIcon className="w-5 h-5 flex-shrink-0" />
-                                                    <span className="text-base">{item.label}</span>
-                                                    {item.badge && (
-                                                        <span
-                                                            className="ml-auto text-xs px-2 py-0.5 rounded-full"
+                        {/* Navigation Sections */}
+                        {visibleSections.map((section) => {
+                            const SectionIcon = section.icon
+                            const isSectionExpanded = expandedSection === section.title
+
+                            const visibleItems = section.items.filter(item => {
+                                if (item.permission) return can(item.permission)
+                                return true
+                            })
+
+                            return (
+                                <div key={section.title} className="mb-1">
+                                    {/* Section Header */}
+                                    <button
+                                        onClick={() => toggleSection(section.title)}
+                                        className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200"
+                                        style={{
+                                            background: isSectionExpanded ? "rgba(255,255,255,0.08)" : 'transparent',
+                                            color: isSectionExpanded ? "#fff" : "rgba(255,255,255,0.75)",
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <SectionIcon className="w-5 h-5 shrink-0" />
+                                            <span className="text-sm font-bold">{section.title}</span>
+                                        </div>
+                                        <ChevronRight
+                                            className={`w-4 h-4 transition-transform duration-200 ${isSectionExpanded ? 'rotate-90' : ''}`}
+                                            style={{ color: "rgba(255,255,255,0.45)" }}
+                                        />
+                                    </button>
+
+                                    {/* Section Items */}
+                                    {isSectionExpanded && (
+                                        <div className="mt-1 ml-3 space-y-0.5">
+                                            {visibleItems.map((item) => {
+                                                const ItemIcon = item.icon
+                                                const active = isActive(item.href)
+                                                return (
+                                                    <Link key={item.href} href={item.href}>
+                                                        <div
+                                                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 ${active ? 'font-semibold' : 'font-medium'}`}
                                                             style={{
-                                                                background: COLORS.primary,
-                                                                color: COLORS.textWhite
+                                                                background: active ? "rgba(168,85,247,0.25)" : 'transparent',
+                                                                color: active ? "#e9d5ff" : "rgba(255,255,255,0.65)",
+                                                                borderLeft: active ? "3px solid #a855f7" : "3px solid transparent",
                                                             }}
                                                         >
-                                                            {item.badge}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </Link>
-                                        )
-                                    })}
+                                                            <ItemIcon className="w-4 h-4 shrink-0" />
+                                                            <span className="text-sm">{item.label}</span>
+                                                            {item.badge && (
+                                                                <span
+                                                                    className="ml-auto text-xs px-2 py-0.5 rounded-full"
+                                                                    style={{ background: "#7c3aed", color: "#fff" }}
+                                                                >
+                                                                    {item.badge}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </Link>
+                                                )
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                        </div>
-                    )
-                })}
+                            )
+                        })}
                     </>
                 )}
             </nav>
 
             {/* Footer - System Status */}
             <div
-                className="p-4 border-t"
-                style={{ borderColor: COLORS.border }}
+                className="p-4"
+                style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
             >
                 <div className="flex items-center gap-2">
-                    <div
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: COLORS.green500 }}
-                    />
-                    <span className="text-xs font-medium" style={{ color: COLORS.textSecondary }}>
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: "#4ade80" }} />
+                    <span className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.55)" }}>
                         System Optimal
                     </span>
                 </div>

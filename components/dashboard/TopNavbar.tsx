@@ -74,7 +74,7 @@ export function TopNavbar({ user, isCollapsed, onLogout, onAddFolder }: TopNavba
                     <input
                         type="text"
                         placeholder="Search..."
-                        className="pl-10 pr-4 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all w-48"
+                        className="pl-10 pr-4 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all w-48"
                         style={{
                             borderColor: COLORS.border,
                             background: COLORS.bgGrayLight,
@@ -92,7 +92,7 @@ export function TopNavbar({ user, isCollapsed, onLogout, onAddFolder }: TopNavba
                         <select
                             value={activeOrganizationId}
                             onChange={(e) => onOrganizationChange(e.target.value)}
-                            className="px-3 py-2 rounded-lg border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="px-3 py-2 rounded-lg border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-400"
                             style={{
                                 borderColor: COLORS.border,
                                 background: COLORS.bgWhite,
@@ -130,7 +130,7 @@ export function TopNavbar({ user, isCollapsed, onLogout, onAddFolder }: TopNavba
                     onClick={onAddFolder}
                     className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all duration-300 hover:scale-105 hover:shadow-lg"
                     style={{
-                        background: COLORS.gradientIndigo,
+                        background: "linear-gradient(135deg, #7c3aed 0%, #341746 100%)",
                         color: COLORS.textWhite,
                         boxShadow: COLORS.shadowPurple
                     }}
