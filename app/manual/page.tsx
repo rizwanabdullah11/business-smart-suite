@@ -229,7 +229,9 @@ export default function ManualPage() {
       setCategories(cached.categories)
       setArchivedCategories(cached.archivedCategories)
       setCategoryItemView(cached.categoryItemView)
-      setExpandedCategories(cached.expandedCategories?.length ? cached.expandedCategories : ["1"])
+      setExpandedCategories(
+        cached.expandedCategories?.length ? [cached.expandedCategories[0]] : ["1"]
+      )
     }
     loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -245,11 +247,7 @@ export default function ManualPage() {
   }, [archivedCategories, categories, categoryItemView, expandedCategories])
 
   const toggleCategory = (categoryId: string) => {
-    setExpandedCategories(prev =>
-      prev.includes(categoryId)
-        ? prev.filter(id => id !== categoryId)
-        : [...prev, categoryId]
-    )
+    setExpandedCategories((prev) => (prev.includes(categoryId) ? [] : [categoryId]))
   }
 
   const toggleHighlight = async (_categoryId: string, manualId: string, currentHighlighted: boolean) => {
@@ -1281,7 +1279,7 @@ export default function ManualPage() {
                           }
                           setAddingManualToCategory(category.id)
                           if (!expandedCategories.includes(category.id)) {
-                            setExpandedCategories((prev) => [...prev, category.id])
+                            setExpandedCategories([category.id])
                           }
                         }}
                         className="flex h-7 w-7 items-center justify-center rounded-md border border-white/15 bg-white/10 transition-all hover:bg-white/20"
