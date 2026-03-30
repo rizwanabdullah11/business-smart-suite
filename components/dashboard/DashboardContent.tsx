@@ -190,6 +190,7 @@ export function DashboardContent() {
   const [exportStartDate, setExportStartDate] = useState("")
   const [exportEndDate, setExportEndDate] = useState("")
   const [activeQuickAction, setActiveQuickAction] = useState<"create" | "review" | "alerts" | null>(null)
+  const [activeDocList, setActiveDocList] = useState<"archived" | "stale" | null>(null)
 
   useEffect(() => {
     if (authLoading || !isAuthenticated) return
@@ -1351,16 +1352,19 @@ export function DashboardContent() {
 
       {/* ── COMPLIANCE SCORE + MODULE BREAKDOWN ── */}
       {(() => {
-        const total = dashboardDocs.length
-        const approved = dashboardDocs.filter((d) => d.approved).length
+        const activeDocs = dashboardDocs.filter((d) => !d.archived && !d.isArchived)
+        const total = activeDocs.length
+        const approved = activeDocs.filter((d) => d.approved).length
         const score = total > 0 ? Math.round((approved / total) * 100) : 0
         const radius = 54
         const circumference = 2 * Math.PI * radius
         const offset = circumference - (score / 100) * circumference
 
-        // Group docs by ALL modules, sort by count desc
+        // Group ACTIVE (non-archived) docs by module, sort by count desc
         const moduleMap: Record<string, number> = {}
-        dashboardDocs.forEach((d) => { if (d._module) moduleMap[d._module] = (moduleMap[d._module] || 0) + 1 })
+        dashboardDocs
+          .filter((d) => !d.archived && !d.isArchived)
+          .forEach((d) => { if (d._module) moduleMap[d._module] = (moduleMap[d._module] || 0) + 1 })
         const topModules = Object.entries(moduleMap).sort((a, b) => b[1] - a[1])
         const maxCount = topModules[0]?.[1] || 1
 
@@ -1477,10 +1481,11 @@ export function DashboardContent() {
 
       {/* ── SYSTEM HEALTH STRIP — dynamic ── */}
       {(() => {
-        const totalDocs = dashboardDocs.length
-        const approvedDocs = dashboardDocs.filter((d) => d.approved).length
+        const activeHealthDocs = dashboardDocs.filter((d) => !d.archived && !d.isArchived)
+        const totalDocs = activeHealthDocs.length
+        const approvedDocs = activeHealthDocs.filter((d) => d.approved).length
         const compliancePct = totalDocs > 0 ? Math.round((approvedDocs / totalDocs) * 100) : 0
-        const uniqueModules = new Set(dashboardDocs.map((d) => d._module).filter(Boolean)).size
+        const uniqueModules = new Set(activeHealthDocs.map((d) => d._module).filter(Boolean)).size
         const activityCount = recentActivities.length
 
         const healthItems = [
@@ -1642,13 +1647,12 @@ export function DashboardContent() {
         </div>
 
         {/* Document Status — 1/3 width */}
-        <div className="flex flex-col gap-5">
-          {/* Colourful status breakdown */}
+        <div className="flex flex-col gap-4">
+
+          {/* Total Documents — static info */}
           {[
-            { label: "Total Documents", value: dashboardDocs.length, gradient: "linear-gradient(135deg,#7c3aed,#a855f7)", shadow: "0 4px 14px rgba(124,58,237,0.3)" },
-            { label: "Pending Review", value: pendingReviewDocs.length, gradient: "linear-gradient(135deg,#ea580c,#f97316)", shadow: "0 4px 14px rgba(234,88,12,0.3)" },
-            { label: "Archived", value: archivedDocs.length, gradient: "linear-gradient(135deg,#475569,#64748b)", shadow: "0 4px 14px rgba(71,85,105,0.25)" },
-            { label: "Stale (30+ days)", value: staleDocs.length, gradient: "linear-gradient(135deg,#2563eb,#3b82f6)", shadow: "0 4px 14px rgba(37,99,235,0.3)" },
+            { label: "Total Documents", value: dashboardDocs.filter((d) => !d.archived && !d.isArchived).length, gradient: "linear-gradient(135deg,#7c3aed,#a855f7)", shadow: "0 4px 14px rgba(124,58,237,0.3)", sub: "active records" },
+            { label: "Pending Review", value: pendingReviewDocs.length, gradient: "linear-gradient(135deg,#ea580c,#f97316)", shadow: "0 4px 14px rgba(234,88,12,0.3)", sub: "awaiting sign-off" },
           ].map((item) => (
             <div
               key={item.label}
@@ -1661,10 +1665,50 @@ export function DashboardContent() {
               </div>
               <div className="relative z-10">
                 <div className="text-sm font-bold text-white">{item.label}</div>
-                <div className="text-xs text-white opacity-60 mt-0.5">live data</div>
+                <div className="text-xs text-white opacity-55 mt-0.5">{item.sub}</div>
               </div>
             </div>
           ))}
+
+          {/* Archived — clickable, opens doc list */}
+          <button
+            type="button"
+            onClick={() => setActiveDocList("archived")}
+            className="relative overflow-hidden rounded-2xl px-5 py-4 flex items-center gap-4 text-left group transition-all duration-200 hover:-translate-y-0.5"
+            style={{ background: "linear-gradient(135deg,#475569,#64748b)", boxShadow: "0 4px 14px rgba(71,85,105,0.25)" }}
+          >
+            <div className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
+            <div className="text-3xl font-black text-white relative z-10 min-w-[2.5rem] text-center">
+              {loading ? "—" : archivedDocs.length}
+            </div>
+            <div className="relative z-10 flex-1">
+              <div className="text-sm font-bold text-white">Archived</div>
+              <div className="text-xs text-white opacity-55 mt-0.5">
+                {archivedDocs.length > 0 ? "tap to view all" : "none archived"}
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-white opacity-60 relative z-10 transition-transform group-hover:translate-x-0.5 shrink-0" />
+          </button>
+
+          {/* Stale — clickable, opens doc list */}
+          <button
+            type="button"
+            onClick={() => setActiveDocList("stale")}
+            className="relative overflow-hidden rounded-2xl px-5 py-4 flex items-center gap-4 text-left group transition-all duration-200 hover:-translate-y-0.5"
+            style={{ background: "linear-gradient(135deg,#2563eb,#3b82f6)", boxShadow: "0 4px 14px rgba(37,99,235,0.3)" }}
+          >
+            <div className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
+            <div className="text-3xl font-black text-white relative z-10 min-w-[2.5rem] text-center">
+              {loading ? "—" : staleDocs.length}
+            </div>
+            <div className="relative z-10 flex-1">
+              <div className="text-sm font-bold text-white">Stale (30+ days)</div>
+              <div className="text-xs text-white opacity-55 mt-0.5">
+                {staleDocs.length > 0 ? "tap to view all" : "all up to date"}
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-white opacity-60 relative z-10 transition-transform group-hover:translate-x-0.5 shrink-0" />
+          </button>
         </div>
       </div>
 
@@ -1770,6 +1814,119 @@ export function DashboardContent() {
           </div>
         )
       })()}
+
+      {/* ── ARCHIVED / STALE DOC LIST MODAL ── */}
+      {activeDocList ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(6px)" }}
+          onClick={() => setActiveDocList(null)}
+        >
+          <div
+            className="w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden"
+            style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div
+              className="relative overflow-hidden flex items-center justify-between px-6 py-5"
+              style={{
+                background: activeDocList === "archived"
+                  ? "linear-gradient(135deg,#475569,#64748b)"
+                  : "linear-gradient(135deg,#2563eb,#3b82f6)",
+              }}
+            >
+              <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
+              <div className="relative">
+                <h3 className="text-lg font-black text-white">
+                  {activeDocList === "archived" ? "Archived Documents" : "Stale Documents (30+ days)"}
+                </h3>
+                <p className="text-xs mt-0.5 text-white" style={{ opacity: 0.6 }}>
+                  {activeDocList === "archived"
+                    ? `${archivedDocs.length} archived record${archivedDocs.length !== 1 ? "s" : ""} found`
+                    : `${staleDocs.length} document${staleDocs.length !== 1 ? "s" : ""} not updated in 30+ days`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveDocList(null)}
+                className="relative px-4 py-2 rounded-xl text-sm font-bold transition-all hover:opacity-80"
+                style={{ background: "rgba(255,255,255,0.2)", color: "#fff" }}
+              >
+                Close
+              </button>
+            </div>
+
+            {/* Doc list */}
+            <div className="p-5">
+              {(activeDocList === "archived" ? archivedDocs : staleDocs).length === 0 ? (
+                <div className="py-10 text-center flex flex-col items-center gap-3">
+                  <div
+                    className="h-14 w-14 rounded-2xl flex items-center justify-center"
+                    style={{ background: activeDocList === "archived" ? "linear-gradient(135deg,#475569,#64748b)" : "linear-gradient(135deg,#2563eb,#3b82f6)" }}
+                  >
+                    <CheckCircle className="w-7 h-7 text-white" />
+                  </div>
+                  <p className="text-sm font-semibold" style={{ color: COLORS.textSecondary }}>
+                    {activeDocList === "archived" ? "No archived documents." : "All documents are up to date!"}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[26rem] overflow-y-auto pr-1">
+                  {(activeDocList === "archived" ? archivedDocs : staleDocs).map((doc, i) => {
+                    const isStaleView = activeDocList === "stale"
+                    const lastUpdated = doc.updatedAt || doc.createdAt
+                    return (
+                      <button
+                        key={doc._id || i}
+                        type="button"
+                        onClick={() => { handleOpenDocument(doc); setActiveDocList(null) }}
+                        className="w-full text-left p-4 rounded-xl border transition-all hover:shadow-md flex items-center gap-3"
+                        style={{
+                          borderColor: activeDocList === "archived" ? "#e2e8f0" : "#bfdbfe",
+                          background: activeDocList === "archived" ? "#f8fafc" : "#eff6ff",
+                        }}
+                      >
+                        <div
+                          className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0"
+                          style={{
+                            background: activeDocList === "archived"
+                              ? "linear-gradient(135deg,#475569,#64748b)"
+                              : "linear-gradient(135deg,#2563eb,#3b82f6)",
+                          }}
+                        >
+                          <FileText className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold truncate" style={{ color: COLORS.textPrimary }}>
+                            {doc.title || "Untitled Document"}
+                          </p>
+                          <p className="text-xs mt-0.5" style={{ color: COLORS.textSecondary }}>
+                            {PDF_MODULE_LABELS[doc._module || ""] || "Document"}
+                            {lastUpdated ? ` · Last updated ${formatTimeAgo(lastUpdated)}` : ""}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span
+                            className="text-[10px] font-black px-2.5 py-1 rounded-full"
+                            style={{
+                              background: activeDocList === "archived" ? "#e2e8f0" : "#dbeafe",
+                              color: activeDocList === "archived" ? "#475569" : "#2563eb",
+                            }}
+                          >
+                            {isStaleView ? "Stale" : "Archived"}
+                          </span>
+                          <ArrowRight className="w-3.5 h-3.5" style={{ color: COLORS.textLight }} />
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* ── MODAL ── */}
       {activeQuickAction ? (
