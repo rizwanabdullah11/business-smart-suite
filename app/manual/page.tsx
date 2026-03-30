@@ -1247,13 +1247,20 @@ export default function ManualPage() {
                     </div>
                   </button>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className="rounded-md px-2.5 py-1 text-[11px] font-semibold"
-                      style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)" }}
-                    >
-                      {showArchived ? "Archived Category" : "Active Category"}
-                    </span>
+                  <div className="flex items-center gap-1.5">
+                    {/* Drag/grip handle */}
+                    <div className="mr-1 flex h-7 w-5 items-center justify-center opacity-50">
+                      <svg width="12" height="14" viewBox="0 0 12 14" fill="white">
+                        <circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/>
+                        <circle cx="3" cy="7" r="1.5"/><circle cx="9" cy="7" r="1.5"/>
+                        <circle cx="3" cy="12" r="1.5"/><circle cx="9" cy="12" r="1.5"/>
+                      </svg>
+                    </div>
+                    {/* White toggle square */}
+                    <div
+                      className="h-6 w-6 rounded"
+                      style={{ background: "rgba(255,255,255,0.92)", border: "1px solid rgba(255,255,255,0.4)" }}
+                    />
 
                     {!isEmployee ? (
                       <button
@@ -1262,10 +1269,11 @@ export default function ManualPage() {
                           e.stopPropagation()
                           startEditCategory(category.id, category.title)
                         }}
-                        className="flex h-7 w-7 items-center justify-center rounded-md border border-white/15 bg-white/10 transition-all hover:bg-white/20"
+                        className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
+                        style={{ background: "#22c55e" }}
                         title="Edit Category"
                       >
-                        <Edit className="h-3.5 w-3.5" />
+                        <Edit className="h-3.5 w-3.5 text-white" />
                       </button>
                     ) : null}
 
@@ -1282,10 +1290,11 @@ export default function ManualPage() {
                             setExpandedCategories([category.id])
                           }
                         }}
-                        className="flex h-7 w-7 items-center justify-center rounded-md border border-white/15 bg-white/10 transition-all hover:bg-white/20"
+                        className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
+                        style={{ background: "#22c55e" }}
                         title="Add Manual"
                       >
-                        <Plus className="h-3.5 w-3.5" />
+                        <Plus className="h-3.5 w-3.5 text-white" />
                       </button>
                     ) : null}
 
@@ -1297,10 +1306,11 @@ export default function ManualPage() {
                             e.stopPropagation()
                             unarchiveCategory(category.id)
                           }}
-                          className="flex h-7 w-7 items-center justify-center rounded-md border border-white/15 bg-white/10 transition-all hover:bg-white/20"
+                          className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
+                          style={{ background: "#f59e0b" }}
                           title="Unarchive Category"
                         >
-                          <Archive className="h-3.5 w-3.5" />
+                          <Archive className="h-3.5 w-3.5 text-white" />
                         </button>
                       ) : (
                         <button
@@ -1309,10 +1319,11 @@ export default function ManualPage() {
                             e.stopPropagation()
                             archiveCategory(category.id)
                           }}
-                          className="flex h-7 w-7 items-center justify-center rounded-md border border-white/15 bg-white/10 transition-all hover:bg-white/20"
+                          className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
+                          style={{ background: "#f59e0b" }}
                           title="Archive Category"
                         >
-                          <Archive className="h-3.5 w-3.5" />
+                          <Archive className="h-3.5 w-3.5 text-white" />
                         </button>
                       )
                     ) : null}
@@ -1324,10 +1335,11 @@ export default function ManualPage() {
                           e.stopPropagation()
                           deleteCategory(category.id)
                         }}
-                        className="flex h-7 w-7 items-center justify-center rounded-md border border-white/15 bg-[#ef4444] transition-all hover:brightness-110"
+                        className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
+                        style={{ background: "#ef4444" }}
                         title="Delete Category"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <X className="h-3.5 w-3.5 text-white" />
                       </button>
                     ) : null}
                   </div>
@@ -1598,15 +1610,15 @@ export default function ManualPage() {
                           <table className="min-w-full text-left">
                             <thead style={{ background: "#ffffff" }}>
                               <tr style={{ color: "#707685" }}>
-                                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide">
+                                <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wide">
                                   <input type="checkbox" className="h-4 w-4 rounded" />
                                 </th>
-                                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide">Manual</th>
-                                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide">Issue Level</th>
-                                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide">Issue Date</th>
-                                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide">Location</th>
-                                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide">Status</th>
-                                <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide">Actions</th>
+                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Manual</th>
+                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Issue Level</th>
+                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Issue Date</th>
+                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Location</th>
+                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Status</th>
+                                <th className="px-2 py-2 text-right text-[11px] font-semibold uppercase tracking-wide">Actions</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -1623,12 +1635,13 @@ export default function ManualPage() {
                                             ? "#faf7ff"
                                             : "#ffffff",
                                       borderTop: index === 0 ? "none" : "1px solid #efeff5",
+                                      borderBottom: index === sortedManuals.length - 1 ? "1px solid #efeff5" : "none",
                                     }}
                                   >
-                                    <td className="px-4 py-5 align-top">
+                                    <td className="px-2 py-1 align-top">
                                       <input type="checkbox" className="mt-1 h-4 w-4 rounded" />
                                     </td>
-                                    <td className="px-4 py-5 align-top">
+                                    <td className="px-2 py-1 align-top">
                                       <div className="flex items-start gap-3">
                                         <div
                                           className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg"
@@ -1657,19 +1670,19 @@ export default function ManualPage() {
                                         </div>
                                       </div>
                                     </td>
-                                    <td className="px-4 py-5 align-top text-sm" style={{ color: COLORS.textPrimary }}>
+                                    <td className="px-2 py-1 align-top text-sm" style={{ color: COLORS.textPrimary }}>
                                       {manual.version || "1.0"}
                                     </td>
-                                    <td className="px-4 py-5 align-top text-sm" style={{ color: COLORS.textPrimary }}>
+                                    <td className="px-2 py-1 align-top text-sm" style={{ color: COLORS.textPrimary }}>
                                       <div className="flex items-center gap-2">
                                         <Calendar className="h-4 w-4" style={{ color: COLORS.textLight }} />
                                         {formatDisplayDate(manual.issueDate)}
                                       </div>
                                     </td>
-                                    <td className="px-4 py-5 align-top text-sm" style={{ color: COLORS.textPrimary }}>
+                                    <td className="px-2 py-1 align-top text-sm" style={{ color: COLORS.textPrimary }}>
                                       {manual.location || "Default Location"}
                                     </td>
-                                    <td className="px-4 py-5 align-top">
+                                    <td className="px-2 py-1 align-top">
                                       <span
                                         className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
                                         style={{
@@ -1681,39 +1694,48 @@ export default function ManualPage() {
                                         {statusTone.label}
                                       </span>
                                     </td>
-                                    <td className="px-4 py-5">
-                                      <div className="flex flex-wrap justify-end gap-2">
+                                    <td className="px-2 py-1">
+                                      <div className="flex items-center justify-end gap-1">
+                                        {/* Drag handle */}
+                                        <div className="mr-1 flex h-6 w-5 cursor-move items-center justify-center opacity-30 hover:opacity-60">
+                                          <svg width="10" height="14" viewBox="0 0 10 14" fill="#374151">
+                                            <circle cx="2.5" cy="2" r="1.5"/><circle cx="7.5" cy="2" r="1.5"/>
+                                            <circle cx="2.5" cy="7" r="1.5"/><circle cx="7.5" cy="7" r="1.5"/>
+                                            <circle cx="2.5" cy="12" r="1.5"/><circle cx="7.5" cy="12" r="1.5"/>
+                                          </svg>
+                                        </div>
+
                                         {isEmployee ? (
                                           <>
                                             <button
                                               type="button"
                                               onClick={() => toggleApprove(category.id, manual.id, manual.approved)}
                                               disabled={loadingAction === `approve-${manual.id}`}
-                                              className="flex h-7 w-7 items-center justify-center rounded-md border transition-all disabled:cursor-not-allowed disabled:opacity-50"
-                                              style={actionButtonStyle(manual.approved ? "green" : "neutral")}
+                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                              style={{ background: manual.approved ? "#22c55e" : "#e5e7eb" }}
                                               title={manual.approved ? "Reopen" : "Mark done"}
                                             >
-                                              <Check className="h-3.5 w-3.5" />
+                                              <Check className="h-3.5 w-3.5" style={{ color: manual.approved ? "#fff" : "#6b7280" }} />
                                             </button>
                                             <Link href={`/manual/${manual.id}/edit`}>
                                               <button
                                                 type="button"
-                                                className="flex h-7 w-7 items-center justify-center rounded-md border transition-all"
-                                                style={actionButtonStyle("blue")}
+                                                className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
+                                                style={{ background: "#4f46e5" }}
                                                 title="Edit"
                                               >
-                                                <Edit className="h-3.5 w-3.5" />
+                                                <Edit className="h-3.5 w-3.5 text-white" />
                                               </button>
                                             </Link>
                                             <button
                                               type="button"
                                               onClick={() => downloadManual(manual)}
                                               disabled={loadingAction === `download-${manual.id}`}
-                                              className="flex h-7 w-7 items-center justify-center rounded-md border transition-all disabled:cursor-not-allowed disabled:opacity-50"
-                                              style={actionButtonStyle("purple")}
+                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                              style={{ background: "#6366f1" }}
                                               title="Download"
                                             >
-                                              <Download className="h-3.5 w-3.5" />
+                                              <Download className="h-3.5 w-3.5 text-white" />
                                             </button>
                                           </>
                                         ) : (
@@ -1722,93 +1744,93 @@ export default function ManualPage() {
                                               type="button"
                                               onClick={() => toggleHighlight(category.id, manual.id, manual.highlighted)}
                                               disabled={loadingAction === `highlight-${manual.id}`}
-                                              className="flex h-7 w-7 items-center justify-center rounded-md border transition-all disabled:cursor-not-allowed disabled:opacity-50"
-                                              style={actionButtonStyle(manual.highlighted ? "amber" : "neutral")}
+                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                              style={{ background: manual.highlighted ? "#f59e0b" : "#e5e7eb" }}
                                               title={manual.highlighted ? "Remove Highlight" : "Highlight"}
                                             >
-                                              <Star className={`h-3.5 w-3.5 ${manual.highlighted ? "fill-current" : ""}`} />
+                                              <Star className={`h-3.5 w-3.5 ${manual.highlighted ? "fill-white text-white" : "text-gray-500"}`} />
                                             </button>
                                             <button
                                               type="button"
                                               onClick={() => toggleApprove(category.id, manual.id, manual.approved)}
                                               disabled={loadingAction === `approve-${manual.id}`}
-                                              className="flex h-7 w-7 items-center justify-center rounded-md border transition-all disabled:cursor-not-allowed disabled:opacity-50"
-                                              style={actionButtonStyle(manual.approved ? "green" : "neutral")}
+                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                              style={{ background: manual.approved ? "#22c55e" : "#e5e7eb" }}
                                               title={manual.approved ? "Mark as Incomplete" : "Mark as Completed"}
                                             >
-                                              <Check className="h-3.5 w-3.5" />
+                                              <Check className="h-3.5 w-3.5" style={{ color: manual.approved ? "#fff" : "#6b7280" }} />
                                             </button>
                                             <button
                                               type="button"
                                               onClick={() => togglePause(category.id, manual.id, manual.paused)}
                                               disabled={loadingAction === `pause-${manual.id}`}
-                                              className="flex h-7 w-7 items-center justify-center rounded-md border transition-all disabled:cursor-not-allowed disabled:opacity-50"
-                                              style={actionButtonStyle(manual.paused ? "amber" : "neutral")}
+                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                              style={{ background: manual.paused ? "#f59e0b" : "#e5e7eb" }}
                                               title={manual.paused ? "Resume" : "Pause"}
                                             >
-                                              <Pause className="h-3.5 w-3.5" />
+                                              <Pause className="h-3.5 w-3.5" style={{ color: manual.paused ? "#fff" : "#6b7280" }} />
                                             </button>
                                             <Link href={`/manual/${manual.id}/edit`}>
                                               <button
                                                 type="button"
-                                                className="flex h-7 w-7 items-center justify-center rounded-md border transition-all"
-                                                style={actionButtonStyle("blue")}
+                                                className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
+                                                style={{ background: "#4f46e5" }}
                                                 title="Edit"
                                               >
-                                                <Edit className="h-3.5 w-3.5" />
+                                                <Edit className="h-3.5 w-3.5 text-white" />
                                               </button>
                                             </Link>
                                             <button
                                               type="button"
                                               onClick={() => copyManual(category.id, manual.id)}
                                               disabled={loadingAction === `copy-${manual.id}`}
-                                              className="flex h-7 w-7 items-center justify-center rounded-md border transition-all disabled:cursor-not-allowed disabled:opacity-50"
-                                              style={actionButtonStyle("gray")}
+                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                              style={{ background: "#6366f1" }}
                                               title="Duplicate"
                                             >
-                                              <Copy className="h-3.5 w-3.5" />
+                                              <Copy className="h-3.5 w-3.5 text-white" />
                                             </button>
                                             <button
                                               type="button"
                                               onClick={() => downloadManual(manual)}
                                               disabled={loadingAction === `download-${manual.id}`}
-                                              className="flex h-7 w-7 items-center justify-center rounded-md border transition-all disabled:cursor-not-allowed disabled:opacity-50"
-                                              style={actionButtonStyle("purple")}
+                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                              style={{ background: "#6366f1" }}
                                               title="Download"
                                             >
-                                              <Download className="h-3.5 w-3.5" />
+                                              <Download className="h-3.5 w-3.5 text-white" />
                                             </button>
                                             {!isViewingArchivedItems ? (
                                               <button
                                                 type="button"
                                                 onClick={() => archiveManual(category.id, manual.id)}
                                                 disabled={loadingAction === `archive-${manual.id}`}
-                                                className="flex h-7 w-7 items-center justify-center rounded-md border transition-all disabled:cursor-not-allowed disabled:opacity-50"
-                                                style={actionButtonStyle("amber")}
+                                                className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                                style={{ background: "#f59e0b" }}
                                                 title="Archive"
                                               >
-                                                <Archive className="h-3.5 w-3.5" />
+                                                <Archive className="h-3.5 w-3.5 text-white" />
                                               </button>
                                             ) : (
                                               <button
                                                 type="button"
                                                 onClick={() => unarchiveManual(category.id, manual.id)}
                                                 disabled={loadingAction === `unarchive-${manual.id}`}
-                                                className="flex h-7 w-7 items-center justify-center rounded-md border transition-all disabled:cursor-not-allowed disabled:opacity-50"
-                                                style={actionButtonStyle("green")}
+                                                className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                                style={{ background: "#22c55e" }}
                                                 title="Unarchive"
                                               >
-                                                <Archive className="h-3.5 w-3.5" />
+                                                <Archive className="h-3.5 w-3.5 text-white" />
                                               </button>
                                             )}
                                             <button
                                               type="button"
                                               onClick={() => deleteManual(category.id, manual.id)}
-                                              className="flex h-7 w-7 items-center justify-center rounded-md border transition-all"
-                                              style={actionButtonStyle("red")}
+                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
+                                              style={{ background: "#ef4444" }}
                                               title="Delete"
                                             >
-                                              <Trash2 className="h-3.5 w-3.5" />
+                                              <Trash2 className="h-3.5 w-3.5 text-white" />
                                             </button>
                                           </>
                                         )}
