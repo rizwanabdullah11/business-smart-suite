@@ -9,24 +9,49 @@ import {
     FileText,
     Eye,
     EyeOff,
-    Users
+    Users,
+    CheckCircle2,
+    ArrowRight,
+    Lock,
+    Mail,
 } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { Checkbox } from "@/components/ui/Checkbox"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
-import { COLORS } from "@/constant/colors"
 import { useAuth } from "@/contexts/auth-context"
 
-// API Config
-const API_URL = "/api";
+const API_URL = "/api"
+
+const features = [
+    {
+        icon: FileText,
+        title: "Compliance Management",
+        desc: "Streamline ISO documentation and audits effortlessly.",
+    },
+    {
+        icon: ShieldCheck,
+        title: "Enterprise Security",
+        desc: "Bank-grade protection for your sensitive business data.",
+    },
+    {
+        icon: BarChart3,
+        title: "Real-time Analytics",
+        desc: "Make data-driven decisions with live insights and reports.",
+    },
+]
+
+const stats = [
+    { value: "500+", label: "Companies" },
+    { value: "99.9%", label: "Uptime" },
+    { value: "24/7", label: "Support" },
+]
 
 export default function LoginPage() {
     const { toast } = useToast()
     const { refreshUser } = useAuth()
 
-    // State for form inputs
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [isLoading, setIsLoading] = useState(false)
@@ -42,172 +67,238 @@ export default function LoginPage() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
-                body: JSON.stringify({
-                    email: email.trim(),
-                    password: password,
-                }),
-            });
+                body: JSON.stringify({ email: email.trim(), password }),
+            })
 
-            const data = await response.json();
+            const data = await response.json()
 
-            if (!response.ok) {
-                throw new Error(data.message || "Login failed");
-            }
+            if (!response.ok) throw new Error(data.message || "Login failed")
 
-            // Success Logic
             if (data.token) {
-                console.log("✅ Login: Token received, setting auth data...");
-                
-                // Clear any existing auth data first
-                localStorage.removeItem("token");
-                localStorage.removeItem("user");
-                
-                // Set new auth data
-                localStorage.setItem("token", data.token);
-                if (data.user) {
-                    localStorage.setItem("user", JSON.stringify(data.user));
-                }
-                
-                console.log("✅ Login: Auth data set, triggering refresh...");
-                
-                // Trigger auth context refresh on the same tab
-                window.dispatchEvent(new Event("auth-change"));
+                localStorage.removeItem("token")
+                localStorage.removeItem("user")
+                localStorage.setItem("token", data.token)
+                if (data.user) localStorage.setItem("user", JSON.stringify(data.user))
+
+                window.dispatchEvent(new Event("auth-change"))
                 await refreshUser()
-                
+
                 toast({
                     title: "Welcome back!",
                     description: "Successfully logged in.",
                     variant: "default",
-                });
+                })
 
-                // Navigate to dashboard
-                console.log("✅ Login: Redirecting to dashboard...");
-                window.location.assign("/dashboard");
+                window.location.assign("/dashboard")
             }
-
         } catch (error: any) {
             toast({
                 title: "Login Failed",
                 description: error.message || "Please check your credentials",
                 variant: "destructive",
-            });
+            })
         } finally {
-            setIsLoading(false);
+            setIsLoading(false)
         }
     }
 
     return (
         <div className="flex min-h-screen w-full">
-            {/* Left Panel - Branding & Features */}
-            <div
-                className="hidden lg:flex w-1/2 flex-col justify-between p-12 relative overflow-hidden"
-                style={{
-                    background: `linear-gradient(135deg, ${COLORS.indigo600} 0%, ${COLORS.purple600} 50%, ${COLORS.pink600} 100%)`
-                }}
-            >
-                {/* Background Pattern Overlay */}
-                <div className="absolute inset-0 bg-black opacity-10 pattern-grid-lg"></div>
 
-                {/* Header Branding */}
+            {/* ── LEFT PANEL ── */}
+            <div
+                className="hidden lg:flex w-[52%] flex-col justify-between p-12 relative overflow-hidden"
+                style={{ background: "linear-gradient(145deg, #1a0533 0%, #2d0f4e 40%, #341746 100%)" }}
+            >
+                {/* Decorative orbs */}
+                <div
+                    className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full opacity-20 blur-3xl pointer-events-none"
+                    style={{ background: "radial-gradient(circle, #a855f7 0%, transparent 70%)" }}
+                />
+                <div
+                    className="absolute -bottom-40 -right-24 w-[420px] h-[420px] rounded-full opacity-15 blur-3xl pointer-events-none"
+                    style={{ background: "radial-gradient(circle, #7c3aed 0%, transparent 70%)" }}
+                />
+                <div
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-5 blur-3xl pointer-events-none"
+                    style={{ background: "radial-gradient(circle, #e879f9 0%, transparent 70%)" }}
+                />
+
+                {/* Subtle dot grid */}
+                <svg
+                    className="absolute inset-0 w-full h-full opacity-[0.04] pointer-events-none"
+                    xmlns="http://www.w3.org/2000/svg"
+                >
+                    <defs>
+                        <pattern id="dots" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
+                            <circle cx="2" cy="2" r="1.5" fill="white" />
+                        </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#dots)" />
+                </svg>
+
+                {/* Brand */}
                 <div className="relative z-10 flex items-center gap-3">
-                    <div className="h-10 w-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-                        <span className="font-bold text-xl text-white">B</span>
+                    <div
+                        className="h-11 w-11 rounded-xl flex items-center justify-center shadow-lg"
+                        style={{ background: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)" }}
+                    >
+                        <span className="font-black text-xl text-white">B</span>
                     </div>
-                    <span className="text-2xl font-bold text-white tracking-tight">Business Smart</span>
+                    <div>
+                        <span className="text-xl font-bold text-white tracking-tight leading-none block">
+                            Business Smart
+                        </span>
+                        <span className="text-[11px] font-medium tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.45)" }}>
+                            Suite
+                        </span>
+                    </div>
                 </div>
 
-                {/* Main Content */}
+                {/* Hero text */}
                 <div className="relative z-10 w-full max-w-lg">
-                    <h1 className="text-5xl font-bold text-white mb-6 leading-tight">
-                        Welcome to <br /> Business Smart Suite
+                    <div
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-8"
+                        style={{ background: "rgba(168,85,247,0.2)", color: "#d8b4fe", border: "1px solid rgba(168,85,247,0.3)" }}
+                    >
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse inline-block" />
+                        ISO 9001 Compliance Platform
+                    </div>
+
+                    <h1 className="text-5xl font-black text-white mb-5 leading-[1.1] tracking-tight">
+                        Manage Your <br />
+                        <span
+                            className="bg-clip-text text-transparent"
+                            style={{ backgroundImage: "linear-gradient(90deg, #c084fc 0%, #e879f9 100%)" }}
+                        >
+                            Business Excellence
+                        </span>
                     </h1>
-                    <p className="text-lg text-white/80 mb-12 leading-relaxed">
-                        Your complete solution for ISO 9001 compliance, risk management, and operational excellence.
+                    <p className="text-base leading-relaxed mb-10" style={{ color: "rgba(255,255,255,0.6)" }}>
+                        The all-in-one platform for compliance management, risk tracking, audits, and operational intelligence.
                     </p>
 
-                    {/* Feature Cards */}
-                    <div className="space-y-4">
-                        <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 flex items-start gap-4 transition-transform hover:-translate-y-1 duration-300">
-                            <div className="p-3 bg-white/20 rounded-lg">
-                                <FileText className="w-6 h-6 text-white" />
+                    {/* Feature cards */}
+                    <div className="space-y-3">
+                        {features.map(({ icon: Icon, title, desc }) => (
+                            <div
+                                key={title}
+                                className="flex items-start gap-4 p-4 rounded-2xl transition-all duration-300 hover:-translate-y-0.5"
+                                style={{
+                                    background: "rgba(255,255,255,0.05)",
+                                    border: "1px solid rgba(255,255,255,0.08)",
+                                    backdropFilter: "blur(8px)",
+                                }}
+                            >
+                                <div
+                                    className="p-2.5 rounded-xl shrink-0"
+                                    style={{ background: "rgba(168,85,247,0.25)" }}
+                                >
+                                    <Icon className="w-5 h-5" style={{ color: "#d8b4fe" }} />
+                                </div>
+                                <div>
+                                    <h3 className="text-white font-semibold text-sm leading-tight">{title}</h3>
+                                    <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "rgba(255,255,255,0.5)" }}>{desc}</p>
+                                </div>
+                                <CheckCircle2 className="w-4 h-4 shrink-0 ml-auto mt-0.5" style={{ color: "#a855f7" }} />
                             </div>
-                            <div>
-                                <h3 className="text-white font-bold text-lg">Compliance Management</h3>
-                                <p className="text-white/70 text-sm">Streamline your ISO documentation and audits effortlessly.</p>
-                            </div>
-                        </div>
-
-                        <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 flex items-start gap-4 transition-transform hover:-translate-y-1 duration-300">
-                            <div className="p-3 bg-white/20 rounded-lg">
-                                <ShieldCheck className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                                <h3 className="text-white font-bold text-lg">Secure & Reliable</h3>
-                                <p className="text-white/70 text-sm">Enterprise-grade security for your sensitive business data.</p>
-                            </div>
-                        </div>
-
-                        <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 flex items-start gap-4 transition-transform hover:-translate-y-1 duration-300">
-                            <div className="p-3 bg-white/20 rounded-lg">
-                                <BarChart3 className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                                <h3 className="text-white font-bold text-lg">Real-time Analytics</h3>
-                                <p className="text-white/70 text-sm">Make data-driven decisions with live insights and reports.</p>
-                            </div>
-                        </div>
+                        ))}
                     </div>
                 </div>
 
-                {/* Footer Stats */}
-                <div className="relative z-10 flex items-center gap-12 pt-8 border-t border-white/20">
-                    <div>
-                        <h4 className="text-3xl font-bold text-white">100%</h4>
-                        <p className="text-white/60 text-sm font-medium uppercase tracking-wider">Compliance</p>
-                    </div>
-                    <div>
-                        <h4 className="text-3xl font-bold text-white">24/7</h4>
-                        <p className="text-white/60 text-sm font-medium uppercase tracking-wider">Support</p>
-                    </div>
-                    <div>
-                        <h4 className="text-3xl font-bold text-white">99%</h4>
-                        <p className="text-white/60 text-sm font-medium uppercase tracking-wider">Uptime</p>
-                    </div>
+                {/* Stats row */}
+                <div className="relative z-10 flex items-center gap-0 pt-8" style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+                    {stats.map((s, i) => (
+                        <div key={s.label} className="flex-1 text-center relative">
+                            {i > 0 && (
+                                <div
+                                    className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-px"
+                                    style={{ background: "rgba(255,255,255,0.12)" }}
+                                />
+                            )}
+                            <div className="text-3xl font-black text-white">{s.value}</div>
+                            <div className="text-[11px] font-semibold uppercase tracking-widest mt-0.5" style={{ color: "rgba(255,255,255,0.45)" }}>
+                                {s.label}
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
 
-            {/* Right Panel - Login Form */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
-                <div className="w-full max-w-[440px] space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                    <div className="text-center space-y-2">
-                        <div className="h-12 w-12 bg-indigo-50 rounded-xl flex items-center justify-center mx-auto mb-6">
-                            <span className="text-2xl">✨</span>
+            {/* ── RIGHT PANEL ── */}
+            <div
+                className="flex-1 flex items-center justify-center p-8 relative"
+                style={{ background: "#f8f7fc" }}
+            >
+                {/* Subtle background orb */}
+                <div
+                    className="absolute top-0 right-0 w-96 h-96 rounded-full opacity-10 blur-3xl pointer-events-none"
+                    style={{ background: "radial-gradient(circle, #a855f7 0%, transparent 70%)" }}
+                />
+
+                <div className="relative z-10 w-full max-w-[420px]">
+
+                    {/* Mobile brand header */}
+                    <div className="flex lg:hidden items-center justify-center gap-2 mb-10">
+                        <div
+                            className="h-9 w-9 rounded-xl flex items-center justify-center shadow"
+                            style={{ background: "linear-gradient(135deg, #7c3aed, #a855f7)" }}
+                        >
+                            <span className="font-black text-white text-base">B</span>
                         </div>
-                        <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Welcome back</h2>
-                        <p className="text-gray-500">Sign in to access your admin dashboard</p>
+                        <span className="text-lg font-bold text-gray-900">Business Smart Suite</span>
                     </div>
 
-                    <form onSubmit={handleLogin} className="space-y-6">
-                        <div className="space-y-6">
-                            <div className="space-y-4">
-                                <Label htmlFor="email" className="font-bold text-gray-900">Email Address <span className="text-red-500">*</span></Label>
+                    {/* Card */}
+                    <div
+                        className="rounded-3xl p-8 shadow-xl"
+                        style={{
+                            background: "#ffffff",
+                            boxShadow: "0 20px 60px rgba(124,58,237,0.08), 0 4px 20px rgba(0,0,0,0.06)"
+                        }}
+                    >
+                        {/* Icon + heading */}
+                        <div className="text-center mb-8">
+                            <div
+                                className="h-14 w-14 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-md"
+                                style={{ background: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)" }}
+                            >
+                                <Lock className="w-6 h-6 text-white" />
+                            </div>
+                            <h2 className="text-2xl font-black text-gray-900 tracking-tight">Welcome back</h2>
+                            <p className="text-sm text-gray-500 mt-1">Sign in to your Business Smart account</p>
+                        </div>
+
+                        <form onSubmit={handleLogin} className="space-y-5">
+                            {/* Email */}
+                            <div className="space-y-1.5">
+                                <Label htmlFor="email" className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                                    <Mail className="w-3.5 h-3.5" style={{ color: "#7c3aed" }} />
+                                    Email Address
+                                </Label>
                                 <Input
                                     id="email"
-                                    placeholder="mail@example.com"
-                                    className="h-12 bg-white border-gray-200 focus:border-indigo-500 focus:ring-indigo-100 transition-all placeholder:text-gray-400 rounded-lg text-black"
+                                    type="email"
+                                    placeholder="you@example.com"
+                                    className="h-12 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:border-purple-400 focus:ring-purple-100 placeholder:text-gray-400 text-gray-900 transition-all text-sm"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
                                 />
                             </div>
-                            <div className="space-y-4">
-                                <Label htmlFor="password" className="font-bold text-gray-900">Password <span className="text-red-500">*</span></Label>
+
+                            {/* Password */}
+                            <div className="space-y-1.5">
+                                <Label htmlFor="password" className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                                    <Lock className="w-3.5 h-3.5" style={{ color: "#7c3aed" }} />
+                                    Password
+                                </Label>
                                 <div className="relative">
                                     <Input
                                         id="password"
                                         type={showPassword ? "text" : "password"}
                                         placeholder="Enter your password"
-                                        className="h-12 bg-white border-gray-200 focus:border-indigo-500 focus:ring-indigo-100 transition-all pr-10 placeholder:text-gray-400 rounded-lg text-black"
+                                        className="h-12 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:border-purple-400 focus:ring-purple-100 placeholder:text-gray-400 text-gray-900 transition-all pr-12 text-sm"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         required
@@ -215,55 +306,89 @@ export default function LoginPage() {
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
                                     >
-                                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                        {showPassword
+                                            ? <EyeOff className="w-4.5 h-4.5" />
+                                            : <Eye className="w-4.5 h-4.5" />
+                                        }
                                     </button>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <Checkbox
-                                    id="remember"
-                                    checked={rememberMe}
-                                    onCheckedChange={(checked) => setRememberMe(!!checked)}
-                                />
-                                <Label htmlFor="remember" className="text-sm font-medium text-gray-600 cursor-pointer">Remember me</Label>
+                            {/* Remember me + Forgot */}
+                            <div className="flex items-center justify-between pt-1">
+                                <div className="flex items-center gap-2">
+                                    <Checkbox
+                                        id="remember"
+                                        checked={rememberMe}
+                                        onCheckedChange={(checked) => setRememberMe(!!checked)}
+                                        className="border-gray-300"
+                                    />
+                                    <Label htmlFor="remember" className="text-sm text-gray-600 cursor-pointer select-none">
+                                        Remember me
+                                    </Label>
+                                </div>
+                                <Link
+                                    href="/forgot-password"
+                                    className="text-sm font-semibold hover:underline transition-colors"
+                                    style={{ color: "#7c3aed" }}
+                                >
+                                    Forgot password?
+                                </Link>
                             </div>
-                            <Link href="/forgot-password" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">
-                                Forgot password?
-                            </Link>
-                        </div>
 
-                        <Button
-                            type="submit"
-                            className="w-full h-12 text-base font-bold shadow-lg hover:shadow-indigo-200 hover:-translate-y-0.5 transition-all duration-300"
-                            style={{
-                                background: `linear-gradient(to right, ${COLORS.indigo600}, ${COLORS.purple600})`
-                            }}
-                            disabled={isLoading}
-                        >
-                            {isLoading ? (
-                                <span className="flex items-center gap-2">
-                                    <Loader2 className="w-4 h-4 animate-spin" /> Authenticating...
+                            {/* Submit */}
+                            <Button
+                                type="submit"
+                                className="w-full h-12 text-sm font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-purple-300 mt-2"
+                                style={{
+                                    background: isLoading
+                                        ? "#9ca3af"
+                                        : "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)",
+                                    color: "#fff",
+                                }}
+                                disabled={isLoading}
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Authenticating...
+                                    </>
+                                ) : (
+                                    <>
+                                        Sign In
+                                        <ArrowRight className="w-4 h-4" />
+                                    </>
+                                )}
+                            </Button>
+                        </form>
+
+                        {/* Trust badges */}
+                        <div className="mt-6 pt-5" style={{ borderTop: "1px solid #f3f4f6" }}>
+                            <div className="flex items-center justify-center gap-5 text-xs text-gray-400">
+                                <span className="flex items-center gap-1.5">
+                                    <ShieldCheck className="w-3.5 h-3.5" style={{ color: "#a855f7" }} />
+                                    SSL Secured
                                 </span>
-                            ) : (
-                                "Sign In"
-                            )}
-                        </Button>
-                    </form>
-
-                    <div className="pt-6 border-t border-gray-100 text-center space-y-4">
-                        <p className="text-xs text-gray-400">
-                            © 2026 Business Smart Suite. All rights reserved.
-                        </p>
-                        <div className="flex items-center justify-center gap-6 text-xs text-gray-500">
-                            <span className="flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> Secure Login</span>
-                            <span className="flex items-center gap-1"><Users className="w-3 h-3" /> 24/7 Support</span>
+                                <span className="w-px h-3 bg-gray-200" />
+                                <span className="flex items-center gap-1.5">
+                                    <Lock className="w-3.5 h-3.5" style={{ color: "#a855f7" }} />
+                                    256-bit Encryption
+                                </span>
+                                <span className="w-px h-3 bg-gray-200" />
+                                <span className="flex items-center gap-1.5">
+                                    <Users className="w-3.5 h-3.5" style={{ color: "#a855f7" }} />
+                                    24/7 Support
+                                </span>
+                            </div>
                         </div>
                     </div>
+
+                    {/* Footer note */}
+                    <p className="text-center text-xs text-gray-400 mt-6">
+                        © {new Date().getFullYear()} Business Smart Suite. All rights reserved.
+                    </p>
                 </div>
             </div>
         </div>
