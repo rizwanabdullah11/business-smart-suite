@@ -19,7 +19,6 @@ import {
   ChevronRight,
   Copy,
   Download,
-  ArrowLeft,
   Bot,
   type LucideIcon,
 } from "lucide-react"
@@ -706,11 +705,6 @@ export default function DynamicModulePage({
         {/* ── Header ── */}
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-3">
-            <Link href="/dashboard">
-              <button className="flex h-10 w-10 items-center justify-center rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-md" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-            </Link>
             <div>
               <div className="mb-1 flex items-center gap-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "#eef2ff", color: "#4338ca", border: "1px solid #c7d2fe" }}>
