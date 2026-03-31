@@ -53,7 +53,7 @@ export function TopNavbar({ user, isCollapsed, onLogout, onAddFolder }: TopNavba
                 background: COLORS.bgWhite,
                 borderColor: COLORS.border,
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
-                paddingLeft: isCollapsed ? '112px' : '312px', // Sidebar width (80/280) + 32px (main padding)
+                paddingLeft: '2rem',
                 paddingRight: '2rem'
             }}
         >
@@ -110,8 +110,8 @@ export function TopNavbar({ user, isCollapsed, onLogout, onAddFolder }: TopNavba
                     </div>
                 ) : null}
 
-                {/* Analytics Button */}
-                <Link href="/analytics">
+                {/* Dashboard (analytics) */}
+                <Link href="/dashboard/analytics">
                     <button
                         className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all duration-300 hover:scale-105 hover:shadow-lg"
                         style={{
@@ -121,7 +121,7 @@ export function TopNavbar({ user, isCollapsed, onLogout, onAddFolder }: TopNavba
                         }}
                     >
                         <BarChart2 className="w-4 h-4" />
-                        <span className="hidden xl:inline">Analytics</span>
+                        <span className="hidden xl:inline">Dashboard</span>
                     </button>
                 </Link>
 

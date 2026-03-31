@@ -66,8 +66,6 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     await connectToDatabase()
 
     const { filter: ownershipFilter } = await buildModuleAccessFilter(request, user)
-
-    // Fetch ALL documents (including archived) so the dashboard can show accurate counts
     const allDocsQuery =
       Object.keys(ownershipFilter).length > 0 ? ownershipFilter : {}
 
@@ -90,7 +88,6 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       ...moduleDocs.flat(),
     ] as DashboardDoc[]
 
-    // Stats are based on non-archived (active) docs only
     const activeDocs = allDocs.filter((doc) => !doc.archived && !doc.isArchived)
     const completedCount = activeDocs.filter((doc) => Boolean(doc.approved)).length
     const pendingCount = activeDocs.filter((doc) => !doc.approved).length
@@ -189,8 +186,8 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     return NextResponse.json({
       stats,
       recentActivities,
-      docs: activeDocs.map(serializeDoc),           // active only — used for module breakdown, compliance, totals
-      archivedDocs: archivedOnlyDocs.map(serializeDoc), // archived only — used for the archived card
+      docs: activeDocs.map(serializeDoc),
+      archivedDocs: archivedOnlyDocs.map(serializeDoc),
     })
   } catch (error) {
     return NextResponse.json(

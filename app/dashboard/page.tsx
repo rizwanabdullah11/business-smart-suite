@@ -1,5 +1,5 @@
-import { DashboardContent } from "@/components/dashboard/DashboardContent"
+import { ModuleHubContent } from "@/components/dashboard/ModuleHubContent"
 
 export default function DashboardPage() {
-    return <DashboardContent />
+    return <ModuleHubContent />
 }

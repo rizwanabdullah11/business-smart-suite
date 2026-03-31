@@ -19,7 +19,6 @@ import {
   ChevronRight,
   Copy,
   Download,
-  ArrowLeft,
   Bot,
   type LucideIcon,
 } from "lucide-react"
@@ -228,9 +227,8 @@ export default function DynamicModulePage({
 
       setCategories(merged)
       setArchivedCategories(mergedArchived)
-      setExpandedCategories((prev) => {
-        const firstCategoryId = merged[0]?.id
-        const nextExpanded = prev.length ? [prev[0]] : firstCategoryId ? [String(firstCategoryId)] : []
+      setExpandedCategories(() => {
+        const nextExpanded: string[] = []
         writeModulePageCache(cacheKey, {
           categories: merged,
           archivedCategories: mergedArchived,
@@ -706,11 +704,6 @@ export default function DynamicModulePage({
         {/* ── Header ── */}
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-3">
-            <Link href="/dashboard">
-              <button className="flex h-10 w-10 items-center justify-center rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-md" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-            </Link>
             <div>
               <div className="mb-1 flex items-center gap-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "#eef2ff", color: "#4338ca", border: "1px solid #c7d2fe" }}>
@@ -765,8 +758,30 @@ export default function DynamicModulePage({
         {!isEmployee ? (
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div className="inline-flex rounded-xl p-1" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
-              <button type="button" onClick={() => setShowArchived(false)} className="rounded-lg px-4 py-2 text-sm font-semibold transition-all" style={{ background: !showArchived ? COLORS.purple700 : "transparent", color: !showArchived ? COLORS.textWhite : COLORS.textSecondary }}>Active</button>
-              <button type="button" onClick={() => setShowArchived(true)} className="rounded-lg px-4 py-2 text-sm font-semibold transition-all" style={{ background: showArchived ? COLORS.purple700 : "transparent", color: showArchived ? COLORS.textWhite : COLORS.textSecondary }}>Archived</button>
+              <button
+                type="button"
+                onClick={() => setShowArchived(false)}
+                className="rounded-lg px-4 py-2 text-sm font-semibold transition-all"
+                style={{
+                  background: !showArchived ? COLORS.purple700 : COLORS.purple50,
+                  color: !showArchived ? COLORS.textWhite : COLORS.purple700,
+                  border: `1px solid ${!showArchived ? COLORS.purple700 : COLORS.purple200}`,
+                }}
+              >
+                Active
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowArchived(true)}
+                className="rounded-lg px-4 py-2 text-sm font-semibold transition-all"
+                style={{
+                  background: showArchived ? COLORS.purple700 : COLORS.purple50,
+                  color: showArchived ? COLORS.textWhite : COLORS.purple700,
+                  border: `1px solid ${showArchived ? COLORS.purple700 : COLORS.purple200}`,
+                }}
+              >
+                Archived
+              </button>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span style={{ color: COLORS.textSecondary }}>Sort by</span>
@@ -911,11 +926,11 @@ export default function DynamicModulePage({
                       </div>
                     ) : (
                       /* Table */
-                      <div className="overflow-hidden rounded-2xl" style={{ border: "1px solid #efeff5", background: "#fcfcff" }}>
+                      <div className="overflow-hidden rounded-2xl" style={{ border: `1px solid ${COLORS.purple200}`, background: COLORS.purple50 }}>
                         <div className="overflow-x-auto p-3">
                           <table className="min-w-full text-left">
-                            <thead style={{ background: "#fff" }}>
-                              <tr style={{ color: "#707685" }}>
+                            <thead style={{ background: COLORS.bgWhite }}>
+                              <tr style={{ color: COLORS.purple700 }}>
                                 <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wide">
                                   <input
                                     type="checkbox"
@@ -942,7 +957,20 @@ export default function DynamicModulePage({
                               {sortedItems.map((item: any, index: number) => {
                                 const statusTone = getItemStatusTone(item)
                                 return (
-                                  <tr key={item.id} style={{ background: item.paused ? "#fffaf2" : item.highlighted ? "#faf7ff" : "#fff", borderTop: index === 0 ? "none" : "1px solid #efeff5", borderBottom: index === sortedItems.length - 1 ? "1px solid #efeff5" : "none" }}>
+                                  <tr
+                                    key={item.id}
+                                    style={{
+                                      background: item.paused
+                                        ? COLORS.orange50
+                                        : item.highlighted
+                                          ? COLORS.purple50
+                                          : index % 2 === 0
+                                            ? COLORS.bgWhite
+                                            : "#fcfbff",
+                                      borderTop: index === 0 ? "none" : `1px solid ${COLORS.purple100}`,
+                                      borderBottom: index === sortedItems.length - 1 ? `1px solid ${COLORS.purple100}` : "none",
+                                    }}
+                                  >
                                     <td className="px-2 py-1 align-top">
                                       <input
                                         type="checkbox"

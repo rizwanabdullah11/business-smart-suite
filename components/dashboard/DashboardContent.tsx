@@ -2,7 +2,23 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { TrendingUp, TrendingDown, FileText, Users, AlertCircle, CheckCircle, FileDown, Loader2, Calendar, Clock, ArrowRight, RefreshCw, Plus, Activity, Star, Zap, ShieldCheck, BarChart2, BookOpen } from "lucide-react"
+import Link from "next/link"
+import {
+  TrendingUp,
+  TrendingDown,
+  FileText,
+  Users,
+  AlertCircle,
+  CheckCircle,
+  FileDown,
+  Loader2,
+  ArrowLeft,
+  Activity,
+  Zap,
+  ShieldCheck,
+  BarChart2,
+  BookOpen,
+} from "lucide-react"
 import { COLORS } from "@/constant/colors"
 import { useAuth } from "@/contexts/auth-context"
 import { Permission } from "@/lib/types/permissions"
@@ -92,7 +108,7 @@ const PDF_MODULE_LABELS: Record<string, string> = {
   "customer-feedback": "Customer Feedback",
 }
 
-const DASHBOARD_CACHE_KEY_PREFIX = "dashboardCache:v2"
+const DASHBOARD_CACHE_KEY_PREFIX = "dashboardCache:v3"
 const DASHBOARD_CACHE_TTL_MS = 2 * 60 * 1000
 
 type DashboardCachePayload = {
@@ -187,7 +203,6 @@ export function DashboardContent() {
   const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([])
   const [dashboardDocs, setDashboardDocs] = useState<AnyDoc[]>([])
   const [archivedDocsFromApi, setArchivedDocsFromApi] = useState<AnyDoc[]>([])
-  const [showAllActivities, setShowAllActivities] = useState(false)
   const [loading, setLoading] = useState(true)
   const [exportingPdf, setExportingPdf] = useState(false)
   const [exportStartDate, setExportStartDate] = useState("")
@@ -297,13 +312,8 @@ export function DashboardContent() {
     () => [COLORS.shadowBlue, COLORS.shadowGreen, COLORS.shadowOrange, COLORS.shadowPurple],
     []
   )
-  const visibleActivities = showAllActivities ? recentActivities : recentActivities.slice(0, 6)
-  // dashboardDocs contains ONLY active (non-archived) docs from the API
-  const pendingReviewDocs = useMemo(
-    () => dashboardDocs.filter((doc) => !doc.approved),
-    [dashboardDocs]
-  )
-  // archivedDocs comes directly from the API as a separate list
+  const visibleActivities = recentActivities
+  const pendingReviewDocs = useMemo(() => dashboardDocs.filter((doc) => !doc.approved), [dashboardDocs])
   const archivedDocs = archivedDocsFromApi
   const staleDocs = useMemo(
     () =>
@@ -373,11 +383,53 @@ export function DashboardContent() {
     return items
   }, [archivedDocs.length, loading, pendingReviewDocs.length, recentActivities.length, staleDocs.length])
 
+  const complianceScore = useMemo(() => {
+    const total = dashboardDocs.length
+    if (total === 0) return 0
+    const approved = dashboardDocs.filter((d) => d.approved).length
+    return Math.round((approved / total) * 100)
+  }, [dashboardDocs])
+
+  const moduleBreakdown = useMemo(() => {
+    const map: Record<string, number> = {}
+    dashboardDocs.forEach((d) => {
+      if (d._module) map[d._module] = (map[d._module] || 0) + 1
+    })
+    return Object.entries(map).sort((a, b) => b[1] - a[1])
+  }, [dashboardDocs])
+
+  const recentDocsGrid = useMemo(() => {
+    return [...dashboardDocs]
+      .sort((a, b) => {
+        const ta = new Date(a.updatedAt || a.createdAt || 0).getTime()
+        const tb = new Date(b.updatedAt || b.createdAt || 0).getTime()
+        return tb - ta
+      })
+      .slice(0, 6)
+  }, [dashboardDocs])
+
+  const healthMetrics = useMemo(() => {
+    const total = dashboardDocs.length
+    const approved = dashboardDocs.filter((d) => d.approved).length
+    const pct = total > 0 ? Math.round((approved / total) * 100) : 0
+    const modules = new Set(dashboardDocs.map((d) => d._module).filter(Boolean)).size
+    return { pct, modules, activityCount: recentActivities.length, pending: pendingReviewDocs.length }
+  }, [dashboardDocs, recentActivities.length, pendingReviewDocs.length])
+
+  const moduleBarColors = [
+    "linear-gradient(90deg,#7c3aed,#a855f7)",
+    "linear-gradient(90deg,#059669,#10b981)",
+    "linear-gradient(90deg,#2563eb,#3b82f6)",
+    "linear-gradient(90deg,#ea580c,#f97316)",
+    "linear-gradient(90deg,#db2777,#f472b6)",
+    "linear-gradient(90deg,#0891b2,#22d3ee)",
+  ]
+
   const getDocumentHref = (doc: AnyDoc) => {
-    if (!doc._id) return "/dashboard"
+    if (!doc._id) return "/dashboard/analytics"
     if (doc._module === "manual") return `/manual/${doc._id}`
     if (doc._module) return `/${doc._module}/${doc._id}`
-    return "/dashboard"
+    return "/dashboard/analytics"
   }
 
   const handleOpenDocument = (doc: AnyDoc) => {
@@ -397,11 +449,10 @@ export function DashboardContent() {
     }
     setActiveQuickAction(null)
     if (action === "analytics") {
-      router.push("/analytics")
+      router.push("/dashboard/analytics")
       return
     }
     if (action === "activity") {
-      setShowAllActivities(true)
       const recentActivitySection = document.getElementById("dashboard-recent-activity")
       recentActivitySection?.scrollIntoView({ behavior: "smooth", block: "start" })
     }
@@ -540,17 +591,17 @@ export function DashboardContent() {
         if (Number.isNaN(date.getTime())) return "-"
         return includeTime
           ? date.toLocaleString([], {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
           : date.toLocaleDateString([], {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            })
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })
       }
 
       const formatMonthYear = (value?: string) => {
@@ -1149,500 +1200,207 @@ export function DashboardContent() {
     }
   }
 
-  const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
-
-  const statConfig = [
-    {
-      gradient: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)",
-      shadow: "0 8px 24px rgba(124,58,237,0.35)",
-      icon: "rgba(255,255,255,0.25)",
-      decoration: "rgba(255,255,255,0.08)",
-    },
-    {
-      gradient: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
-      shadow: "0 8px 24px rgba(5,150,105,0.35)",
-      icon: "rgba(255,255,255,0.25)",
-      decoration: "rgba(255,255,255,0.08)",
-    },
-    {
-      gradient: "linear-gradient(135deg, #ea580c 0%, #f97316 100%)",
-      shadow: "0 8px 24px rgba(234,88,12,0.35)",
-      icon: "rgba(255,255,255,0.25)",
-      decoration: "rgba(255,255,255,0.08)",
-    },
-    {
-      gradient: "linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)",
-      shadow: "0 8px 24px rgba(37,99,235,0.35)",
-      icon: "rgba(255,255,255,0.25)",
-      decoration: "rgba(255,255,255,0.08)",
-    },
-  ]
-
-  const quickActionConfig = [
-    {
-      key: "create" as const,
-      label: "Create Document",
-      desc: "Start a new policy, procedure, or form",
-      icon: Plus,
-      gradient: "linear-gradient(135deg, #7c3aed 0%, #c084fc 100%)",
-      shadow: "0 8px 24px rgba(124,58,237,0.4)",
-      glow: "rgba(168,85,247,0.3)",
-    },
-    {
-      key: "review" as const,
-      label: "Review Tasks",
-      desc: pendingReviewDocs.length > 0 ? `${pendingReviewDocs.length} pending approvals` : "All tasks reviewed",
-      icon: CheckCircle,
-      gradient: "linear-gradient(135deg, #059669 0%, #34d399 100%)",
-      shadow: "0 8px 24px rgba(5,150,105,0.4)",
-      glow: "rgba(16,185,129,0.3)",
-    },
-    {
-      key: "alerts" as const,
-      label: "View Alerts",
-      desc: alertItems.length > 0 ? `${alertItems.length} alert${alertItems.length > 1 ? "s" : ""} need attention` : "No active alerts",
-      icon: AlertCircle,
-      gradient: "linear-gradient(135deg, #ea580c 0%, #fb923c 100%)",
-      shadow: "0 8px 24px rgba(234,88,12,0.4)",
-      glow: "rgba(249,115,22,0.3)",
-    },
-  ]
-
   return (
-    <div className="space-y-6" style={{ background: "transparent" }}>
-
-      {/* ── WELCOME BANNER ── */}
+    <div className="space-y-8">
       <div
-        className="relative overflow-hidden rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-        style={{ background: "linear-gradient(135deg, #1a0533 0%, #3b0764 40%, #341746 100%)" }}
+        className="p-6 rounded-xl border space-y-4"
+        style={{
+          background: COLORS.bgWhite,
+          borderColor: COLORS.border
+        }}
       >
-        {/* Decorative orb */}
-        <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full opacity-10 pointer-events-none"
-          style={{ background: "radial-gradient(circle, #a855f7 0%, transparent 70%)" }} />
-
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-1">
-            <span
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
-              style={{ background: "rgba(168,85,247,0.25)", color: "#d8b4fe", border: "1px solid rgba(168,85,247,0.35)" }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse inline-block" />
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold" style={{ color: COLORS.textPrimary }}>
               {dashboardScopeLabel}
-            </span>
-          </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">
-            Welcome back{user?.name ? `, ${user.name}` : ""}!
-          </h1>
-          <div className="flex items-center gap-1.5 mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
-            <Calendar className="w-3.5 h-3.5" />
-            <span className="text-sm">{today}</span>
-          </div>
-        </div>
-
-        {/* PDF Export — compact */}
-        <div
-          className="relative z-10 flex flex-col gap-3 sm:items-end"
-          style={{ minWidth: 260 }}
-        >
-          <div className="flex gap-2">
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-semibold" style={{ color: "rgba(255,255,255,0.55)" }}>From</label>
-              <input
-                type="date"
-                value={exportStartDate}
-                onChange={(e) => setExportStartDate(e.target.value)}
-                className="px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-                style={{ background: "rgba(255,255,255,0.12)", color: "#fff", border: "1px solid rgba(255,255,255,0.15)", colorScheme: "dark" }}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-semibold" style={{ color: "rgba(255,255,255,0.55)" }}>To</label>
-              <input
-                type="date"
-                value={exportEndDate}
-                onChange={(e) => setExportEndDate(e.target.value)}
-                className="px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-                style={{ background: "rgba(255,255,255,0.12)", color: "#fff", border: "1px solid rgba(255,255,255,0.15)", colorScheme: "dark" }}
-              />
-            </div>
+            </h2>
+            <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+              Select a start and end date, then export the scoped dashboard data as PDF.
+            </p>
           </div>
           <button
             type="button"
             onClick={handleExportPdf}
             disabled={exportingPdf || loading || !isExportRangeValid}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 hover:-translate-y-0.5"
+            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg font-bold transition-all duration-200"
             style={{
-              background: isExportRangeValid && !exportingPdf && !loading
-                ? "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)"
-                : "rgba(255,255,255,0.1)",
-              color: "#fff",
-              opacity: exportingPdf || loading || !isExportRangeValid ? 0.6 : 1,
-              boxShadow: isExportRangeValid ? "0 4px 14px rgba(124,58,237,0.4)" : "none",
+              background: COLORS.gradientIndigo,
+              color: COLORS.textWhite,
+              boxShadow: COLORS.shadowPurple,
+              opacity: exportingPdf || loading || !isExportRangeValid ? 0.7 : 1
             }}
           >
-            {exportingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
-            {exportingPdf ? "Generating..." : "Download PDF"}
+            {exportingPdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileDown className="w-5 h-5" />}
+            {exportingPdf ? "Generating PDF..." : "Download PDF"}
           </button>
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold mb-2" style={{ color: COLORS.textPrimary }}>
+              Start date
+            </label>
+            <input
+              type="date"
+              value={exportStartDate}
+              onChange={(e) => setExportStartDate(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              style={{
+                borderColor: COLORS.border,
+                background: COLORS.bgWhite,
+                color: COLORS.textPrimary,
+              }}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-2" style={{ color: COLORS.textPrimary }}>
+              End date
+            </label>
+            <input
+              type="date"
+              value={exportEndDate}
+              onChange={(e) => setExportEndDate(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              style={{
+                borderColor: COLORS.border,
+                background: COLORS.bgWhite,
+                color: COLORS.textPrimary,
+              }}
+            />
+          </div>
+        </div>
+
+        {!isExportRangeValid ? (
+          <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+            Select a valid start date and end date to enable PDF download.
+          </p>
+        ) : null}
       </div>
 
-      {/* ── KPI STAT CARDS — full gradient, colorful ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon
           const TrendIcon = stat.trend === "up" ? TrendingUp : TrendingDown
-          const cfg = statConfig[index]
+
           return (
             <div
               key={index}
-              className="relative overflow-hidden rounded-2xl p-6 flex flex-col gap-5 transition-all duration-300 cursor-default hover:-translate-y-1"
-              style={{ background: cfg.gradient, boxShadow: cfg.shadow }}
+              className="p-7 rounded-xl border-0 transition-all duration-300 hover:scale-105 cursor-pointer"
+              style={{
+                background: gradients[index],
+                boxShadow: shadows[index]
+              }}
             >
-              {/* Big decorative circle */}
-              <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full pointer-events-none" style={{ background: cfg.decoration }} />
-              <div className="absolute -right-2 -bottom-8 w-20 h-20 rounded-full pointer-events-none" style={{ background: cfg.decoration }} />
-
-              <div className="relative flex items-center justify-between">
-                <div className="h-13 w-13 p-3 rounded-2xl flex items-center justify-center" style={{ background: cfg.icon }}>
-                  <Icon className="w-6 h-6 text-white" />
+              <div className="flex items-start justify-between mb-5">
+                <div
+                  className="p-4 rounded-lg backdrop-blur-sm"
+                  style={{ background: 'rgba(255, 255, 255, 0.25)' }}
+                >
+                  <Icon className="w-7 h-7 text-white" />
                 </div>
-                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold" style={{ background: "rgba(255,255,255,0.2)", color: "#fff" }}>
-                  <TrendIcon className="w-3.5 h-3.5" />
+                <div
+                  className="flex items-center gap-1 text-base font-bold text-white"
+                >
+                  <TrendIcon className="w-5 h-5" />
                   {stat.change}
                 </div>
               </div>
-
-              <div className="relative">
-                <div className="text-4xl font-black text-white tracking-tight">
-                  {loading
-                    ? <span className="inline-block h-9 w-16 rounded-xl animate-pulse" style={{ background: "rgba(255,255,255,0.25)" }} />
-                    : stat.value}
-                </div>
-                <div className="text-sm font-bold text-white mt-1 opacity-90">{stat.title}</div>
-                <div className="text-xs text-white opacity-60 mt-0.5">{stat.subtitle}</div>
-              </div>
+              <h3 className="text-4xl font-bold mb-2 text-white">
+                {stat.value}
+              </h3>
+              <p className="text-base font-bold mb-2 text-white opacity-90">
+                {stat.title}
+              </p>
+              <p className="text-sm text-white opacity-75">
+                {loading ? "loading..." : stat.subtitle}
+              </p>
             </div>
           )
         })}
       </div>
 
-      {/* ── QUICK ACTIONS — bold gradient cards ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {quickActionConfig.map(({ key, label, desc, icon: Icon, gradient, shadow }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setActiveQuickAction(key)}
-            className="relative overflow-hidden rounded-2xl p-6 text-left transition-all duration-300 hover:-translate-y-1 group"
-            style={{ background: gradient, boxShadow: shadow }}
-          >
-            <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.08)" }} />
-            <div className="absolute right-4 bottom-4 w-16 h-16 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.06)" }} />
-
-            <div className="relative flex items-start justify-between gap-3">
-              <div className="h-14 w-14 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,255,255,0.22)" }}>
-                <Icon className="w-7 h-7 text-white" />
-              </div>
-              <div className="h-8 w-8 rounded-xl flex items-center justify-center transition-transform group-hover:translate-x-0.5" style={{ background: "rgba(255,255,255,0.15)" }}>
-                <ArrowRight className="w-4 h-4 text-white" />
-              </div>
-            </div>
-
-            <div className="relative mt-4">
-              <div className="text-base font-black text-white">{label}</div>
-              <div className="text-xs text-white opacity-70 mt-1">{desc}</div>
-            </div>
-          </button>
-        ))}
-      </div>
-
-      {/* ── COMPLIANCE SCORE + MODULE BREAKDOWN ── */}
-      {(() => {
-        // dashboardDocs is already active-only (no archived) — no extra filter needed
-        const total = dashboardDocs.length
-        const approved = dashboardDocs.filter((d) => d.approved).length
-        const score = total > 0 ? Math.round((approved / total) * 100) : 0
-        const radius = 54
-        const circumference = 2 * Math.PI * radius
-        const offset = circumference - (score / 100) * circumference
-
-        // Group docs by module, sort by count desc
-        const moduleMap: Record<string, number> = {}
-        dashboardDocs
-          .forEach((d) => { if (d._module) moduleMap[d._module] = (moduleMap[d._module] || 0) + 1 })
-        const topModules = Object.entries(moduleMap).sort((a, b) => b[1] - a[1])
-        const maxCount = topModules[0]?.[1] || 1
-
-        const moduleColors = [
-          "linear-gradient(90deg,#7c3aed,#a855f7)",
-          "linear-gradient(90deg,#059669,#10b981)",
-          "linear-gradient(90deg,#2563eb,#3b82f6)",
-          "linear-gradient(90deg,#ea580c,#f97316)",
-          "linear-gradient(90deg,#db2777,#f472b6)",
-          "linear-gradient(90deg,#0891b2,#22d3ee)",
-          "linear-gradient(90deg,#65a30d,#84cc16)",
-        ]
-
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* Compliance Ring */}
-            <div
-              className="rounded-2xl p-6 flex items-center gap-6 relative overflow-hidden"
-              style={{ background: "linear-gradient(135deg,#1a0533 0%,#3b0764 60%,#341746 100%)", boxShadow: "0 8px 32px rgba(124,58,237,0.35)" }}
-            >
-              <div className="absolute -right-10 -top-10 w-44 h-44 rounded-full pointer-events-none" style={{ background: "rgba(168,85,247,0.12)" }} />
-              <div className="absolute -left-6 -bottom-6 w-28 h-28 rounded-full pointer-events-none" style={{ background: "rgba(168,85,247,0.08)" }} />
-
-              {/* SVG Ring */}
-              <div className="relative shrink-0">
-                <svg width="140" height="140" viewBox="0 0 140 140">
-                  <circle cx="70" cy="70" r={radius} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="12" />
-                  <circle
-                    cx="70" cy="70" r={radius} fill="none"
-                    stroke="url(#complianceGrad)" strokeWidth="12"
-                    strokeDasharray={circumference} strokeDashoffset={loading ? circumference : offset}
-                    strokeLinecap="round" transform="rotate(-90 70 70)"
-                    style={{ transition: "stroke-dashoffset 1s ease" }}
-                  />
-                  <defs>
-                    <linearGradient id="complianceGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#a855f7" />
-                      <stop offset="100%" stopColor="#c084fc" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-3xl font-black text-white">{loading ? "—" : `${score}%`}</span>
-                  <span className="text-[10px] text-white opacity-55 font-semibold uppercase tracking-wide">Score</span>
-                </div>
-              </div>
-
-              <div className="relative z-10 flex-1">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold mb-3"
-                  style={{ background: "rgba(168,85,247,0.25)", color: "#d8b4fe", border: "1px solid rgba(168,85,247,0.3)" }}>
-                  <ShieldCheck className="w-3 h-3" /> ISO Compliance
-                </div>
-                <h3 className="text-2xl font-black text-white leading-tight">Compliance<br />Score</h3>
-                <p className="text-xs text-white mt-2 leading-relaxed" style={{ opacity: 0.6 }}>
-                  {loading ? "Loading..." : `${approved} of ${total} documents approved`}
-                </p>
-                <div className="mt-3 flex gap-3">
-                  {[
-                    { label: "Approved", val: approved, color: "#4ade80" },
-                    { label: "Pending", val: Math.max(total - approved, 0), color: "#fb923c" },
-                  ].map((s) => (
-                    <div key={s.label}>
-                      <div className="text-xl font-black" style={{ color: s.color }}>{loading ? "—" : s.val}</div>
-                      <div className="text-[10px] text-white opacity-50 font-semibold">{s.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Module Breakdown bars */}
-            <div
-              className="rounded-2xl p-6"
-              style={{ background: "#ffffff", border: "1px solid #e9d5ff", boxShadow: "0 4px 16px rgba(124,58,237,0.08)" }}
-            >
-              <div className="flex items-center gap-2 mb-5">
-                <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
-                  <BarChart2 className="w-4 h-4 text-white" />
-                </div>
-                <span className="font-black text-base" style={{ color: "#4c1d95" }}>Module Breakdown</span>
-                <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: "#faf5ff", color: "#7c3aed", border: "1px solid #e9d5ff" }}>
-                  {topModules.length} modules
-                </span>
-              </div>
-
-              {topModules.length === 0 ? (
-                <div className="py-6 text-center text-sm" style={{ color: COLORS.textSecondary }}>
-                  {loading ? "Loading modules..." : "No module data yet."}
-                </div>
-              ) : (
-                <div className="space-y-3 overflow-y-auto pr-1" style={{ maxHeight: 280 }}>
-                  {topModules.map(([mod, count], i) => (
-                    <div key={mod}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-semibold capitalize truncate max-w-[60%]" style={{ color: COLORS.textPrimary }}>
-                          {PDF_MODULE_LABELS[mod] || mod}
-                        </span>
-                        <span className="text-xs font-black px-2 py-0.5 rounded-full" style={{ background: "#faf5ff", color: "#7c3aed" }}>{count}</span>
-                      </div>
-                      <div className="h-2.5 rounded-full overflow-hidden" style={{ background: "#f3e8ff" }}>
-                        <div
-                          className="h-full rounded-full transition-all duration-700"
-                          style={{ width: `${Math.max((count / maxCount) * 100, 4)}%`, background: moduleColors[i % moduleColors.length] }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )
-      })()}
-
-      {/* ── SYSTEM HEALTH STRIP — dynamic ── */}
-      {(() => {
-        // dashboardDocs is already active-only — no extra filter needed
-        const totalDocs = dashboardDocs.length
-        const approvedDocs = dashboardDocs.filter((d) => d.approved).length
-        const compliancePct = totalDocs > 0 ? Math.round((approvedDocs / totalDocs) * 100) : 0
-        const uniqueModules = new Set(dashboardDocs.map((d) => d._module).filter(Boolean)).size
-        const activityCount = recentActivities.length
-
-        const healthItems = [
-          {
-            icon: Activity,
-            label: "Live Activity",
-            value: loading ? "—" : `${activityCount} events`,
-            sub: activityCount > 0 ? "Active" : "No events yet",
-            gradient: "linear-gradient(135deg,#059669,#10b981)",
-            shadow: "0 4px 14px rgba(5,150,105,0.3)",
-            pulse: activityCount > 0,
-          },
-          {
-            icon: Zap,
-            label: "Active Modules",
-            value: loading ? "—" : `${uniqueModules} modules`,
-            sub: uniqueModules > 0 ? "In use" : "None yet",
-            gradient: "linear-gradient(135deg,#2563eb,#3b82f6)",
-            shadow: "0 4px 14px rgba(37,99,235,0.3)",
-            pulse: uniqueModules > 0,
-          },
-          {
-            icon: Star,
-            label: "Pending Reviews",
-            value: loading ? "—" : `${pendingReviewDocs.length} docs`,
-            sub: pendingReviewDocs.length === 0 ? "All clear" : "Needs attention",
-            gradient: pendingReviewDocs.length > 0
-              ? "linear-gradient(135deg,#d97706,#fbbf24)"
-              : "linear-gradient(135deg,#059669,#10b981)",
-            shadow: pendingReviewDocs.length > 0
-              ? "0 4px 14px rgba(217,119,6,0.3)"
-              : "0 4px 14px rgba(5,150,105,0.3)",
-            pulse: pendingReviewDocs.length > 0,
-          },
-          {
-            icon: BookOpen,
-            label: "Compliance Rate",
-            value: loading ? "—" : `${compliancePct}%`,
-            sub: compliancePct >= 80 ? "Audit Ready" : compliancePct >= 50 ? "In Progress" : "Needs Work",
-            gradient: compliancePct >= 80
-              ? "linear-gradient(135deg,#7c3aed,#a855f7)"
-              : compliancePct >= 50
-              ? "linear-gradient(135deg,#d97706,#fbbf24)"
-              : "linear-gradient(135deg,#dc2626,#f87171)",
-            shadow: "0 4px 14px rgba(124,58,237,0.3)",
-            pulse: true,
-          },
-        ]
-
-        return (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {healthItems.map(({ icon: Icon, label, value, sub, gradient, shadow, pulse }) => (
-              <div
-                key={label}
-                className="relative overflow-hidden rounded-2xl px-5 py-4 flex items-center gap-3"
-                style={{ background: gradient, boxShadow: shadow }}
-              >
-                <div className="absolute -right-3 -bottom-3 w-16 h-16 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
-                <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,255,255,0.22)" }}>
-                  <Icon className="w-5 h-5 text-white" />
-                </div>
-                <div className="relative z-10 flex-1 min-w-0">
-                  <div className="text-sm font-black text-white truncate">{value}</div>
-                  <div className="text-[10px] text-white font-semibold mt-0.5 truncate" style={{ opacity: 0.65 }}>{label}</div>
-                  <div className="text-[10px] text-white font-medium mt-0.5 truncate" style={{ opacity: 0.45 }}>{sub}</div>
-                </div>
-                {pulse && <div className="ml-auto relative z-10 h-2 w-2 rounded-full bg-white animate-pulse shrink-0" />}
-              </div>
-            ))}
-          </div>
-        )
-      })()}
-
-      {/* ── MAIN CONTENT ROW ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-        {/* Recent Activity — 2/3 width */}
+      {/* Compliance score + Module breakdown */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div
-          id="dashboard-recent-activity"
-          className="lg:col-span-2 rounded-2xl overflow-hidden"
-          style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}`, boxShadow: "0 4px 16px rgba(0,0,0,0.06)" }}
+          className="rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6 relative overflow-hidden border"
+          style={{
+            background: "linear-gradient(135deg,#1a0533 0%,#3b0764 60%,#341746 100%)",
+            borderColor: "rgba(124,58,237,0.35)",
+            boxShadow: "0 8px 32px rgba(124,58,237,0.25)",
+          }}
         >
-          {/* Colourful card header */}
-          <div
-            className="px-6 py-4 flex items-center justify-between"
-            style={{ background: "linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%)", borderBottom: `1px solid #e9d5ff` }}
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
-                <Clock className="w-4 h-4 text-white" />
-              </div>
-              <span className="font-bold text-base" style={{ color: "#4c1d95" }}>Recent Activity</span>
-              {recentActivities.length > 0 && (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-black" style={{ background: "#7c3aed", color: "#fff" }}>
-                  {recentActivities.length}
-                </span>
-              )}
+          <div className="relative w-36 h-36 shrink-0">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="10" />
+              <circle
+                cx="60"
+                cy="60"
+                r="54"
+                fill="none"
+                stroke="url(#dashComplianceGrad)"
+                strokeWidth="10"
+                strokeLinecap="round"
+                strokeDasharray={`${(complianceScore / 100) * 339.3} 339.3`}
+              />
+              <defs>
+                <linearGradient id="dashComplianceGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#7c3aed" />
+                  <stop offset="100%" stopColor="#a855f7" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+              <span className="text-3xl font-black">{loading ? "—" : `${complianceScore}%`}</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">Compliance</span>
             </div>
           </div>
+          <div className="flex-1 text-center sm:text-left">
+            <h3 className="text-lg font-black text-white">ISO compliance score</h3>
+            <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
+              Approved documents vs active records across all modules.
+            </p>
+            <p className="text-xs mt-3 font-semibold" style={{ color: "rgba(255,255,255,0.45)" }}>
+              {dashboardDocs.filter((d) => d.approved).length} approved · {dashboardDocs.length} total active
+            </p>
+          </div>
+        </div>
 
-          {/* Activity list — scrollable */}
-          <div className="p-4 space-y-2 overflow-y-auto" style={{ maxHeight: 360 }}>
-            {recentActivities.length === 0 ? (
-              <div className="py-12 text-center">
-                {loading ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="h-12 w-12 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
-                      <RefreshCw className="w-5 h-5 text-white animate-spin" />
-                    </div>
-                    <span className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Loading activity...</span>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="h-12 w-12 rounded-full flex items-center justify-center" style={{ background: COLORS.gray100 }}>
-                      <Clock className="w-5 h-5" style={{ color: COLORS.gray400 }} />
-                    </div>
-                    <span className="text-sm" style={{ color: COLORS.textSecondary }}>No recent activity found.</span>
-                  </div>
-                )}
-              </div>
+        <div
+          className="rounded-2xl p-5 border"
+          style={{ background: COLORS.bgWhite, borderColor: COLORS.border }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-bold" style={{ color: COLORS.textPrimary }}>
+              Module breakdown
+            </h3>
+            <span className="text-xs font-semibold" style={{ color: COLORS.textSecondary }}>
+              {moduleBreakdown.length} modules
+            </span>
+          </div>
+          <div className="space-y-3 max-h-[280px] overflow-y-auto pr-1">
+            {moduleBreakdown.length === 0 ? (
+              <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                {loading ? "Loading…" : "No module data yet."}
+              </p>
             ) : (
-              recentActivities.map((activity, index) => {
-                const hue = (index * 53 + 270) % 360
+              moduleBreakdown.map(([key, count], i) => {
+                const max = moduleBreakdown[0]?.[1] || 1
+                const pct = Math.round((count / max) * 100)
                 return (
-                  <div
-                    key={index}
-                    className="flex items-start gap-3 p-3 rounded-xl border transition-all hover:shadow-sm"
-                    style={{
-                      background: index % 2 === 0 ? "#faf5ff" : COLORS.bgWhite,
-                      borderColor: index % 2 === 0 ? "#e9d5ff" : COLORS.border,
-                    }}
-                  >
-                    <div
-                      className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-black shrink-0"
-                      style={{ background: `hsl(${hue},70%,88%)`, color: `hsl(${hue},60%,30%)` }}
-                    >
-                      {(activity.user || "?").charAt(0).toUpperCase()}
+                  <div key={key}>
+                    <div className="flex justify-between text-xs font-semibold mb-1">
+                      <span style={{ color: COLORS.textPrimary }}>{PDF_MODULE_LABELS[key] || key}</span>
+                      <span style={{ color: COLORS.textSecondary }}>{count}</span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-sm font-bold" style={{ color: COLORS.textPrimary }}>{activity.action}</span>
-                        <span
-                          className="inline-block px-2 py-0.5 rounded-lg text-xs font-semibold truncate max-w-[200px]"
-                          style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "#fff" }}
-                        >
-                          {activity.item}
-                        </span>
-                      </div>
-                      <p className="text-xs mt-0.5" style={{ color: COLORS.textLight }}>
-                        by <span className="font-semibold" style={{ color: COLORS.textSecondary }}>{activity.user}</span>
-                        {" · "}{activity.time}
-                      </p>
+                    <div className="h-2 rounded-full overflow-hidden" style={{ background: COLORS.bgGray }}>
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${pct}%`,
+                          background: moduleBarColors[i % moduleBarColors.length],
+                        }}
+                      />
                     </div>
                   </div>
                 )
@@ -1650,330 +1408,339 @@ export function DashboardContent() {
             )}
           </div>
         </div>
+      </div>
 
-        {/* Document Status — 1/3 width */}
-        <div className="flex flex-col gap-4">
-
-          {/* Total Documents — static info */}
-          {[
-            { label: "Total Documents", value: dashboardDocs.length, gradient: "linear-gradient(135deg,#7c3aed,#a855f7)", shadow: "0 4px 14px rgba(124,58,237,0.3)", sub: "active records" },
-            { label: "Pending Review", value: pendingReviewDocs.length, gradient: "linear-gradient(135deg,#ea580c,#f97316)", shadow: "0 4px 14px rgba(234,88,12,0.3)", sub: "awaiting sign-off" },
-          ].map((item) => (
+      {/* System health */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          {
+            icon: Activity,
+            label: "Live activity",
+            value: loading ? "—" : `${healthMetrics.activityCount} events`,
+            sub: healthMetrics.activityCount > 0 ? "Recent" : "None yet",
+            gradient: "linear-gradient(135deg,#059669,#10b981)",
+          },
+          {
+            icon: Zap,
+            label: "Active modules",
+            value: loading ? "—" : `${healthMetrics.modules}`,
+            sub: "In use",
+            gradient: "linear-gradient(135deg,#2563eb,#3b82f6)",
+          },
+          {
+            icon: AlertCircle,
+            label: "Pending reviews",
+            value: loading ? "—" : `${healthMetrics.pending}`,
+            sub: healthMetrics.pending > 0 ? "Needs attention" : "All clear",
+            gradient:
+              healthMetrics.pending > 0
+                ? "linear-gradient(135deg,#ea580c,#f97316)"
+                : "linear-gradient(135deg,#64748b,#94a3b8)",
+          },
+          {
+            icon: ShieldCheck,
+            label: "Compliance rate",
+            value: loading ? "—" : `${healthMetrics.pct}%`,
+            sub: healthMetrics.pct >= 80 ? "Strong" : healthMetrics.pct >= 50 ? "Monitor" : "Review",
+            gradient: "linear-gradient(135deg,#7c3aed,#a855f7)",
+          },
+        ].map((item) => {
+          const Icon = item.icon
+          return (
             <div
               key={item.label}
-              className="relative overflow-hidden rounded-2xl px-5 py-4 flex items-center gap-4"
-              style={{ background: item.gradient, boxShadow: item.shadow }}
+              className="rounded-2xl p-4 text-white relative overflow-hidden"
+              style={{ background: item.gradient, boxShadow: "0 4px 14px rgba(0,0,0,0.12)" }}
             >
-              <div className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
-              <div className="text-3xl font-black text-white relative z-10 min-w-[2.5rem] text-center">
-                {loading ? "—" : item.value}
-              </div>
-              <div className="relative z-10">
-                <div className="text-sm font-bold text-white">{item.label}</div>
-                <div className="text-xs text-white opacity-55 mt-0.5">{item.sub}</div>
-              </div>
+              <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-20 bg-white" />
+              <Icon className="w-5 h-5 mb-3 opacity-90 relative z-10" />
+              <p className="text-xs font-bold uppercase tracking-wide opacity-80 relative z-10">{item.label}</p>
+              <p className="text-xl font-black mt-1 relative z-10">{item.value}</p>
+              <p className="text-[11px] opacity-75 mt-0.5 relative z-10">{item.sub}</p>
             </div>
-          ))}
+          )
+        })}
+      </div>
 
-          {/* Archived — clickable, opens doc list */}
-          <button
-            type="button"
-            onClick={() => setActiveDocList("archived")}
-            className="relative overflow-hidden rounded-2xl px-5 py-4 flex items-center gap-4 text-left group transition-all duration-200 hover:-translate-y-0.5"
-            style={{ background: "linear-gradient(135deg,#475569,#64748b)", boxShadow: "0 4px 14px rgba(71,85,105,0.25)" }}
-          >
-            <div className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
-            <div className="text-3xl font-black text-white relative z-10 min-w-[2.5rem] text-center">
-              {loading ? "—" : archivedDocs.length}
-            </div>
-            <div className="relative z-10 flex-1">
-              <div className="text-sm font-bold text-white">Archived</div>
-              <div className="text-xs text-white opacity-55 mt-0.5">
-                {archivedDocs.length > 0 ? "tap to view all" : "none archived"}
+      {/* Document status + Recent documents */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="xl:col-span-1 space-y-4">
+          {[
+            {
+              label: "Total documents",
+              value: dashboardDocs.length,
+              sub: "Active records",
+              gradient: "linear-gradient(135deg,#7c3aed,#a855f7)",
+            },
+            {
+              label: "Pending review",
+              value: pendingReviewDocs.length,
+              sub: "Awaiting sign-off",
+              gradient: "linear-gradient(135deg,#ea580c,#f97316)",
+            },
+            {
+              label: "Archived",
+              value: archivedDocs.length,
+              sub: "Stored records",
+              gradient: "linear-gradient(135deg,#475569,#64748b)",
+              onClick: () => setActiveDocList("archived"),
+            },
+            {
+              label: "Stale (30+ days)",
+              value: staleDocs.length,
+              sub: "May need refresh",
+              gradient: "linear-gradient(135deg,#2563eb,#3b82f6)",
+              onClick: () => setActiveDocList("stale"),
+            },
+          ].map((card) => {
+            const inner = (
+              <>
+                <div className="text-3xl font-black text-white min-w-[2.5rem] text-center">
+                  {loading ? "—" : card.value}
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-white">{card.label}</div>
+                  <div className="text-xs text-white opacity-60">{card.sub}</div>
+                </div>
+              </>
+            )
+            const className = `w-full text-left rounded-2xl px-5 py-4 flex items-center gap-4 transition-transform ${card.onClick ? "hover:scale-[1.02] cursor-pointer" : "cursor-default"
+              }`
+            const style = {
+              background: card.gradient,
+              boxShadow: "0 4px 14px rgba(0,0,0,0.15)",
+              opacity: card.onClick || card.value > 0 ? 1 : 0.85,
+            }
+            return card.onClick ? (
+              <button key={card.label} type="button" onClick={card.onClick} className={className} style={style}>
+                {inner}
+              </button>
+            ) : (
+              <div key={card.label} className={className} style={style}>
+                {inner}
               </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-white opacity-60 relative z-10 transition-transform group-hover:translate-x-0.5 shrink-0" />
-          </button>
+            )
+          })}
+        </div>
 
-          {/* Stale — clickable, opens doc list */}
-          <button
-            type="button"
-            onClick={() => setActiveDocList("stale")}
-            className="relative overflow-hidden rounded-2xl px-5 py-4 flex items-center gap-4 text-left group transition-all duration-200 hover:-translate-y-0.5"
-            style={{ background: "linear-gradient(135deg,#2563eb,#3b82f6)", boxShadow: "0 4px 14px rgba(37,99,235,0.3)" }}
-          >
-            <div className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
-            <div className="text-3xl font-black text-white relative z-10 min-w-[2.5rem] text-center">
-              {loading ? "—" : staleDocs.length}
-            </div>
-            <div className="relative z-10 flex-1">
-              <div className="text-sm font-bold text-white">Stale (30+ days)</div>
-              <div className="text-xs text-white opacity-55 mt-0.5">
-                {staleDocs.length > 0 ? "tap to view all" : "all up to date"}
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-white opacity-60 relative z-10 transition-transform group-hover:translate-x-0.5 shrink-0" />
-          </button>
+        <div
+          className="xl:col-span-2 rounded-2xl p-6 border"
+          style={{ background: COLORS.bgWhite, borderColor: COLORS.border }}
+        >
+          <h3 className="text-lg font-bold mb-4" style={{ color: COLORS.textPrimary }}>
+            Recent documents
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {recentDocsGrid.length === 0 ? (
+              <p className="text-sm col-span-2" style={{ color: COLORS.textSecondary }}>
+                {loading ? "Loading…" : "No documents yet."}
+              </p>
+            ) : (
+              recentDocsGrid.map((doc) => (
+                <button
+                  key={doc._id}
+                  type="button"
+                  onClick={() => router.push(getDocumentHref(doc))}
+                  className="text-left p-4 rounded-xl border transition-all hover:shadow-md"
+                  style={{ borderColor: COLORS.border, background: COLORS.bgGrayLight }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}
+                    >
+                      <BookOpen className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-sm truncate" style={{ color: COLORS.textPrimary }}>
+                        {doc.title || "Untitled"}
+                      </p>
+                      <p className="text-xs mt-0.5" style={{ color: COLORS.textSecondary }}>
+                        {PDF_MODULE_LABELS[doc._module || ""] || doc._module || "—"} ·{" "}
+                        {formatTimeAgo(doc.updatedAt || doc.createdAt)}
+                      </p>
+                      <span
+                        className="inline-block mt-2 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        style={{
+                          background: doc.approved ? `${COLORS.green500}22` : `${COLORS.orange500}22`,
+                          color: doc.approved ? COLORS.green600 : COLORS.orange700,
+                        }}
+                      >
+                        {doc.approved ? "Approved" : "Pending"}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ── RECENT DOCUMENTS GRID ── */}
-      {(() => {
-        const recentDocs = [...dashboardDocs]
-          .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime())
-          .slice(0, 6)
-
-        const docColors = [
-          { gradient: "linear-gradient(135deg,#7c3aed,#a855f7)", light: "#faf5ff", border: "#e9d5ff", text: "#6b21a8" },
-          { gradient: "linear-gradient(135deg,#059669,#10b981)", light: "#ecfdf5", border: "#a7f3d0", text: "#065f46" },
-          { gradient: "linear-gradient(135deg,#2563eb,#3b82f6)", light: "#eff6ff", border: "#bfdbfe", text: "#1e40af" },
-          { gradient: "linear-gradient(135deg,#ea580c,#f97316)", light: "#fff7ed", border: "#fed7aa", text: "#9a3412" },
-          { gradient: "linear-gradient(135deg,#db2777,#f472b6)", light: "#fdf2f8", border: "#fbcfe8", text: "#9d174d" },
-          { gradient: "linear-gradient(135deg,#0891b2,#22d3ee)", light: "#ecfeff", border: "#a5f3fc", text: "#155e75" },
-        ]
-
-        return (
-          <div
-            className="rounded-2xl overflow-hidden"
-            style={{ background: "#fff", border: "1px solid #e9d5ff", boxShadow: "0 4px 16px rgba(124,58,237,0.08)" }}
-          >
-            {/* Header */}
-            <div
-              className="px-6 py-4 flex items-center justify-between"
-              style={{ background: "linear-gradient(135deg,#faf5ff 0%,#f3e8ff 100%)", borderBottom: "1px solid #e9d5ff" }}
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
-                  <FileText className="w-4 h-4 text-white" />
-                </div>
-                <span className="font-black text-base" style={{ color: "#4c1d95" }}>Recent Documents</span>
-                {recentDocs.length > 0 && (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-black" style={{ background: "#7c3aed", color: "#fff" }}>
-                    {recentDocs.length}
-                  </span>
-                )}
-              </div>
+      {/* Recent Activity */}
+      <div
+        id="dashboard-recent-activity"
+        className="p-7 rounded-xl border"
+        style={{
+          background: COLORS.bgWhite,
+          borderColor: COLORS.border
+        }}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold" style={{ color: COLORS.textPrimary }}>
+            Recent Activity
+          </h2>
+        </div>
+        <div className="space-y-4 max-h-[360px] overflow-y-auto pr-1">
+          {visibleActivities.length === 0 ? (
+            <div className="p-5 rounded-lg" style={{ background: COLORS.bgGray }}>
+              <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                {loading ? "Loading recent activity..." : "No recent activity found."}
+              </p>
             </div>
-
-            <div className="p-5">
-              {recentDocs.length === 0 ? (
-                <div className="py-10 text-center">
-                  {loading ? (
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="h-12 w-12 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
-                        <RefreshCw className="w-5 h-5 text-white animate-spin" />
-                      </div>
-                      <span className="text-sm" style={{ color: COLORS.textSecondary }}>Loading documents...</span>
-                    </div>
-                  ) : (
-                    <span className="text-sm" style={{ color: COLORS.textSecondary }}>No documents found.</span>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {recentDocs.map((doc, i) => {
-                    const cfg = docColors[i % docColors.length]
-                    const isApproved = Boolean(doc.approved)
-                    const isArchived = Boolean(doc.archived || doc.isArchived)
-                    const statusLabel = isArchived ? "Archived" : isApproved ? "Approved" : "Pending"
-                    const statusStyle = isArchived
-                      ? { bg: "#f1f5f9", color: "#475569" }
-                      : isApproved
-                      ? { bg: "#dcfce7", color: "#16a34a" }
-                      : { bg: "#fff7ed", color: "#ea580c" }
-
-                    return (
-                      <button
-                        key={doc._id}
-                        type="button"
-                        onClick={() => handleOpenDocument(doc)}
-                        className="text-left rounded-2xl p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md group"
-                        style={{ background: cfg.light, border: `1px solid ${cfg.border}` }}
-                      >
-                        <div className="flex items-start justify-between gap-2 mb-3">
-                          <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: cfg.gradient }}>
-                            <FileText className="w-5 h-5 text-white" />
-                          </div>
-                          <span
-                            className="text-[10px] font-black px-2 py-1 rounded-full"
-                            style={{ background: statusStyle.bg, color: statusStyle.color }}
-                          >
-                            {statusLabel}
-                          </span>
-                        </div>
-                        <div className="text-sm font-black leading-tight line-clamp-2 mb-1" style={{ color: cfg.text }}>
-                          {doc.title || "Untitled Document"}
-                        </div>
-                        <div className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: cfg.text, opacity: 0.6 }}>
-                          {PDF_MODULE_LABELS[doc._module || ""] || "Document"}
-                        </div>
-                        <div className="text-[10px] mt-1" style={{ color: COLORS.textLight }}>
-                          {formatTimeAgo(doc.updatedAt || doc.createdAt)}
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        )
-      })()}
-
-      {/* ── ARCHIVED / STALE DOC LIST MODAL ── */}
-      {activeDocList ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(6px)" }}
-          onClick={() => setActiveDocList(null)}
-        >
-          <div
-            className="w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden"
-            style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal header */}
-            <div
-              className="relative overflow-hidden flex items-center justify-between px-6 py-5"
-              style={{
-                background: activeDocList === "archived"
-                  ? "linear-gradient(135deg,#475569,#64748b)"
-                  : "linear-gradient(135deg,#2563eb,#3b82f6)",
-              }}
-            >
-              <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
-              <div className="relative">
-                <h3 className="text-lg font-black text-white">
-                  {activeDocList === "archived" ? "Archived Documents" : "Stale Documents (30+ days)"}
-                </h3>
-                <p className="text-xs mt-0.5 text-white" style={{ opacity: 0.6 }}>
-                  {activeDocList === "archived"
-                    ? `${archivedDocs.length} archived record${archivedDocs.length !== 1 ? "s" : ""} found`
-                    : `${staleDocs.length} document${staleDocs.length !== 1 ? "s" : ""} not updated in 30+ days`}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveDocList(null)}
-                className="relative px-4 py-2 rounded-xl text-sm font-bold transition-all hover:opacity-80"
-                style={{ background: "rgba(255,255,255,0.2)", color: "#fff" }}
+          ) : (
+            visibleActivities.map((activity, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between p-5 rounded-lg transition-all duration-200 hover:bg-opacity-50"
+                style={{ background: COLORS.bgGray }}
               >
-                Close
-              </button>
-            </div>
-
-            {/* Doc list */}
-            <div className="p-5">
-              {(activeDocList === "archived" ? archivedDocs : staleDocs).length === 0 ? (
-                <div className="py-10 text-center flex flex-col items-center gap-3">
-                  <div
-                    className="h-14 w-14 rounded-2xl flex items-center justify-center"
-                    style={{ background: activeDocList === "archived" ? "linear-gradient(135deg,#475569,#64748b)" : "linear-gradient(135deg,#2563eb,#3b82f6)" }}
-                  >
-                    <CheckCircle className="w-7 h-7 text-white" />
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="font-bold text-base" style={{ color: COLORS.textPrimary }}>
+                      {activity.action}
+                    </span>
+                    <span
+                      className="px-3 py-1 rounded text-sm font-semibold"
+                      style={{
+                        background: `${COLORS.primary}15`,
+                        color: COLORS.primary
+                      }}
+                    >
+                      {activity.item}
+                    </span>
                   </div>
-                  <p className="text-sm font-semibold" style={{ color: COLORS.textSecondary }}>
-                    {activeDocList === "archived" ? "No archived documents." : "All documents are up to date!"}
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                    by {activity.user} • {activity.time}
                   </p>
                 </div>
-              ) : (
-                <div className="space-y-2 max-h-[26rem] overflow-y-auto pr-1">
-                  {(activeDocList === "archived" ? archivedDocs : staleDocs).map((doc, i) => {
-                    const isStaleView = activeDocList === "stale"
-                    const lastUpdated = doc.updatedAt || doc.createdAt
-                    return (
-                      <button
-                        key={doc._id || i}
-                        type="button"
-                        onClick={() => { handleOpenDocument(doc); setActiveDocList(null) }}
-                        className="w-full text-left p-4 rounded-xl border transition-all hover:shadow-md flex items-center gap-3"
-                        style={{
-                          borderColor: activeDocList === "archived" ? "#e2e8f0" : "#bfdbfe",
-                          background: activeDocList === "archived" ? "#f8fafc" : "#eff6ff",
-                        }}
-                      >
-                        <div
-                          className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0"
-                          style={{
-                            background: activeDocList === "archived"
-                              ? "linear-gradient(135deg,#475569,#64748b)"
-                              : "linear-gradient(135deg,#2563eb,#3b82f6)",
-                          }}
-                        >
-                          <FileText className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold truncate" style={{ color: COLORS.textPrimary }}>
-                            {doc.title || "Untitled Document"}
-                          </p>
-                          <p className="text-xs mt-0.5" style={{ color: COLORS.textSecondary }}>
-                            {PDF_MODULE_LABELS[doc._module || ""] || "Document"}
-                            {lastUpdated ? ` · Last updated ${formatTimeAgo(lastUpdated)}` : ""}
-                          </p>
-                        </div>
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          <span
-                            className="text-[10px] font-black px-2.5 py-1 rounded-full"
-                            style={{
-                              background: activeDocList === "archived" ? "#e2e8f0" : "#dbeafe",
-                              color: activeDocList === "archived" ? "#475569" : "#2563eb",
-                            }}
-                          >
-                            {isStaleView ? "Stale" : "Archived"}
-                          </span>
-                          <ArrowRight className="w-3.5 h-3.5" style={{ color: COLORS.textLight }} />
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div
+          onClick={() => setActiveQuickAction("create")}
+          className="p-7 rounded-xl border-0 cursor-pointer transition-all duration-300 hover:scale-105"
+          style={{
+            background: COLORS.gradientCyan,
+            boxShadow: COLORS.shadowBlue
+          }}
+        >
+          <div className="text-center">
+            <div
+              className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center backdrop-blur-sm"
+              style={{ background: 'rgba(255, 255, 255, 0.25)' }}
+            >
+              <FileText className="w-8 h-8 text-white" />
             </div>
+            <h3 className="font-bold text-xl mb-3 text-white">
+              Create Document
+            </h3>
+            <p className="text-base text-white opacity-90">
+              Start a new policy or procedure
+            </p>
           </div>
         </div>
-      ) : null}
 
-      {/* ── MODAL ── */}
+        <div
+          onClick={() => setActiveQuickAction("review")}
+          className="p-7 rounded-xl border-0 cursor-pointer transition-all duration-300 hover:scale-105"
+          style={{
+            background: COLORS.gradientForest,
+            boxShadow: COLORS.shadowGreen
+          }}
+        >
+          <div className="text-center">
+            <div
+              className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center backdrop-blur-sm"
+              style={{ background: 'rgba(255, 255, 255, 0.25)' }}
+            >
+              <CheckCircle className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="font-bold text-xl mb-3 text-white">
+              Review Tasks
+            </h3>
+            <p className="text-base text-white opacity-90">
+              Check pending approvals
+            </p>
+          </div>
+        </div>
+
+        <div
+          onClick={() => setActiveQuickAction("alerts")}
+          className="p-7 rounded-xl border-0 cursor-pointer transition-all duration-300 hover:scale-105"
+          style={{
+            background: COLORS.gradientPurple,
+            boxShadow: COLORS.shadowPink
+          }}
+        >
+          <div className="text-center">
+            <div
+              className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center backdrop-blur-sm"
+              style={{ background: 'rgba(255, 255, 255, 0.25)' }}
+            >
+              <AlertCircle className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="font-bold text-xl mb-3 text-white">
+              View Alerts
+            </h3>
+            <p className="text-base text-white opacity-90">
+              Check system notifications
+            </p>
+          </div>
+        </div>
+      </div>
+
       {activeQuickAction ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(15,23,42,0.55)", backdropFilter: "blur(6px)" }}
+          style={{ background: "rgba(15, 23, 42, 0.45)" }}
           onClick={() => setActiveQuickAction(null)}
         >
           <div
-            className="w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden"
-            style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}
+            className="w-full max-w-3xl rounded-2xl border shadow-2xl"
+            style={{ background: COLORS.bgWhite, borderColor: COLORS.border }}
             onClick={(event) => event.stopPropagation()}
           >
-            {/* Modal header */}
             <div
-              className="relative overflow-hidden flex items-center justify-between px-6 py-5"
-              style={{
-                background: activeQuickAction === "create"
-                  ? "linear-gradient(135deg,#7c3aed,#a855f7)"
-                  : activeQuickAction === "review"
-                  ? "linear-gradient(135deg,#059669,#10b981)"
-                  : "linear-gradient(135deg,#ea580c,#f97316)",
-              }}
+              className="flex items-center justify-between px-6 py-5 border-b"
+              style={{ borderColor: COLORS.border }}
             >
-              <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
-              <div className="relative">
-                <h3 className="text-lg font-black text-white">
-                  {activeQuickAction === "create" ? "Create Document" : activeQuickAction === "review" ? "Review Tasks" : "View Alerts"}
+              <div>
+                <h3 className="text-2xl font-bold" style={{ color: COLORS.textPrimary }}>
+                  {activeQuickAction === "create"
+                    ? "Create Document"
+                    : activeQuickAction === "review"
+                      ? "Review Tasks"
+                      : "View Alerts"}
                 </h3>
-                <p className="text-xs mt-0.5 text-white opacity-65">
+                <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
                   {activeQuickAction === "create"
                     ? "Choose where you want to create a new document."
                     : activeQuickAction === "review"
-                    ? "Open pending documents that need your attention."
-                    : "Review key dashboard alerts and follow-up actions."}
+                      ? "Open pending documents that need your attention."
+                      : "Review key dashboard alerts and follow-up actions."}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setActiveQuickAction(null)}
-                className="relative px-4 py-2 rounded-xl text-sm font-bold transition-all hover:opacity-80"
-                style={{ background: "rgba(255,255,255,0.2)", color: "#fff" }}
+                className="px-4 py-2 rounded-lg font-semibold"
+                style={{ background: COLORS.bgGray, color: COLORS.textPrimary }}
               >
                 Close
               </button>
@@ -1982,29 +1749,27 @@ export function DashboardContent() {
             <div className="p-6">
               {activeQuickAction === "create" ? (
                 createDocumentOptions.length === 0 ? (
-                  <div className="py-8 text-center">
+                  <div className="p-5 rounded-xl" style={{ background: COLORS.bgGray }}>
                     <p className="text-sm" style={{ color: COLORS.textSecondary }}>
                       You do not currently have permission to create documents from the dashboard.
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {createDocumentOptions.map((option) => (
                       <button
                         key={option.href}
                         type="button"
                         onClick={() => handleOpenCreateOption(option.href)}
-                        className="text-left p-4 rounded-xl border transition-all hover:shadow-md hover:-translate-y-0.5 flex items-center gap-3"
-                        style={{ borderColor: "#e9d5ff", background: "#faf5ff" }}
+                        className="text-left p-5 rounded-xl border transition-all hover:shadow-md"
+                        style={{ borderColor: COLORS.border, background: COLORS.bgGrayLight }}
                       >
-                        <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
-                          <FileText className="w-4 h-4 text-white" />
-                        </div>
-                        <div>
-                          <div className="text-sm font-bold" style={{ color: COLORS.textPrimary }}>{option.label}</div>
-                          <div className="text-xs" style={{ color: COLORS.textSecondary }}>{option.description}</div>
-                        </div>
-                        <ArrowRight className="w-4 h-4 ml-auto shrink-0" style={{ color: "#7c3aed" }} />
+                        <h4 className="text-lg font-bold mb-2" style={{ color: COLORS.textPrimary }}>
+                          {option.label}
+                        </h4>
+                        <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                          {option.description}
+                        </p>
                       </button>
                     ))}
                   </div>
@@ -2013,34 +1778,37 @@ export function DashboardContent() {
 
               {activeQuickAction === "review" ? (
                 pendingReviewDocs.length === 0 ? (
-                  <div className="py-8 text-center flex flex-col items-center gap-3">
-                    <div className="h-14 w-14 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg,#059669,#10b981)" }}>
-                      <CheckCircle className="w-7 h-7 text-white" />
-                    </div>
-                    <p className="text-sm font-semibold" style={{ color: COLORS.textSecondary }}>All tasks reviewed — nothing pending!</p>
+                  <div className="p-5 rounded-xl" style={{ background: COLORS.bgGray }}>
+                    <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                      No pending review tasks were found in the current dashboard data.
+                    </p>
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
+                  <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-1">
                     {pendingReviewDocs.map((doc) => (
                       <button
                         key={doc._id}
                         type="button"
                         onClick={() => handleOpenDocument(doc)}
-                        className="w-full text-left p-4 rounded-xl border transition-all hover:shadow-md flex items-center gap-3"
-                        style={{ borderColor: "#fed7aa", background: "#fff7ed" }}
+                        className="w-full text-left p-4 rounded-xl border transition-all hover:shadow-md"
+                        style={{ borderColor: COLORS.border, background: COLORS.bgGrayLight }}
                       >
-                        <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg,#ea580c,#f97316)" }}>
-                          <FileText className="w-4 h-4 text-white" />
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <p className="text-base font-bold" style={{ color: COLORS.textPrimary }}>
+                              {doc.title || "Untitled Document"}
+                            </p>
+                            <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                              {PDF_MODULE_LABELS[doc._module || ""] || "Document"} • Last updated {formatTimeAgo(doc.updatedAt || doc.createdAt)}
+                            </p>
+                          </div>
+                          <span
+                            className="px-3 py-1 rounded-full text-xs font-bold"
+                            style={{ background: COLORS.orange100, color: COLORS.orange700 }}
+                          >
+                            Pending
+                          </span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold truncate" style={{ color: COLORS.textPrimary }}>{doc.title || "Untitled Document"}</p>
-                          <p className="text-xs mt-0.5" style={{ color: COLORS.textSecondary }}>
-                            {PDF_MODULE_LABELS[doc._module || ""] || "Document"} · {formatTimeAgo(doc.updatedAt || doc.createdAt)}
-                          </p>
-                        </div>
-                        <span className="px-2.5 py-1 rounded-full text-xs font-black shrink-0" style={{ background: "linear-gradient(135deg,#ea580c,#f97316)", color: "#fff" }}>
-                          Pending
-                        </span>
                       </button>
                     ))}
                   </div>
@@ -2049,44 +1817,117 @@ export function DashboardContent() {
 
               {activeQuickAction === "alerts" ? (
                 alertItems.length === 0 ? (
-                  <div className="py-8 text-center flex flex-col items-center gap-3">
-                    <div className="h-14 w-14 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg,#059669,#10b981)" }}>
-                      <CheckCircle className="w-7 h-7 text-white" />
-                    </div>
-                    <p className="text-sm font-semibold" style={{ color: COLORS.textSecondary }}>No alerts right now. Dashboard looks healthy!</p>
+                  <div className="p-5 rounded-xl" style={{ background: COLORS.bgGray }}>
+                    <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                      No alerts right now. Your dashboard looks healthy.
+                    </p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {alertItems.map((item, index) => (
                       <div
                         key={`${item.title}-${index}`}
-                        className="p-4 rounded-xl border flex items-start justify-between gap-4"
-                        style={{ borderColor: "#fed7aa", background: "#fff7ed" }}
+                        className="p-5 rounded-xl border"
+                        style={{ borderColor: COLORS.border, background: COLORS.bgGrayLight }}
                       >
-                        <div className="flex items-start gap-3">
-                          <div className="h-8 w-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg,#ea580c,#f97316)" }}>
-                            <AlertCircle className="w-4 h-4 text-white" />
-                          </div>
+                        <div className="flex items-start justify-between gap-4">
                           <div>
-                            <p className="text-sm font-bold" style={{ color: COLORS.textPrimary }}>{item.title}</p>
-                            <p className="text-xs mt-0.5" style={{ color: COLORS.textSecondary }}>{item.description}</p>
+                            <p className="text-base font-bold" style={{ color: COLORS.textPrimary }}>
+                              {item.title}
+                            </p>
+                            <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                              {item.description}
+                            </p>
                           </div>
+                          {item.action ? (
+                            <button
+                              type="button"
+                              onClick={() => handleAlertAction(item.action)}
+                              className="px-4 py-2 rounded-lg text-sm font-semibold"
+                              style={{ background: COLORS.primary, color: COLORS.textWhite }}
+                            >
+                              Open
+                            </button>
+                          ) : null}
                         </div>
-                        {item.action ? (
-                          <button
-                            type="button"
-                            onClick={() => handleAlertAction(item.action)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-bold shrink-0"
-                            style={{ background: "linear-gradient(135deg,#ea580c,#f97316)", color: "#fff" }}
-                          >
-                            Open
-                          </button>
-                        ) : null}
                       </div>
                     ))}
                   </div>
                 )
               ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {activeDocList ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(15, 23, 42, 0.5)" }}
+          onClick={() => setActiveDocList(null)}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl border shadow-2xl max-h-[85vh] flex flex-col"
+            style={{ background: COLORS.bgWhite, borderColor: COLORS.border }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="flex items-center justify-between px-5 py-4 text-white rounded-t-2xl"
+              style={{
+                background:
+                  activeDocList === "archived"
+                    ? "linear-gradient(135deg,#475569,#64748b)"
+                    : "linear-gradient(135deg,#2563eb,#3b82f6)",
+              }}
+            >
+              <h3 className="text-lg font-bold">
+                {activeDocList === "archived" ? "Archived documents" : "Stale documents (30+ days)"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setActiveDocList(null)}
+                className="px-3 py-1 rounded-lg text-sm font-semibold bg-white/20 hover:bg-white/30"
+              >
+                Close
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1 space-y-2">
+              {(activeDocList === "archived" ? archivedDocs : staleDocs).length === 0 ? (
+                <p className="text-sm text-center py-8" style={{ color: COLORS.textSecondary }}>
+                  No documents in this list.
+                </p>
+              ) : (
+                (activeDocList === "archived" ? archivedDocs : staleDocs).map((doc) => (
+                  <button
+                    key={doc._id}
+                    type="button"
+                    onClick={() => {
+                      setActiveDocList(null)
+                      router.push(getDocumentHref(doc))
+                    }}
+                    className="w-full text-left p-3 rounded-xl border transition-all hover:shadow-sm"
+                    style={{ borderColor: COLORS.border, background: COLORS.bgGrayLight }}
+                  >
+                    <p className="font-semibold text-sm" style={{ color: COLORS.textPrimary }}>
+                      {doc.title || "Untitled"}
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: COLORS.textSecondary }}>
+                      {PDF_MODULE_LABELS[doc._module || ""] || doc._module || "—"} ·{" "}
+                      {formatTimeAgo(doc.updatedAt || doc.createdAt)}
+                    </p>
+                    <span
+                      className="inline-block mt-2 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{
+                        background:
+                          activeDocList === "archived" ? `${COLORS.gray500}22` : `${COLORS.blue500}22`,
+                        color: activeDocList === "archived" ? COLORS.gray700 : COLORS.blue700,
+                      }}
+                    >
+                      {activeDocList === "archived" ? "Archived" : "Stale"}
+                    </span>
+                  </button>
+                ))
+              )}
             </div>
           </div>
         </div>
