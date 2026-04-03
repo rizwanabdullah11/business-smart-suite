@@ -816,7 +816,7 @@ export default function DynamicModulePage({
               <div key={category.id} className="overflow-hidden rounded-2xl" style={{ background: COLORS.bgWhite, border: "1px solid #ececf3", boxShadow: "0 10px 30px rgba(31,41,55,0.05)" }}>
 
                 {/* Category Header */}
-                <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between" style={{ background: "#341746", color: "#fff" }}>
+                <div className="flex flex-col gap-3 px-4 py-1.5 sm:flex-row sm:items-center sm:justify-between" style={{ background: "#341746", color: "#fff" }}>
                   <button type="button" onClick={() => toggleCategory(category.id)} className="flex items-center gap-3 text-left">
                     <div className="flex h-7 w-7 items-center justify-center rounded-md" style={{ background: "rgba(255,255,255,0.14)" }}>
                       {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
