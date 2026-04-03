@@ -705,13 +705,12 @@ export default function DynamicModulePage({
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-3">
             <div>
-              <div className="mb-1 flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "#eef2ff", color: "#4338ca", border: "1px solid #c7d2fe" }}>
                   <Icon className="h-5 w-5" />
                 </div>
                 <h1 className="text-3xl font-bold tracking-tight" style={{ color: COLORS.textPrimary }}>{title}</h1>
               </div>
-              <p className="text-sm" style={{ color: COLORS.textSecondary }}>{description}</p>
             </div>
           </div>
 
@@ -817,12 +816,34 @@ export default function DynamicModulePage({
 
                 {/* Category Header */}
                 <div className="bg-[#2d1e3e] text-white p-3 flex justify-between items-center rounded-sm cursor-pointer" onClick={() => toggleCategory(category.id)}>
-                  <span className="font-semibold">{category.title}</span>
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-5 w-5" />
+                    <span className="font-semibold">{category.title}</span>
+                  </div>
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     {!showArchived && (
                       <>
-                        <button type="button" className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-white/10 text-white border-none" title="Sort">
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            setSortType("name")
+                            setSortDirection((d) => sortType === "name" ? (d === "asc" ? "desc" : "asc") : "asc")
+                          }}
+                          className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-white/10 text-white border-none" 
+                          title="Sort by Name"
+                        >
                           <ArrowUpDown className="h-3 w-3" />
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            setSortType("date")
+                            setSortDirection((d) => sortType === "date" ? (d === "asc" ? "desc" : "asc") : "asc")
+                          }}
+                          className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-white/10 text-white border-none" 
+                          title="Sort by Date"
+                        >
+                          <Calendar className="h-3 w-3" />
                         </button>
                       </>
                     )}
