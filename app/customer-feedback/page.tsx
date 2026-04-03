@@ -339,7 +339,7 @@ export default function CustomerFeedbackPage() {
                 >
                   {/* Category Header */}
                   <div
-                    className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-3 px-4 py-1.5 sm:flex-row sm:items-center sm:justify-between"
                     style={{ background: "#341746", color: "#fff" }}
                   >
                     <button

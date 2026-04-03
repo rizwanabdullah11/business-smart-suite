@@ -108,3 +108,47 @@ body {
 .card-shadow-hover:hover {
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
 }
+
+/* Dashboard Enterprise Styles */
+.enterprise-hero-icon {
+  width: 80px;
+  height: 80px;
+  padding: 20px;
+}
+
+@media (min-width: 1024px) {
+  .enterprise-hero-icon {
+    width: 96px;
+    height: 96px;
+    padding: 24px;
+  }
+}
+
+.enterprise-section-title {
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Smaller icon size to accommodate two-line text */
+.optimized-nav-icon {
+  width: 48px;
+  height: 48px;
+  padding: 10px;
+  flex-shrink: 0;
+}
+
+@media (min-width: 1024px) {
+  .optimized-nav-icon {
+    width: 56px;
+    height: 56px;
+    padding: 12px;
+  }
+}
+
+.enterprise-nav-item:hover {
+  background: linear-gradient(to bottom right, rgba(51, 65, 85, 0.8), rgba(71, 85, 105, 0.6), rgba(51, 65, 85, 0.8));
+}
+
+/* Enhanced shadow utilities */
+.shadow-3xl {
+  box-shadow: 0 35px 60px -15px rgba(0, 0, 0, 0.5);
+}

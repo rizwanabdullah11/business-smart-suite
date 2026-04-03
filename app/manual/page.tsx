@@ -936,7 +936,7 @@ export default function ManualPage() {
       className="min-h-screen"
       style={{ background: "linear-gradient(180deg, #f7f8fb 0%, #f3f5f9 100%)" }}
     >
-      <div className="mx-auto max-w-[1400px] p-4 sm:p-6">
+      <div className="mx-autos p-4 sm:p-6">
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-3">
             {/* <Link href="/dashboard">
@@ -1223,7 +1223,7 @@ export default function ManualPage() {
                 }}
               >
                 <div
-                  className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 px-4 py-1.5 sm:flex-row sm:items-center sm:justify-between"
                   style={{
                     background: "#341746",
                     color: COLORS.textWhite,

@@ -26,6 +26,7 @@ import {
   TrendingUp,
   BarChart,
   Settings,
+  FolderOpen,
 } from "lucide-react"
 import { Permission } from "@/lib/types/permissions"
 
@@ -64,6 +65,7 @@ export const DASHBOARD_MODULE_GROUPS: DashboardModuleGroup[] = [
       { icon: ClipboardList, label: "Procedures", href: "/procedures", permission: Permission.VIEW_PROCEDURES },
       { icon: FileInput, label: "Forms", href: "/forms", permission: Permission.VIEW_FORMS },
       { icon: Award, label: "Certificates", href: "/certificate", permission: Permission.VIEW_CERTIFICATES },
+      { icon: FolderOpen, label: "Documents", href: "/documents", permission: Permission.VIEW_MANUALS },
     ],
   },
   {

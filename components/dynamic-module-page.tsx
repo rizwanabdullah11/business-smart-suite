@@ -699,19 +699,18 @@ export default function DynamicModulePage({
 
   return (
     <div className="min-h-screen" style={{ background: "linear-gradient(180deg,#f7f8fb 0%,#f3f5f9 100%)" }}>
-      <div className="mx-auto max-w-[1400px] p-4 sm:p-6">
+      <div className="mx-auto p-4 sm:p-6">
 
         {/* ── Header ── */}
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-3">
             <div>
-              <div className="mb-1 flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "#eef2ff", color: "#4338ca", border: "1px solid #c7d2fe" }}>
                   <Icon className="h-5 w-5" />
                 </div>
                 <h1 className="text-3xl font-bold tracking-tight" style={{ color: COLORS.textPrimary }}>{title}</h1>
               </div>
-              <p className="text-sm" style={{ color: COLORS.textSecondary }}>{description}</p>
             </div>
           </div>
 
@@ -813,49 +812,69 @@ export default function DynamicModulePage({
             const isExpanded = expandedCategories.includes(category.id)
 
             return (
-              <div key={category.id} className="overflow-hidden rounded-2xl" style={{ background: COLORS.bgWhite, border: "1px solid #ececf3", boxShadow: "0 10px 30px rgba(31,41,55,0.05)" }}>
+              <div key={category.id} className="mb-4">
 
                 {/* Category Header */}
-                <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between" style={{ background: "#341746", color: "#fff" }}>
-                  <button type="button" onClick={() => toggleCategory(category.id)} className="flex items-center gap-3 text-left">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-md" style={{ background: "rgba(255,255,255,0.14)" }}>
-                      {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                    </div>
-                    <div>
-                      <div className="text-base font-semibold">{category.title}</div>
-                      <div className="text-xs" style={{ color: "rgba(255,255,255,0.65)" }}>{currentItems.length} {itemLabel.toLowerCase()}{currentItems.length === 1 ? "" : "s"} in view</div>
-                    </div>
-                  </button>
-
-                  <div className="flex items-center gap-1.5">
-                    <div className="mr-1 flex h-7 w-5 items-center justify-center opacity-50">
+                <div className="bg-[#2d1e3e] text-white p-3 flex justify-between items-center rounded-sm cursor-pointer" onClick={() => toggleCategory(category.id)}>
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-5 w-5" />
+                    <span className="font-semibold">{category.title}</span>
+                  </div>
+                  <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                    {!showArchived && (
+                      <>
+                      <div className="mr-1 flex h-7 w-5 items-center justify-center opacity-50">
                       <svg width="12" height="14" viewBox="0 0 12 14" fill="white"><circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/><circle cx="3" cy="7" r="1.5"/><circle cx="9" cy="7" r="1.5"/><circle cx="3" cy="12" r="1.5"/><circle cx="9" cy="12" r="1.5"/></svg>
                     </div>
-                    <div className="h-6 w-6 rounded" style={{ background: "rgba(255,255,255,0.92)", border: "1px solid rgba(255,255,255,0.4)" }} />
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            setSortType("name")
+                            setSortDirection((d) => sortType === "name" ? (d === "asc" ? "desc" : "asc") : "asc")
+                          }}
+                          className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-white/10 text-white border-none" 
+                          title="Sort by Name"
+                        >
+                          <ArrowUpDown className="h-3 w-3" />
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            setSortType("date")
+                            setSortDirection((d) => sortType === "date" ? (d === "asc" ? "desc" : "asc") : "asc")
+                          }}
+                          className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-white/10 text-white border-none" 
+                          title="Sort by Date"
+                        >
+                          <Calendar className="h-3 w-3" />
+                        </button>
+                      </>
+                    )}
+                    
                     {!isEmployee ? (
-                      <button type="button" onClick={(e) => { e.stopPropagation(); setEditingCategory(category.id); setEditTitle(category.title) }} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#22c55e" }} title="Edit Category">
-                        <Edit className="h-3.5 w-3.5 text-white" />
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setEditingCategory(category.id); setEditTitle(category.title) }} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-gray-600 text-white border-none" title="Edit Category">
+                        <Edit className="h-3 w-3" />
                       </button>
                     ) : null}
                     {!showArchived ? (
-                      <button type="button" onClick={(e) => { e.stopPropagation(); if (isViewingArchivedItems) setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" })); setAddingItemToCategory(category.id); if (!expandedCategories.includes(category.id)) setExpandedCategories([category.id]) }} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#22c55e" }} title="Add Item">
-                        <Plus className="h-3.5 w-3.5 text-white" />
+                      <button type="button" onClick={(e) => { e.stopPropagation(); if (isViewingArchivedItems) setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" })); setAddingItemToCategory(category.id); if (!expandedCategories.includes(category.id)) setExpandedCategories([category.id]) }} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-green-500 text-white border-none" title="Add Item">
+                        <Plus className="h-3 w-3" />
                       </button>
                     ) : null}
                     {!isEmployee ? (
                       showArchived ? (
-                        <button type="button" onClick={(e) => { e.stopPropagation(); unarchiveCategory(category.id) }} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#f59e0b" }} title="Unarchive Category">
-                          <Archive className="h-3.5 w-3.5 text-white" />
+                        <button type="button" onClick={(e) => { e.stopPropagation(); unarchiveCategory(category.id) }} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-green-600 text-white border-none" title="Unarchive Category">
+                          <Archive className="h-3 w-3" />
                         </button>
                       ) : (
-                        <button type="button" onClick={(e) => { e.stopPropagation(); archiveCategory(category.id) }} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#f59e0b" }} title="Archive Category">
-                          <Archive className="h-3.5 w-3.5 text-white" />
+                        <button type="button" onClick={(e) => { e.stopPropagation(); archiveCategory(category.id) }} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-gray-600 text-white border-none" title="Archive Category">
+                          <Archive className="h-3 w-3" />
                         </button>
                       )
                     ) : null}
                     {!isEmployee ? (
-                      <button type="button" onClick={(e) => { e.stopPropagation(); deleteCategory(category.id) }} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#ef4444" }} title="Delete Category">
-                        <X className="h-3.5 w-3.5 text-white" />
+                      <button type="button" onClick={(e) => { e.stopPropagation(); deleteCategory(category.id) }} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-red-500 text-white border-none" title="Delete Category">
+                        <X className="h-3 w-3" />
                       </button>
                     ) : null}
                   </div>
@@ -926,12 +945,12 @@ export default function DynamicModulePage({
                       </div>
                     ) : (
                       /* Table */
-                      <div className="overflow-hidden rounded-2xl" style={{ border: `1px solid ${COLORS.purple200}`, background: COLORS.purple50 }}>
-                        <div className="overflow-x-auto p-3">
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div className="overflow-x-auto">
                           <table className="min-w-full text-left">
-                            <thead style={{ background: COLORS.bgWhite }}>
-                              <tr style={{ color: COLORS.purple700 }}>
-                                <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wide">
+                            <thead className="bg-gray-50">
+                              <tr style={{ color: COLORS.textPrimary }}>
+                                <th className="pl-4 pr-0 py-3 text-base font-medium">
                                   <input
                                     type="checkbox"
                                     className="h-4 w-4 rounded cursor-pointer"
@@ -945,36 +964,26 @@ export default function DynamicModulePage({
                                     }}
                                   />
                                 </th>
-                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">{itemLabel}</th>
-                                {displayKeys.map((key) => (
-                                  <th key={key} className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">{fieldLabelMap[key] || key}</th>
+                                <th className="pl-0 pr-4 py-3 text-base font-medium">{itemLabel}</th>
+                                {displayKeys.slice(0, -1).map((key) => (
+                                  <th key={key} className="px-4 py-3 text-base font-medium">{fieldLabelMap[key] || key}</th>
                                 ))}
-                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Status</th>
-                                <th className="px-2 py-2 text-right text-[11px] font-semibold uppercase tracking-wide">Actions</th>
+                                <th className="px-4 py-3 text-base font-medium">{displayKeys.length > 0 ? (fieldLabelMap[displayKeys[displayKeys.length - 1]] || displayKeys[displayKeys.length - 1]) : "Location"}</th>
+                                <th className="px-4 py-3 text-base font-medium text-right">Actions</th>
                               </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="bg-white divide-y divide-gray-200">
                               {sortedItems.map((item: any, index: number) => {
                                 const statusTone = getItemStatusTone(item)
                                 return (
                                   <tr
                                     key={item.id}
-                                    style={{
-                                      background: item.paused
-                                        ? COLORS.orange50
-                                        : item.highlighted
-                                          ? COLORS.purple50
-                                          : index % 2 === 0
-                                            ? COLORS.bgWhite
-                                            : "#fcfbff",
-                                      borderTop: index === 0 ? "none" : `1px solid ${COLORS.purple100}`,
-                                      borderBottom: index === sortedItems.length - 1 ? `1px solid ${COLORS.purple100}` : "none",
-                                    }}
+                                    className="hover:bg-gray-50 transition-colors"
                                   >
-                                    <td className="px-2 py-1 align-top">
+                                    <td className="pl-4 pr-0 py-3 align-middle">
                                       <input
                                         type="checkbox"
-                                        className="mt-1 h-4 w-4 rounded cursor-pointer"
+                                        className="h-4 w-4 rounded cursor-pointer"
                                         checked={selectedItems[category.id]?.has(item.id) ?? false}
                                         onChange={(e) => {
                                           setSelectedItems((prev) => {
@@ -986,73 +995,59 @@ export default function DynamicModulePage({
                                         }}
                                       />
                                     </td>
-                                    <td className="px-2 py-1 align-top">
-                                      <div className="flex items-start gap-3">
-                                        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "#faf5ff", color: COLORS.purple700, border: `1px solid ${COLORS.purple200}` }}>
-                                          <Icon className="h-4 w-4" />
+                                    <td className="pl-0 pr-4 py-3 align-middle">
+                                      <div className="flex items-center gap-1">
+                                        <div className="flex h-8 w-8 items-center justify-center bg-blue-100 rounded" style={{ minWidth: '32px' }}>
+                                          <Icon className="h-4 w-4 text-blue-600" aria-hidden="true" />
                                         </div>
-                                        <div className="min-w-0">
-                                          <Link href={`/task/${moduleSlug}/${item.id}?back=${encodeURIComponent(itemHrefPrefix)}`} className="block text-sm font-semibold hover:underline sm:text-[15px] break-words" style={{ color: COLORS.purple700 }}>
-                                            {getItemTitle(item)}
-                                          </Link>
-                                          {item.fileName ? (
-                                            <div className="mt-1 flex items-center gap-1 text-xs" style={{ color: "#73788a" }}>
-                                              <Icon className="h-3 w-3 shrink-0" style={{ color: COLORS.purple700 }} />
-                                              <span className="max-w-[160px] truncate" title={item.fileName}>{item.fileName}</span>
-                                            </div>
-                                          ) : null}
-                                          {(item.highlighted || item.paused) ? (
-                                            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs" style={{ color: "#73788a" }}>
-                                              {item.highlighted ? <span>Starred</span> : null}
-                                              {item.paused ? <span>Paused</span> : null}
-                                            </div>
-                                          ) : null}
-                                        </div>
+                                        <Link href={`${itemHrefPrefix}/${item.id}`} className="text-blue-600 hover:underline text-base">
+                                          {getItemTitle(item)}
+                                        </Link>
                                       </div>
                                     </td>
-                                    {displayKeys.map((key) => (
-                                      <td key={key} className="px-2 py-1 align-top text-sm" style={{ color: COLORS.textPrimary }}>
+                                    {displayKeys.slice(0, -1).map((key) => (
+                                      <td key={key} className="px-4 py-3 align-middle text-base" style={{ color: COLORS.textPrimary }}>
                                         {key.toLowerCase().includes("date") ? (
-                                          <div className="flex items-center gap-2">
-                                            <Calendar className="h-4 w-4" style={{ color: COLORS.textLight }} />
-                                            {formatDisplayDate(item?.[key])}
-                                          </div>
+                                          formatDisplayDate(item?.[key])
                                         ) : (
                                           String(item?.[key] ?? "—")
                                         )}
                                       </td>
                                     ))}
-                                    <td className="px-2 py-1 align-top">
-                                      <span className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: statusTone.bg, color: statusTone.color, border: `1px solid ${statusTone.border}` }}>{statusTone.label}</span>
+                                    <td className="px-4 py-3 align-middle text-base" style={{ color: COLORS.textPrimary }}>
+                                      {displayKeys.length > 0 ? String(item?.[displayKeys[displayKeys.length - 1]] ?? "—") : (item.location || "—")}
                                     </td>
-                                    <td className="px-2 py-1">
-                                      <div className="flex items-center justify-end gap-1">
-                                        <div className="mr-1 flex h-6 w-5 cursor-move items-center justify-center opacity-30 hover:opacity-60">
-                                          <svg width="10" height="14" viewBox="0 0 10 14" fill="#374151"><circle cx="2.5" cy="2" r="1.5"/><circle cx="7.5" cy="2" r="1.5"/><circle cx="2.5" cy="7" r="1.5"/><circle cx="7.5" cy="7" r="1.5"/><circle cx="2.5" cy="12" r="1.5"/><circle cx="7.5" cy="12" r="1.5"/></svg>
-                                        </div>
-                                        {isEmployee ? (
-                                          <>
-                                            <button type="button" onClick={() => updateItem(item.id, { approved: !item.approved }, "approve")} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#22c55e" }} title={item.approved ? "Reopen" : "Mark done"}><Check className="h-3.5 w-3.5 text-white" /></button>
-                                            <Link href={`${itemHrefPrefix}/${item.id}/edit`}><button type="button" className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#4f46e5" }} title="Edit"><Edit className="h-3.5 w-3.5 text-white" /></button></Link>
-                                            <button type="button" onClick={() => downloadItem(item)} disabled={loadingAction === `download-${item.id}`} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50" style={{ background: "#6366f1" }} title="Download"><Download className="h-3.5 w-3.5 text-white" /></button>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <button type="button" onClick={() => updateItem(item.id, { highlighted: !item.highlighted }, "highlight")} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#f59e0b" }} title={item.highlighted ? "Remove Highlight" : "Highlight"}><Star className={`h-3.5 w-3.5 text-white ${item.highlighted ? "fill-white" : ""}`} /></button>
-                                            <button type="button" onClick={() => updateItem(item.id, { approved: !item.approved }, "approve")} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#22c55e" }} title={item.approved ? "Mark as Incomplete" : "Mark as Completed"}><Check className="h-3.5 w-3.5 text-white" /></button>
-                                            <button type="button" onClick={() => updateItem(item.id, { paused: !item.paused }, "pause")} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#f97316" }} title={item.paused ? "Resume" : "Pause"}><Pause className="h-3.5 w-3.5 text-white" /></button>
-                                            <Link href={`${itemHrefPrefix}/${item.id}/edit`}><button type="button" className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#4f46e5" }} title="Edit"><Edit className="h-3.5 w-3.5 text-white" /></button></Link>
-                                            <button type="button" onClick={() => copyItem(category.id, item)} disabled={loadingAction === `copy-${item.id}`} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50" style={{ background: "#6366f1" }} title="Duplicate"><Copy className="h-3.5 w-3.5 text-white" /></button>
-                                            <button type="button" onClick={() => downloadItem(item)} disabled={loadingAction === `download-${item.id}`} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50" style={{ background: "#6366f1" }} title="Download"><Download className="h-3.5 w-3.5 text-white" /></button>
-                                            {!isViewingArchivedItems ? (
-                                              <button type="button" onClick={() => updateItem(item.id, { archived: true, isArchived: true }, "archive")} disabled={loadingAction === `archive-${item.id}`} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50" style={{ background: "#f59e0b" }} title="Archive"><Archive className="h-3.5 w-3.5 text-white" /></button>
+                                    <td className="px-4 py-3 align-middle">
+                                      {!isEmployee && (
+                                        <div className="flex gap-1 justify-end">
+                                          {isEmployee ? (
+                                              <>
+                                                <button type="button" className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-gray-400 text-white border-none cursor-grab" title="Drag">
+                                                  <GripVertical className="h-3 w-3" />
+                                                </button>
+                                                <button type="button" onClick={() => updateItem(item.id, { approved: !item.approved }, "approve")} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-green-500 text-white border-none" title={item.approved ? "Reopen" : "Mark done"}><Check className="h-3 w-3" /></button>
+                                                <Link href={`${itemHrefPrefix}/${item.id}/edit`}><button type="button" className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-indigo-600 text-white border-none" title="Edit"><Edit className="h-3 w-3" /></button></Link>
+                                                <button type="button" onClick={() => downloadItem(item)} disabled={loadingAction === `download-${item.id}`} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50 bg-indigo-500 text-white border-none" title="Download"><Download className="h-3 w-3" /></button>
+                                              </>
                                             ) : (
-                                              <button type="button" onClick={() => updateItem(item.id, { archived: false, isArchived: false }, "unarchive")} disabled={loadingAction === `unarchive-${item.id}`} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50" style={{ background: "#22c55e" }} title="Unarchive"><Archive className="h-3.5 w-3.5 text-white" /></button>
+                                              <>
+                                              
+                                            <button type="button" onClick={() => updateItem(item.id, { highlighted: !item.highlighted }, "highlight")} className={`flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 ${item.highlighted ? "bg-gray-200" : "bg-yellow-500 text-white"} border-none`} title={item.highlighted ? "Remove Highlight" : "Highlight"}><div className="h-3 w-3 bg-yellow-500"></div></button>
+                                            <button type="button" onClick={() => updateItem(item.id, { approved: !item.approved }, "approve")} className={`flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 ${item.approved ? "bg-gray-200" : "bg-green-500 text-white"} border-none`} title={item.approved ? "Mark as Incomplete" : "Mark as Completed"}><Check className="h-3 w-3" /></button>
+                                            <button type="button" onClick={() => updateItem(item.id, { paused: !item.paused }, "pause")} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-orange-500 text-white border-none" title={item.paused ? "Resume" : "Pause"}><Pause className="h-3 w-3" /></button>
+                                            <Link href={`${itemHrefPrefix}/${item.id}/edit`}><button type="button" className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-indigo-600 text-white border-none" title="Edit"><Edit className="h-3 w-3" /></button></Link>
+                                            <button type="button" onClick={() => copyItem(category.id, item)} disabled={loadingAction === `copy-${item.id}`} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50 bg-indigo-500 text-white border-none" title="Duplicate"><Copy className="h-3 w-3" /></button>
+                                            <button type="button" onClick={() => downloadItem(item)} disabled={loadingAction === `download-${item.id}`} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50 bg-indigo-500 text-white border-none" title="Download"><Download className="h-3 w-3" /></button>
+                                            {!isViewingArchivedItems ? (
+                                              <button type="button" onClick={() => updateItem(item.id, { archived: true, isArchived: true }, "archive")} disabled={loadingAction === `archive-${item.id}`} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50 bg-gray-600 text-white border-none" title="Archive"><Archive className="h-3 w-3" /></button>
+                                            ) : (
+                                              <button type="button" onClick={() => updateItem(item.id, { archived: false, isArchived: false }, "unarchive")} disabled={loadingAction === `unarchive-${item.id}`} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50 bg-green-600 text-white border-none" title="Unarchive"><Archive className="h-3 w-3" /></button>
                                             )}
-                                            <button type="button" onClick={() => deleteItem(item.id)} className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110" style={{ background: "#ef4444" }} title="Delete"><Trash2 className="h-3.5 w-3.5 text-white" /></button>
+                                            <button type="button" onClick={() => deleteItem(item.id)} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-red-500 text-white border-none" title="Delete"><Trash2 className="h-3 w-3" /></button>
                                           </>
                                         )}
-                                      </div>
+                                        </div>
+                                      )}
                                     </td>
                                   </tr>
                                 )

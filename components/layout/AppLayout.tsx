@@ -8,7 +8,6 @@ import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { AppPurpleHeader } from "@/components/dashboard/AppPurpleHeader"
 import { Footer } from "@/components/dashboard/Footer"
-import { CreateSectionDialog } from "@/components/dashboard/CreateSectionDialog"
 
 interface AppLayoutProps {
     children: React.ReactNode
@@ -19,7 +18,6 @@ export function AppLayout({ children }: AppLayoutProps) {
     const pathname = usePathname()
     const { toast } = useToast()
     const { user, loading, isAuthenticated, logout: authLogout } = useAuth()
-    const [isCreateSectionOpen, setIsCreateSectionOpen] = useState(false)
 
     useEffect(() => {
         if (!loading && !isAuthenticated && pathname !== '/login') {
@@ -34,10 +32,6 @@ export function AppLayout({ children }: AppLayoutProps) {
             description: "See you next time!",
         })
         router.push('/login')
-    }
-
-    const handleAddFolder = () => {
-        setIsCreateSectionOpen(true)
     }
 
     if (pathname === '/login') {
@@ -67,20 +61,15 @@ export function AppLayout({ children }: AppLayoutProps) {
             className="min-h-screen"
             style={{ background: isHome ? HOME_PAGE_BG : COLORS.bgGray }}
         >
-            <AppPurpleHeader user={user} onLogout={handleLogout} onAddFolder={handleAddFolder} />
+            <AppPurpleHeader user={user} onLogout={handleLogout} />
 
             <main
-                className={isHome ? 'pt-[5.25rem] px-0 pb-0 bg-transparent' : 'pt-[5.25rem] px-4 sm:px-8 pb-8'}
+                className={isHome ? 'pt-[68px] px-0 pb-0 bg-transparent' : 'pt-[68px] pb-8'}
             >
                 {children}
             </main>
 
             {!isHome ? <Footer /> : null}
-
-            <CreateSectionDialog
-                open={isCreateSectionOpen}
-                onOpenChange={setIsCreateSectionOpen}
-            />
         </div>
     )
 }
