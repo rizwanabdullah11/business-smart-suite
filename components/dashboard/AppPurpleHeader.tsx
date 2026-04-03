@@ -1,108 +1,167 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
-import { Plus, LogOut } from "lucide-react"
-import { AppNavigationDrawer } from "@/components/dashboard/AppNavigationDrawer"
+import { Search, HelpCircle } from "lucide-react"
+import { CompanySelector } from "@/components/dashboard/CompanySelector"
+import { UserNav } from "@/components/dashboard/UserNav"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Input } from "@/components/ui"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Button } from "@/components/ui"
+import { useRouter } from "next/navigation"
 
 type AppPurpleHeaderProps = {
   user: { name?: string; email?: string; role?: string } | null
   onLogout: () => void | Promise<void>
-  onAddFolder: () => void
+}
+
+interface SearchResult {
+  id: string
+  title: string
+  type: string
+  href: string
+  section: string
 }
 
 /** Fixed purple gradient header — matches home / marketing style on every screen */
-export function AppPurpleHeader({ user, onLogout, onAddFolder }: AppPurpleHeaderProps) {
-  const [drawerOpen, setDrawerOpen] = useState(false)
+export function AppPurpleHeader({ user, onLogout }: AppPurpleHeaderProps) {
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const router = useRouter()
 
-  const userInitial = String(user?.name || user?.email || "U").charAt(0).toUpperCase()
+  const handleSearch = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([])
+      return
+    }
+    setIsSearching(true)
+    try {
+      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
+      if (!response.ok) throw new Error("Search failed")
+      const results = await response.json()
+      setSearchResults(results)
+    } catch (error) {
+      console.error("Search error:", error)
+      setSearchResults([])
+    } finally {
+      setIsSearching(false)
+    }
+  }
 
   return (
-    <>
-      <header
-        className="fixed top-0 left-0 right-0 z-40 flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3 min-h-[72px]"
-        style={{
-          background: "#341746",
-          borderBottom: "1px solid rgba(255,255,255,0.12)",
-          boxShadow: "0 4px 24px rgba(59, 7, 100, 0.35)",
-        }}
-      >
-        <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="flex items-center rounded-xl shrink-0 transition-transform hover:scale-[1.02] active:scale-[0.99]"
-            style={{
-              background: "linear-gradient(135deg,#7c3aed,#a855f7)",
-              boxShadow: "0 4px 14px rgba(124,58,237,0.45)",
-              padding: "14px 18px",
-            }}
-            title="Open navigation"
-            aria-label="Open navigation menu"
-          >
-            <span className="text-sm sm:text-base font-black text-white whitespace-nowrap">
-              Business Smart Suite
-            </span>
-          </button>
+    <header className="w-full fixed top-0 left-0 right-0 z-40">
+      <div className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 p-4 flex justify-between items-center relative overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/50 via-purple-900/30 to-slate-900/50"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(120,119,198,0.3),transparent_50%)]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(120,119,198,0.2),transparent_50%)]"></div>
+
+        <div className="flex items-center relative z-10">
+          <CompanySelector />
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          <Link href="/dashboard/analytics">
-            <button
-              type="button"
-              className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white transition-all hover:opacity-90 active:scale-95"
-              style={{
-                background: "linear-gradient(135deg,#7c3aed,#a855f7)",
-                boxShadow: "0 4px 12px rgba(124,58,237,0.35)",
-              }}
-            >
-              Dashboard
-            </button>
-          </Link>
-          <button
-            type="button"
-            onClick={onAddFolder}
-            className="flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white transition-all hover:bg-white/15 active:scale-95"
-            style={{
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.35)",
-            }}
-          >
-            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Add Folder</span>
-          </button>
+        <div className="flex items-center gap-4 relative z-10">
+          {/* Search Dialog */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 backdrop-blur-sm">
+                <Search className="h-5 w-5" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Search</DialogTitle>
+              </DialogHeader>
+              <div className="relative">
+                <Input
+                  placeholder="Search across all sections..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value)
+                    handleSearch(e.target.value)
+                  }}
+                  className="pr-8"
+                />
+                {isSearching && (
+                  <div className="absolute right-2 top-2.5">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900" />
+                  </div>
+                )}
+              </div>
+              <ScrollArea className="h-[300px] mt-4">
+                {searchResults.length > 0 ? (
+                  <div className="space-y-2">
+                    {searchResults.map((result) => (
+                      <div
+                        key={result.id}
+                        className="p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors"
+                        onClick={() => {
+                          router.push(result.href)
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-medium text-gray-900">{result.title}</h4>
+                            <p className="text-sm text-gray-600">{result.section}</p>
+                          </div>
+                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                            {result.type}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : searchQuery ? (
+                  <div className="text-center py-8 text-gray-500">
+                    No results found for "{searchQuery}"
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    Start typing to search...
+                  </div>
+                )}
+              </ScrollArea>
+            </DialogContent>
+          </Dialog>
 
-          <div
-            className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 ml-1"
-            style={{ borderLeft: "1px solid rgba(255,255,255,0.15)" }}
-          >
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-              style={{ background: "linear-gradient(135deg,#6d28d9,#a855f7)" }}
-            >
-              {userInitial}
-            </div>
-            <span
-              className="text-xs sm:text-sm font-medium max-w-[100px] sm:max-w-[160px] truncate hidden md:block"
-              style={{ color: "rgba(255,255,255,0.9)" }}
-            >
-              {user?.name || user?.email || "User"}
-            </span>
-            <button
-              type="button"
-              onClick={() => void onLogout()}
-              className="flex items-center gap-1 px-2 sm:px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all hover:bg-white/10"
-              style={{ color: "rgba(255,255,255,0.85)" }}
-              title="Logout"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden xl:inline">Logout</span>
-            </button>
-          </div>
+          {/* Help Dialog */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 backdrop-blur-sm">
+                <HelpCircle className="h-5 w-5" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Help & Support</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-semibold mb-2">Quick Navigation</h4>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Use the Business Smart Suite dropdown in the top-left corner to quickly navigate between different sections of the application.
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-2">Search Functionality</h4>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Search across all sections using the search icon. Results will show documents, policies, and other relevant content.
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-2">Need More Help?</h4>
+                  <p className="text-sm text-gray-600">
+                    Contact your system administrator for additional support or training.
+                  </p>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <UserNav user={user} onLogout={onLogout} />
         </div>
-      </header>
-
-      <AppNavigationDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} user={user} onLogout={onLogout} />
-    </>
+      </div>
+    </header>
   )
 }

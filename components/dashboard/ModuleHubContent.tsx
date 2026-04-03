@@ -4,7 +4,11 @@ import Link from "next/link"
 import { usePermissions } from "@/hooks/use-permissions"
 import { DASHBOARD_MODULE_GROUPS } from "@/constant/dashboard-module-groups"
 
-export function ModuleHubContent() {
+type ModuleHubContentProps = {
+  onAddFolder?: () => void
+}
+
+export function ModuleHubContent({ onAddFolder }: ModuleHubContentProps = {}) {
   const { can, loading } = usePermissions()
 
   const visibleGroups = DASHBOARD_MODULE_GROUPS.map((group) => ({
@@ -84,11 +88,22 @@ export function ModuleHubContent() {
                     <h1 className="text-4xl font-bold text-white mb-3 drop-shadow-lg">Business Smart Suite</h1>
                     <p className="text-purple-200 text-xl drop-shadow">Your comprehensive business management portal</p>
                   </div>
-                  <Link href="/analytics">
-                    <button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-400/50 backdrop-blur-sm">
-                      Analytics Dashboard
+                  <div className="flex items-center gap-4">
+                    <Link href="/analytics">
+                      <button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-400/50 backdrop-blur-sm">
+                        Analytics Dashboard
+                      </button>
+                    </Link>
+                    <button
+                      onClick={onAddFolder}
+                      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-400/50 backdrop-blur-sm flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add Folder
                     </button>
-                  </Link>
+                  </div>
                 </div>
 
                 {/* Revolutionary Company Portal */}
