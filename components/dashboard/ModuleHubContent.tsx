@@ -181,16 +181,16 @@ export function ModuleHubContent() {
                                         className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-${colors.icon} to-transparent opacity-0 group-hover/item:opacity-50 transition-opacity duration-1000`}
                                       ></div>
                                       
-                                      <div className="flex flex-col items-center text-center h-full justify-between relative z-10">
-                                        {/* Optimized Big Navigation Icon */}
+                                      <div className="flex flex-col items-center text-center h-full justify-center relative z-10 gap-2">
+                                        {/* Optimized Big Navigation Icon - Smaller for better text fit */}
                                         <div 
-                                          className={`optimized-nav-icon flex items-center justify-center rounded-2xl mb-2 lg:mb-3 transition-all duration-1000 group-hover/item:scale-110 bg-gradient-to-br ${colors.iconGradient} text-white shadow-xl shadow-${colors.shadow}`}
+                                          className={`optimized-nav-icon flex items-center justify-center rounded-2xl transition-all duration-1000 group-hover/item:scale-110 bg-gradient-to-br ${colors.iconGradient} text-white shadow-xl shadow-${colors.shadow}`}
                                         >
-                                          <div className="w-12 h-12 lg:w-16 lg:h-16 drop-shadow-lg flex items-center justify-center">
-                                            <ModIcon className="w-full h-full" />
-                                          </div>
+                                          <ModIcon className="w-full h-full" />
                                         </div>
-                                        <div className="flex-1 flex flex-col justify-center px-1">
+                                        
+                                        {/* Text Container */}
+                                        <div className="px-1">
                                           <h3 className="font-poppins font-semibold text-slate-200 text-xs lg:text-sm leading-tight drop-shadow-lg group-hover/item:text-white transition-all duration-700 line-clamp-2">
                                             {item.label}
                                           </h3>
