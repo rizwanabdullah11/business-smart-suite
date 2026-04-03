@@ -69,11 +69,11 @@ export function AppPurpleHeader({ user, onLogout }: AppPurpleHeaderProps) {
                 <Search className="h-5 w-5" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>Search</DialogTitle>
+            <DialogContent className="sm:max-w-[600px] rounded-3xl bg-white">
+              <DialogHeader className="mb-4">
+                <DialogTitle className="text-2xl font-bold text-gray-900">Search</DialogTitle>
               </DialogHeader>
-              <div className="relative">
+              <div className="relative mb-4">
                 <Input
                   placeholder="Search across all sections..."
                   value={searchQuery}
@@ -81,31 +81,31 @@ export function AppPurpleHeader({ user, onLogout }: AppPurpleHeaderProps) {
                     setSearchQuery(e.target.value)
                     handleSearch(e.target.value)
                   }}
-                  className="pr-8"
+                  className="h-14 text-base rounded-2xl border-2 border-purple-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 placeholder:text-gray-400 bg-white text-gray-900"
                 />
                 {isSearching && (
-                  <div className="absolute right-2 top-2.5">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900" />
+                  <div className="absolute right-4 top-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600" />
                   </div>
                 )}
               </div>
-              <ScrollArea className="h-[300px] mt-4">
+              <ScrollArea className="h-[350px]">
                 {searchResults.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {searchResults.map((result) => (
                       <div
                         key={result.id}
-                        className="p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors"
+                        className="p-4 rounded-xl border border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 cursor-pointer transition-all duration-200"
                         onClick={() => {
                           router.push(result.href)
                         }}
                       >
                         <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="font-medium text-gray-900">{result.title}</h4>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900 mb-1">{result.title}</h4>
                             <p className="text-sm text-gray-600">{result.section}</p>
                           </div>
-                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                          <span className="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-medium ml-4">
                             {result.type}
                           </span>
                         </div>
@@ -113,12 +113,12 @@ export function AppPurpleHeader({ user, onLogout }: AppPurpleHeaderProps) {
                     ))}
                   </div>
                 ) : searchQuery ? (
-                  <div className="text-center py-8 text-gray-500">
-                    No results found for "{searchQuery}"
+                  <div className="text-center py-16">
+                    <p className="text-gray-500 text-lg">No results found for "{searchQuery}"</p>
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    Start typing to search...
+                  <div className="text-center py-16">
+                    <p className="text-gray-400 text-lg">Start typing to search...</p>
                   </div>
                 )}
               </ScrollArea>
@@ -132,26 +132,26 @@ export function AppPurpleHeader({ user, onLogout }: AppPurpleHeaderProps) {
                 <HelpCircle className="h-5 w-5" />
               </Button>
             </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Help & Support</DialogTitle>
+            <DialogContent className="sm:max-w-[550px] rounded-3xl bg-white">
+              <DialogHeader className="mb-4">
+                <DialogTitle className="text-2xl font-bold text-gray-900">Help & Support</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div>
-                  <h4 className="font-semibold mb-2">Quick Navigation</h4>
-                  <p className="text-sm text-gray-600 mb-4">
+                  <h4 className="font-bold text-lg text-gray-900 mb-3">Quick Navigation</h4>
+                  <p className="text-base text-gray-600 leading-relaxed">
                     Use the Business Smart Suite dropdown in the top-left corner to quickly navigate between different sections of the application.
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-2">Search Functionality</h4>
-                  <p className="text-sm text-gray-600 mb-4">
+                  <h4 className="font-bold text-lg text-gray-900 mb-3">Search Functionality</h4>
+                  <p className="text-base text-gray-600 leading-relaxed">
                     Search across all sections using the search icon. Results will show documents, policies, and other relevant content.
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-2">Need More Help?</h4>
-                  <p className="text-sm text-gray-600">
+                  <h4 className="font-bold text-lg text-gray-900 mb-3">Need More Help?</h4>
+                  <p className="text-base text-gray-600 leading-relaxed">
                     Contact your system administrator for additional support or training.
                   </p>
                 </div>
