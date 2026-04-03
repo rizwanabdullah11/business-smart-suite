@@ -950,7 +950,7 @@ export default function DynamicModulePage({
                           <table className="min-w-full text-left">
                             <thead className="bg-gray-50">
                               <tr style={{ color: COLORS.textPrimary }}>
-                                <th className="px-4 py-3 text-sm font-medium">
+                                <th className="px-4 py-3 text-base font-medium">
                                   <input
                                     type="checkbox"
                                     className="h-4 w-4 rounded cursor-pointer"
@@ -964,12 +964,12 @@ export default function DynamicModulePage({
                                     }}
                                   />
                                 </th>
-                                <th className="px-4 py-3 text-sm font-medium">{itemLabel}</th>
+                                <th className="px-4 py-3 text-base font-medium">{itemLabel}</th>
                                 {displayKeys.slice(0, -1).map((key) => (
-                                  <th key={key} className="px-4 py-3 text-sm font-medium">{fieldLabelMap[key] || key}</th>
+                                  <th key={key} className="px-4 py-3 text-base font-medium">{fieldLabelMap[key] || key}</th>
                                 ))}
-                                <th className="px-4 py-3 text-sm font-medium">{displayKeys.length > 0 ? (fieldLabelMap[displayKeys[displayKeys.length - 1]] || displayKeys[displayKeys.length - 1]) : "Location"}</th>
-                                <th className="px-4 py-3 text-sm font-medium text-right">Actions</th>
+                                <th className="px-4 py-3 text-base font-medium">{displayKeys.length > 0 ? (fieldLabelMap[displayKeys[displayKeys.length - 1]] || displayKeys[displayKeys.length - 1]) : "Location"}</th>
+                                <th className="px-4 py-3 text-base font-medium text-right">Actions</th>
                               </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
