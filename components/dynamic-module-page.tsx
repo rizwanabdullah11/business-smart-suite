@@ -945,46 +945,42 @@ export default function DynamicModulePage({
                       </div>
                     ) : (
                       /* Table */
-                      <div className="border border-gray-200">
-                        <div className="overflow-x-auto p-3">
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div className="overflow-x-auto">
                           <table className="min-w-full text-left">
-                            <thead className="bg-gray-100">
+                            <thead className="bg-gray-50">
                               <tr style={{ color: COLORS.textPrimary }}>
-                                <th className="px-2 py-2 text-xs font-semibold">
-                                  <div className="flex items-center gap-1">
-                                    {/* <div className="flex h-5 w-5 items-center justify-center opacity-30">
-                                      <svg width="10" height="12" viewBox="0 0 12 14" fill="currentColor"><circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/><circle cx="3" cy="7" r="1.5"/><circle cx="9" cy="7" r="1.5"/><circle cx="3" cy="12" r="1.5"/><circle cx="9" cy="12" r="1.5"/></svg>
-                                    </div> */}
-                                    <input
-                                      type="checkbox"
-                                      className="h-4 w-4 rounded cursor-pointer"
-                                      checked={sortedItems.length > 0 && sortedItems.every((i: any) => selectedItems[category.id]?.has(i.id))}
-                                      onChange={(e) => {
-                                        if (e.target.checked) {
-                                          setSelectedItems((prev) => ({ ...prev, [category.id]: new Set(sortedItems.map((i: any) => i.id)) }))
-                                        } else {
-                                          setSelectedItems((prev) => ({ ...prev, [category.id]: new Set() }))
-                                        }
-                                      }}
-                                    />
-                                  </div>
+                                <th className="px-4 py-3 text-sm font-medium">
+                                  <input
+                                    type="checkbox"
+                                    className="h-4 w-4 rounded cursor-pointer"
+                                    checked={sortedItems.length > 0 && sortedItems.every((i: any) => selectedItems[category.id]?.has(i.id))}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedItems((prev) => ({ ...prev, [category.id]: new Set(sortedItems.map((i: any) => i.id)) }))
+                                      } else {
+                                        setSelectedItems((prev) => ({ ...prev, [category.id]: new Set() }))
+                                      }
+                                    }}
+                                  />
                                 </th>
-                                <th className="px-2 py-2 text-xs font-semibold">{itemLabel}</th>
-                                {displayKeys.map((key) => (
-                                  <th key={key} className="px-2 py-2 text-xs font-semibold">{fieldLabelMap[key] || key}</th>
+                                <th className="px-4 py-3 text-sm font-medium">{itemLabel}</th>
+                                {displayKeys.slice(0, -1).map((key) => (
+                                  <th key={key} className="px-4 py-3 text-sm font-medium">{fieldLabelMap[key] || key}</th>
                                 ))}
-                                <th className="px-2 py-2 text-xs font-semibold"></th>
+                                <th className="px-4 py-3 text-sm font-medium">{displayKeys.length > 0 ? (fieldLabelMap[displayKeys[displayKeys.length - 1]] || displayKeys[displayKeys.length - 1]) : "Location"}</th>
+                                <th className="px-4 py-3 text-sm font-medium text-right">Actions</th>
                               </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="bg-white divide-y divide-gray-200">
                               {sortedItems.map((item: any, index: number) => {
                                 const statusTone = getItemStatusTone(item)
                                 return (
                                   <tr
                                     key={item.id}
-                                    className={`border-b ${item.highlighted ? "bg-yellow-50" : index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
+                                    className="hover:bg-gray-50 transition-colors"
                                   >
-                                    <td className="px-2 py-2 align-middle">
+                                    <td className="px-4 py-3 align-middle">
                                       <input
                                         type="checkbox"
                                         className="h-4 w-4 rounded cursor-pointer"
@@ -999,17 +995,16 @@ export default function DynamicModulePage({
                                         }}
                                       />
                                     </td>
-                                    <td className="px-2 py-2 align-middle">
-                                      <div className="flex items-center">
-                                        <Icon className="h-5 w-5 mr-2" aria-hidden="true" />
-                                        <Link href={`${itemHrefPrefix}/${item.id}`} className="text-blue-600 hover:underline">
+                                    <td className="px-4 py-3 align-middle">
+                                      <div className="flex items-center gap-2">
+                                        <Icon className="h-4 w-4 text-blue-600" aria-hidden="true" />
+                                        <Link href={`${itemHrefPrefix}/${item.id}`} className="text-blue-600 hover:underline text-sm">
                                           {getItemTitle(item)}
                                         </Link>
-                                        {item.approved && <span className="ml-2 text-green-600 text-xs">✓ Approved</span>}
                                       </div>
                                     </td>
-                                    {displayKeys.map((key) => (
-                                      <td key={key} className="px-2 py-2 align-middle text-sm" style={{ color: COLORS.textPrimary }}>
+                                    {displayKeys.slice(0, -1).map((key) => (
+                                      <td key={key} className="px-4 py-3 align-middle text-sm" style={{ color: COLORS.textPrimary }}>
                                         {key.toLowerCase().includes("date") ? (
                                           formatDisplayDate(item?.[key])
                                         ) : (
@@ -1017,7 +1012,10 @@ export default function DynamicModulePage({
                                         )}
                                       </td>
                                     ))}
-                                    <td className="px-2 py-2 align-middle">
+                                    <td className="px-4 py-3 align-middle text-sm" style={{ color: COLORS.textPrimary }}>
+                                      {displayKeys.length > 0 ? String(item?.[displayKeys[displayKeys.length - 1]] ?? "—") : (item.location || "—")}
+                                    </td>
+                                    <td className="px-4 py-3 align-middle">
                                       {!isEmployee && (
                                         <div className="flex gap-1 justify-end">
                                           {isEmployee ? (
