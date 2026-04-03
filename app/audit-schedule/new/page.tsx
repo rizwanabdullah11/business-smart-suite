@@ -103,7 +103,7 @@ export default function NewAuditSchedulePage() {
 
   return (
     <div className="min-h-screen" style={{ background: "linear-gradient(180deg,#f7f8fb 0%,#f3f5f9 100%)" }}>
-      <div className="mx-auto max-w-[1400px] p-4 sm:p-6">
+      <div className="mx-auto p-4 sm:p-6">
 
         {/* Header */}
         <div className="mb-6 flex items-start gap-3">
