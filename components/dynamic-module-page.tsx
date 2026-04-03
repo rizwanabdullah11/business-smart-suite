@@ -951,24 +951,29 @@ export default function DynamicModulePage({
                             <thead className="bg-gray-100">
                               <tr style={{ color: COLORS.textPrimary }}>
                                 <th className="px-2 py-2 text-xs font-semibold">
-                                  <input
-                                    type="checkbox"
-                                    className="h-4 w-4 rounded cursor-pointer"
-                                    checked={sortedItems.length > 0 && sortedItems.every((i: any) => selectedItems[category.id]?.has(i.id))}
-                                    onChange={(e) => {
-                                      if (e.target.checked) {
-                                        setSelectedItems((prev) => ({ ...prev, [category.id]: new Set(sortedItems.map((i: any) => i.id)) }))
-                                      } else {
-                                        setSelectedItems((prev) => ({ ...prev, [category.id]: new Set() }))
-                                      }
-                                    }}
-                                  />
+                                  <div className="flex items-center gap-1">
+                                    {/* <div className="flex h-5 w-5 items-center justify-center opacity-30">
+                                      <svg width="10" height="12" viewBox="0 0 12 14" fill="currentColor"><circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/><circle cx="3" cy="7" r="1.5"/><circle cx="9" cy="7" r="1.5"/><circle cx="3" cy="12" r="1.5"/><circle cx="9" cy="12" r="1.5"/></svg>
+                                    </div> */}
+                                    <input
+                                      type="checkbox"
+                                      className="h-4 w-4 rounded cursor-pointer"
+                                      checked={sortedItems.length > 0 && sortedItems.every((i: any) => selectedItems[category.id]?.has(i.id))}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setSelectedItems((prev) => ({ ...prev, [category.id]: new Set(sortedItems.map((i: any) => i.id)) }))
+                                        } else {
+                                          setSelectedItems((prev) => ({ ...prev, [category.id]: new Set() }))
+                                        }
+                                      }}
+                                    />
+                                  </div>
                                 </th>
                                 <th className="px-2 py-2 text-xs font-semibold">{itemLabel}</th>
-                                {displayKeys.slice(0, -1).map((key) => (
+                                {displayKeys.map((key) => (
                                   <th key={key} className="px-2 py-2 text-xs font-semibold">{fieldLabelMap[key] || key}</th>
                                 ))}
-                                <th className="px-2 py-2 text-xs font-semibold">{displayKeys.length > 0 ? (fieldLabelMap[displayKeys[displayKeys.length - 1]] || displayKeys[displayKeys.length - 1]) : "Location"}</th>
+                                <th className="px-2 py-2 text-xs font-semibold"></th>
                               </tr>
                             </thead>
                             <tbody>
@@ -1003,7 +1008,7 @@ export default function DynamicModulePage({
                                         {item.approved && <span className="ml-2 text-green-600 text-xs">✓ Approved</span>}
                                       </div>
                                     </td>
-                                    {displayKeys.slice(0, -1).map((key) => (
+                                    {displayKeys.map((key) => (
                                       <td key={key} className="px-2 py-2 align-middle text-sm" style={{ color: COLORS.textPrimary }}>
                                         {key.toLowerCase().includes("date") ? (
                                           formatDisplayDate(item?.[key])
@@ -1013,11 +1018,9 @@ export default function DynamicModulePage({
                                       </td>
                                     ))}
                                     <td className="px-2 py-2 align-middle">
-                                      <div className="flex justify-between items-center">
-                                        <span>{displayKeys.length > 0 ? String(item?.[displayKeys[displayKeys.length - 1]] ?? "—") : (item.location || "—")}</span>
-                                        {!isEmployee && (
-                                          <div className="flex gap-1">
-                                            {isEmployee ? (
+                                      {!isEmployee && (
+                                        <div className="flex gap-1 justify-end">
+                                          {isEmployee ? (
                                               <>
                                                 <button type="button" className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-gray-400 text-white border-none cursor-grab" title="Drag">
                                                   <GripVertical className="h-3 w-3" />
@@ -1043,9 +1046,8 @@ export default function DynamicModulePage({
                                             <button type="button" onClick={() => deleteItem(item.id)} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-red-500 text-white border-none" title="Delete"><Trash2 className="h-3 w-3" /></button>
                                           </>
                                         )}
-                                          </div>
-                                        )}
-                                      </div>
+                                        </div>
+                                      )}
                                     </td>
                                   </tr>
                                 )
