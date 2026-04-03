@@ -823,6 +823,9 @@ export default function DynamicModulePage({
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     {!showArchived && (
                       <>
+                      <div className="mr-1 flex h-7 w-5 items-center justify-center opacity-50">
+                      <svg width="12" height="14" viewBox="0 0 12 14" fill="white"><circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/><circle cx="3" cy="7" r="1.5"/><circle cx="9" cy="7" r="1.5"/><circle cx="3" cy="12" r="1.5"/><circle cx="9" cy="12" r="1.5"/></svg>
+                    </div>
                         <button 
                           type="button" 
                           onClick={() => {
@@ -847,9 +850,7 @@ export default function DynamicModulePage({
                         </button>
                       </>
                     )}
-                    <div className="mr-1 flex h-7 w-5 items-center justify-center opacity-50">
-                      <svg width="12" height="14" viewBox="0 0 12 14" fill="white"><circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/><circle cx="3" cy="7" r="1.5"/><circle cx="9" cy="7" r="1.5"/><circle cx="3" cy="12" r="1.5"/><circle cx="9" cy="12" r="1.5"/></svg>
-                    </div>
+                    
                     {!isEmployee ? (
                       <button type="button" onClick={(e) => { e.stopPropagation(); setEditingCategory(category.id); setEditTitle(category.title) }} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-gray-600 text-white border-none" title="Edit Category">
                         <Edit className="h-3 w-3" />
@@ -1027,6 +1028,7 @@ export default function DynamicModulePage({
                                               </>
                                             ) : (
                                               <>
+                                              
                                             <button type="button" onClick={() => updateItem(item.id, { highlighted: !item.highlighted }, "highlight")} className={`flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 ${item.highlighted ? "bg-gray-200" : "bg-yellow-500 text-white"} border-none`} title={item.highlighted ? "Remove Highlight" : "Highlight"}><div className="h-3 w-3 bg-yellow-500"></div></button>
                                             <button type="button" onClick={() => updateItem(item.id, { approved: !item.approved }, "approve")} className={`flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 ${item.approved ? "bg-gray-200" : "bg-green-500 text-white"} border-none`} title={item.approved ? "Mark as Incomplete" : "Mark as Completed"}><Check className="h-3 w-3" /></button>
                                             <button type="button" onClick={() => updateItem(item.id, { paused: !item.paused }, "pause")} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-orange-500 text-white border-none" title={item.paused ? "Resume" : "Pause"}><Pause className="h-3 w-3" /></button>
