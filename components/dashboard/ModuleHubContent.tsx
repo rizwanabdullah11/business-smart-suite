@@ -49,12 +49,6 @@ export function ModuleHubContent({ onAddFolder }: ModuleHubContentProps = {}) {
           <div className="w-10 h-10 bg-gradient-to-r from-indigo-500/30 to-purple-500/30 rounded-lg shadow-lg animate-spin" style={{ animationDuration: '8s', animationDirection: 'reverse' }}></div>
         </div>
         
-        {/* Sophisticated Pulsing Rings */}
-        <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-          <div className="w-24 h-24 border-4 border-purple-400/20 rounded-full animate-ping"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-4 border-pink-400/25 rounded-full animate-ping" style={{ animationDelay: '1s' }}></div>
-        </div>
-        
         {/* Elegant Particles */}
         <div className="absolute inset-0">
           {[...Array(25)].map((_, i) => (

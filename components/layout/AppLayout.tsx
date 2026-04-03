@@ -64,7 +64,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             <AppPurpleHeader user={user} onLogout={handleLogout} />
 
             <main
-                className={isHome ? 'pt-[84px] px-0 pb-0 bg-transparent' : 'pt-[84px] px-4 sm:px-8 pb-8'}
+                className={isHome ? 'pt-[68px] px-0 pb-0 bg-transparent' : 'pt-[68px] px-4 sm:px-8 pb-8'}
             >
                 {children}
             </main>

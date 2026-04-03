@@ -50,8 +50,8 @@ export function AppPurpleHeader({ user, onLogout }: AppPurpleHeaderProps) {
   }
 
   return (
-    <header className="w-full fixed top-0 left-0 right-0 z-40">
-      <div className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 p-4 flex justify-between items-center relative overflow-hidden">
+    <header className="w-full fixed top-0 left-0 right-0 z-40 shadow-none">
+      <div className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 p-4 flex justify-between items-center relative overflow-hidden border-0 shadow-none">
         {/* Animated background elements */}
         <div className="absolute inset-0 bg-gradient-to-r from-slate-900/50 via-purple-900/30 to-slate-900/50"></div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(120,119,198,0.3),transparent_50%)]"></div>
