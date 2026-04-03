@@ -996,15 +996,17 @@ export default function DynamicModulePage({
                                       />
                                     </td>
                                     <td className="px-4 py-3 align-middle">
-                                      <div className="flex items-center gap-2">
-                                        <Icon className="h-4 w-4 text-blue-600" aria-hidden="true" />
-                                        <Link href={`${itemHrefPrefix}/${item.id}`} className="text-blue-600 hover:underline text-sm">
+                                      <div className="flex items-center gap-1">
+                                        <div className="flex h-8 w-8 items-center justify-center bg-blue-100 rounded" style={{ minWidth: '32px' }}>
+                                          <Icon className="h-4 w-4 text-blue-600" aria-hidden="true" />
+                                        </div>
+                                        <Link href={`${itemHrefPrefix}/${item.id}`} className="text-blue-600 hover:underline text-base">
                                           {getItemTitle(item)}
                                         </Link>
                                       </div>
                                     </td>
                                     {displayKeys.slice(0, -1).map((key) => (
-                                      <td key={key} className="px-4 py-3 align-middle text-sm" style={{ color: COLORS.textPrimary }}>
+                                      <td key={key} className="px-4 py-3 align-middle text-base" style={{ color: COLORS.textPrimary }}>
                                         {key.toLowerCase().includes("date") ? (
                                           formatDisplayDate(item?.[key])
                                         ) : (
@@ -1012,7 +1014,7 @@ export default function DynamicModulePage({
                                         )}
                                       </td>
                                     ))}
-                                    <td className="px-4 py-3 align-middle text-sm" style={{ color: COLORS.textPrimary }}>
+                                    <td className="px-4 py-3 align-middle text-base" style={{ color: COLORS.textPrimary }}>
                                       {displayKeys.length > 0 ? String(item?.[displayKeys[displayKeys.length - 1]] ?? "—") : (item.location || "—")}
                                     </td>
                                     <td className="px-4 py-3 align-middle">
