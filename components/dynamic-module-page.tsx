@@ -819,10 +819,16 @@ export default function DynamicModulePage({
                 <div className="bg-[#2d1e3e] text-white p-3 flex justify-between items-center rounded-sm cursor-pointer" onClick={() => toggleCategory(category.id)}>
                   <span className="font-semibold">{category.title}</span>
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                    {!showArchived && (
+                      <>
+                        <button type="button" className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-white/10 text-white border-none" title="Sort">
+                          <ArrowUpDown className="h-3 w-3" />
+                        </button>
+                      </>
+                    )}
                     <div className="mr-1 flex h-7 w-5 items-center justify-center opacity-50">
                       <svg width="12" height="14" viewBox="0 0 12 14" fill="white"><circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/><circle cx="3" cy="7" r="1.5"/><circle cx="9" cy="7" r="1.5"/><circle cx="3" cy="12" r="1.5"/><circle cx="9" cy="12" r="1.5"/></svg>
                     </div>
-                    <div className="h-6 w-6 rounded bg-white/90 border border-white/40" />
                     {!isEmployee ? (
                       <button type="button" onClick={(e) => { e.stopPropagation(); setEditingCategory(category.id); setEditTitle(category.title) }} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-gray-600 text-white border-none" title="Edit Category">
                         <Edit className="h-3 w-3" />
