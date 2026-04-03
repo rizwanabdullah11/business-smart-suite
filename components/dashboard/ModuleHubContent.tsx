@@ -95,6 +95,17 @@ export function ModuleHubContent() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16">
                   {visibleGroups.map((group, sectionIndex) => {
                     const GroupIcon = group.icon
+                    const getHoverColors = (index: number) => {
+                      switch(index) {
+                        case 0: return { shadow: 'blue-500/20', bg: 'blue-900/20', border: 'blue-500/30', icon: 'blue-600', iconGradient: 'from-blue-600 via-blue-500 to-blue-400' }
+                        case 1: return { shadow: 'purple-500/20', bg: 'purple-900/20', border: 'purple-500/30', icon: 'purple-600', iconGradient: 'from-purple-600 via-purple-500 to-purple-400' }
+                        case 2: return { shadow: 'emerald-500/20', bg: 'emerald-900/20', border: 'emerald-500/30', icon: 'emerald-600', iconGradient: 'from-emerald-600 via-emerald-500 to-emerald-400' }
+                        case 3: return { shadow: 'orange-500/20', bg: 'orange-900/20', border: 'orange-500/30', icon: 'orange-600', iconGradient: 'from-orange-600 via-orange-500 to-orange-400' }
+                        default: return { shadow: 'gray-500/20', bg: 'gray-900/20', border: 'gray-500/30', icon: 'gray-600', iconGradient: 'from-gray-600 via-gray-500 to-gray-400' }
+                      }
+                    }
+                    const colors = getHoverColors(sectionIndex)
+                    
                     return (
                       <div key={sectionIndex} className="group">
                         <div
@@ -104,33 +115,30 @@ export function ModuleHubContent() {
                             shadow-2xl hover:shadow-3xl
                             backdrop-blur-2xl
                             hover:scale-[1.03] hover:-translate-y-2
-                            focus-within:ring-2 focus-within:ring-slate-400/40 focus-within:outline-none`}
+                            focus-within:ring-2 focus-within:ring-slate-400/40 focus-within:outline-none
+                            hover:shadow-${colors.shadow} hover:bg-gradient-to-br hover:from-slate-900/90 hover:via-${colors.bg} hover:to-slate-900/90`}
                           style={{ minHeight: 'clamp(400px, 45vh, 450px)' }}
                           role="region"
                           aria-label={`${group.title} section`}
                         >
                           {/* Sophisticated Background Elements */}
                           <div className="absolute inset-0 overflow-hidden">
-                            <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full opacity-5 blur-3xl" style={{ background: group.color }}></div>
-                            <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full opacity-5 blur-2xl" style={{ background: group.color }}></div>
+                            <div className={`absolute -top-20 -right-20 w-60 h-60 bg-${colors.icon} rounded-full opacity-5 blur-3xl`}></div>
+                            <div className={`absolute -bottom-16 -left-16 w-48 h-48 bg-${colors.icon} rounded-full opacity-5 blur-2xl`}></div>
                           </div>
 
                           {/* Enterprise Section Header */}
                           <div className="relative p-12 lg:p-16 border-b border-slate-600/30">
                             {/* Subtle Accent Pattern */}
-                            <div className="absolute inset-0 opacity-10" style={{ background: `linear-gradient(to bottom right, ${group.color}33, ${group.color}26, transparent)` }}></div>
+                            <div className={`absolute inset-0 bg-gradient-to-br from-${colors.icon}/20 via-${colors.icon}/15 to-transparent opacity-10`}></div>
                             
                             {/* Premium Corner Accent */}
-                            <div className="absolute top-0 right-0 w-48 h-48 opacity-15" style={{ background: `linear-gradient(to bottom left, ${group.color}, ${group.color}cc, transparent)` }}></div>
+                            <div className={`absolute top-0 right-0 w-48 h-48 bg-gradient-to-bl from-${colors.icon} via-${colors.icon} to-transparent opacity-15`}></div>
                             
                             <div className="flex items-center gap-10 lg:gap-16 relative z-10">
                               {/* Revolutionary Enterprise Icon */}
                               <div 
-                                className="enterprise-hero-icon inline-flex items-center justify-center rounded-3xl"
-                                style={{ 
-                                  background: `linear-gradient(to bottom right, ${group.color}, ${group.color}cc, ${group.color}99)`,
-                                  boxShadow: `0 20px 40px ${group.color}66`
-                                }}
+                                className={`enterprise-hero-icon inline-flex items-center justify-center rounded-3xl bg-gradient-to-br ${colors.iconGradient} shadow-2xl shadow-${colors.shadow}`}
                               >
                                 <div className="w-12 h-12 lg:w-16 lg:h-16 text-white drop-shadow-lg">
                                   <GroupIcon className="w-full h-full" />
@@ -155,38 +163,30 @@ export function ModuleHubContent() {
                                     aria-label={`Navigate to ${item.label}`}
                                   >
                                     <div
-                                      className="enterprise-nav-item aspect-square p-4 lg:p-6 rounded-2xl border transition-all duration-1000 ease-out relative overflow-hidden
+                                      className={`enterprise-nav-item aspect-square p-4 lg:p-6 rounded-2xl border transition-all duration-1000 ease-out relative overflow-hidden
                                         bg-gradient-to-br from-slate-800/60 via-slate-700/50 to-slate-800/60
                                         border-slate-600/40 hover:border-slate-500/60
-                                        shadow-xl hover:shadow-2xl hover:shadow-3xl
+                                        shadow-xl hover:shadow-2xl
                                         transform hover:-translate-y-4 hover:scale-[1.1]
-                                        focus:ring-2 focus:ring-slate-400/40"
-                                      style={{
-                                        boxShadow: `0 10px 30px ${group.color}33`
-                                      }}
+                                        focus:ring-2 focus:ring-slate-400/40
+                                        hover:shadow-${colors.border} hover:bg-gradient-to-br hover:from-slate-800/80 hover:via-${colors.bg} hover:to-slate-800/80`}
                                     >
                                       {/* Enterprise Accent Border */}
                                       <div 
-                                        className="absolute top-0 left-0 w-3 h-full opacity-0 group-hover/item:opacity-100 transition-all duration-1000"
-                                        style={{ background: `linear-gradient(to bottom, ${group.color}, ${group.color}cc)` }}
+                                        className={`absolute top-0 left-0 w-3 h-full bg-gradient-to-b ${colors.iconGradient} opacity-0 group-hover/item:opacity-100 transition-all duration-1000`}
                                       ></div>
                                       
                                       {/* Premium Corner Glow */}
                                       <div 
-                                        className="absolute top-0 right-0 w-24 h-24 opacity-0 group-hover/item:opacity-50 transition-opacity duration-1000"
-                                        style={{ background: `linear-gradient(to bottom left, ${group.color}4d, transparent)` }}
+                                        className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-${colors.icon} to-transparent opacity-0 group-hover/item:opacity-50 transition-opacity duration-1000`}
                                       ></div>
                                       
                                       <div className="flex flex-col items-center text-center h-full justify-between relative z-10">
                                         {/* Optimized Big Navigation Icon */}
                                         <div 
-                                          className="optimized-nav-icon flex items-center justify-center rounded-2xl mb-2 lg:mb-3 transition-all duration-1000 group-hover/item:scale-110"
-                                          style={{ 
-                                            background: `linear-gradient(to bottom right, ${group.color}, ${group.color}cc, ${group.color}99)`,
-                                            boxShadow: `0 10px 20px ${group.color}66`
-                                          }}
+                                          className={`optimized-nav-icon flex items-center justify-center rounded-2xl mb-2 lg:mb-3 transition-all duration-1000 group-hover/item:scale-110 bg-gradient-to-br ${colors.iconGradient} text-white shadow-xl shadow-${colors.shadow}`}
                                         >
-                                          <div className="w-12 h-12 lg:w-16 lg:h-16 drop-shadow-lg flex items-center justify-center text-white">
+                                          <div className="w-12 h-12 lg:w-16 lg:h-16 drop-shadow-lg flex items-center justify-center">
                                             <ModIcon className="w-full h-full" />
                                           </div>
                                         </div>
@@ -198,8 +198,7 @@ export function ModuleHubContent() {
                                         
                                         {/* Enterprise Hover Glow */}
                                         <div 
-                                          className="absolute inset-0 rounded-2xl opacity-0 group-hover/item:opacity-20 transition-all duration-1000"
-                                          style={{ background: `linear-gradient(to bottom right, ${group.color}66, ${group.color}4d, ${group.color}33)` }}
+                                          className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${colors.iconGradient} opacity-0 group-hover/item:opacity-20 transition-all duration-1000`}
                                         ></div>
                                       </div>
                                     </div>
