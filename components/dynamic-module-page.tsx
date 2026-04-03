@@ -950,7 +950,7 @@ export default function DynamicModulePage({
                           <table className="min-w-full text-left">
                             <thead className="bg-gray-50">
                               <tr style={{ color: COLORS.textPrimary }}>
-                                <th className="px-4 py-3 text-base font-medium">
+                                <th className="pl-4 pr-0 py-3 text-base font-medium">
                                   <input
                                     type="checkbox"
                                     className="h-4 w-4 rounded cursor-pointer"
@@ -964,7 +964,7 @@ export default function DynamicModulePage({
                                     }}
                                   />
                                 </th>
-                                <th className="px-4 py-3 text-base font-medium">{itemLabel}</th>
+                                <th className="pl-0 pr-4 py-3 text-base font-medium">{itemLabel}</th>
                                 {displayKeys.slice(0, -1).map((key) => (
                                   <th key={key} className="px-4 py-3 text-base font-medium">{fieldLabelMap[key] || key}</th>
                                 ))}
@@ -980,7 +980,7 @@ export default function DynamicModulePage({
                                     key={item.id}
                                     className="hover:bg-gray-50 transition-colors"
                                   >
-                                    <td className="px-4 py-3 align-middle">
+                                    <td className="pl-4 pr-0 py-3 align-middle">
                                       <input
                                         type="checkbox"
                                         className="h-4 w-4 rounded cursor-pointer"
@@ -995,7 +995,7 @@ export default function DynamicModulePage({
                                         }}
                                       />
                                     </td>
-                                    <td className="px-4 py-3 align-middle">
+                                    <td className="pl-0 pr-4 py-3 align-middle">
                                       <div className="flex items-center gap-1">
                                         <div className="flex h-8 w-8 items-center justify-center bg-blue-100 rounded" style={{ minWidth: '32px' }}>
                                           <Icon className="h-4 w-4 text-blue-600" aria-hidden="true" />
