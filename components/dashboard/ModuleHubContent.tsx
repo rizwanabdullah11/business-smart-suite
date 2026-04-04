@@ -147,11 +147,9 @@ export function ModuleHubContent({ onAddFolder }: ModuleHubContentProps = {}) {
                             <div className="flex items-center gap-10 lg:gap-16 relative z-10">
                               {/* Revolutionary Enterprise Icon */}
                               <div 
-                                className={`enterprise-hero-icon inline-flex items-center justify-center rounded-3xl bg-gradient-to-br ${colors.iconGradient} shadow-2xl shadow-${colors.shadow}`}
+                                className={`enterprise-hero-icon flex items-center justify-center rounded-3xl bg-gradient-to-br ${colors.iconGradient} shadow-2xl shadow-${colors.shadow}`}
                               >
-                                <div className="w-12 h-12 lg:w-16 lg:h-16 text-white drop-shadow-lg">
-                                  <GroupIcon className="w-full h-full" />
-                                </div>
+                                <GroupIcon className="w-12 h-12 lg:w-16 lg:h-16 text-white drop-shadow-lg" />
                               </div>
                               <div className="flex-1">
                                 <h2 className="enterprise-section-title text-4xl lg:text-5xl font-bold mb-4 leading-tight text-white">{group.title}</h2>
