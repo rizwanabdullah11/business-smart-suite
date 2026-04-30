@@ -170,7 +170,7 @@ export default function UsersPage() {
             >
               All Users ({users.filter((u) => showAdmins || roleOf(u) !== "admin").length})
             </button>
-            {isAdmin && (
+            {(isAdmin || isOrganization) && (
               <>
                 <button
                   onClick={() => setFilterRole("organization")}
@@ -185,19 +185,21 @@ export default function UsersPage() {
                 >
                   Organizations ({users.filter((u) => roleOf(u) === "organization").length})
                 </button>
-                <button
-                  onClick={() => setFilterRole("admin")}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    filterRole === "admin" ? "shadow-md" : ""
-                  }`}
-                  style={{
-                    background: filterRole === "admin" ? COLORS.primary : COLORS.bgWhite,
-                    color: filterRole === "admin" ? COLORS.textWhite : COLORS.textPrimary,
-                    border: `1px solid ${COLORS.border}`,
-                  }}
-                >
-                  Admins ({users.filter((u) => roleOf(u) === "admin").length})
-                </button>
+                {isAdmin ? (
+                  <button
+                    onClick={() => setFilterRole("admin")}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                      filterRole === "admin" ? "shadow-md" : ""
+                    }`}
+                    style={{
+                      background: filterRole === "admin" ? COLORS.primary : COLORS.bgWhite,
+                      color: filterRole === "admin" ? COLORS.textWhite : COLORS.textPrimary,
+                      border: `1px solid ${COLORS.border}`,
+                    }}
+                  >
+                    Admins ({users.filter((u) => roleOf(u) === "admin").length})
+                  </button>
+                ) : null}
                 <button
                   onClick={() => setFilterRole("auditor")}
                   className={`px-4 py-2 rounded-lg font-medium transition-all ${
@@ -599,7 +601,7 @@ function AddUserModal({ isAdmin, isOrganization, onClose, onSuccess }: AddUserMo
               style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
             >
               {isAdmin && <option value="Organization">Organization</option>}
-              {isAdmin && <option value="Auditor">Auditor</option>}
+              {(isAdmin || isOrganization) && <option value="Auditor">Auditor</option>}
               <option value="Employee">Employee</option>
             </select>
           </div>

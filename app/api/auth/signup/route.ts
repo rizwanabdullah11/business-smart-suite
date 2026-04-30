@@ -45,16 +45,16 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      if (currentUser.role === "organization" && requestedRole !== ROLE.EMPLOYEE) {
+      if (currentUser.role === "organization" && requestedRole !== ROLE.EMPLOYEE && requestedRole !== ROLE.AUDITOR) {
         return NextResponse.json(
-          { error: "Forbidden", message: "Organizations can only create Employee users" },
+          { error: "Forbidden", message: "Organizations can only create Employee or Auditor users" },
           { status: 403 }
         )
       }
 
       if (currentUser.role === "organization") {
         userData.organizationId = new mongoose.Types.ObjectId(currentUser.id)
-        userData.role = ROLE.EMPLOYEE
+        userData.role = requestedRole === ROLE.AUDITOR ? ROLE.AUDITOR : ROLE.EMPLOYEE
       } else if ((requestedRole === ROLE.EMPLOYEE || requestedRole === ROLE.AUDITOR) && body.organizationId) {
         if (!mongoose.Types.ObjectId.isValid(body.organizationId)) {
           return NextResponse.json(

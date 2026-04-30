@@ -112,9 +112,9 @@ export const POST = withAuth(
       const requestedRole = normalizeRole(body.role)
 
       if (user.role === "organization") {
-        if (requestedRole !== ROLE.EMPLOYEE) {
+        if (requestedRole !== ROLE.EMPLOYEE && requestedRole !== ROLE.AUDITOR) {
           return NextResponse.json(
-            { error: "Organizations can only create Employee users" },
+            { error: "Organizations can only create Employee or Auditor users" },
             { status: 403 }
           )
         }
