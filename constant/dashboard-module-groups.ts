@@ -27,6 +27,8 @@ import {
   BarChart,
   Settings,
   FolderOpen,
+  Rocket,
+  BadgeCheck,
 } from "lucide-react"
 import { Permission } from "@/lib/types/permissions"
 
@@ -67,6 +69,8 @@ export const DASHBOARD_MODULE_GROUPS: DashboardModuleGroup[] = [
       { icon: FileInput, label: "Forms", href: "/forms", permission: Permission.VIEW_FORMS, moduleKey: "document-control" },
       { icon: Award, label: "Certificates", href: "/certificate", permission: Permission.VIEW_CERTIFICATES, moduleKey: "document-control" },
       { icon: FolderOpen, label: "Documents", href: "/documents", permission: Permission.VIEW_MANUALS, moduleKey: "document-control" },
+      { icon: Rocket, label: "Getting Started", href: "/guides/getting-started" },
+      { icon: BadgeCheck, label: "ISO Standards", href: "/guides/iso-standards" },
     ],
   },
   {

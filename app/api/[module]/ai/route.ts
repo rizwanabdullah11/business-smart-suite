@@ -19,21 +19,22 @@ function unsupportedModule(module: string) {
   return NextResponse.json({ error: `Unsupported module: ${module}` }, { status: 404 })
 }
 
-function toSummary(entry: any): EntrySummary {
-  const title = String(entry?.title || entry?.name || "Untitled")
+function toSummary(entry: unknown): EntrySummary {
+  const e = entry as Record<string, any>
+  const title = String(e?.title || e?.name || "Untitled")
   const category =
-    typeof entry?.category === "object" && entry?.category?.name
-      ? String(entry.category.name)
+    typeof e?.category === "object" && e?.category?.name
+      ? String(e.category.name)
       : "Unknown"
 
   return {
-    id: String(entry?._id || ""),
+    id: String(e?._id || ""),
     title,
     category,
-    approved: Boolean(entry?.approved),
-    highlighted: Boolean(entry?.highlighted),
-    paused: Boolean(entry?.paused),
-    archived: Boolean(entry?.archived || entry?.isArchived),
+    approved: Boolean(e?.approved),
+    highlighted: Boolean(e?.highlighted),
+    paused: Boolean(e?.paused),
+    archived: Boolean(e?.archived || e?.isArchived),
   }
 }
 
@@ -80,8 +81,8 @@ async function askGemini(prompt: string) {
 export const POST = withAuth(
   async (request: NextRequest, _user, { params }: { params: { module: string } }) => {
     try {
-      const module = params.module
-      if (!isSupportedModule(module)) return unsupportedModule(module)
+      const moduleSlug = params.module
+      if (!isSupportedModule(moduleSlug)) return unsupportedModule(moduleSlug)
 
       const body = await request.json()
       const action = String(body?.action || "summarize-all")
@@ -90,9 +91,9 @@ export const POST = withAuth(
       const question = String(body?.question || "").trim()
 
       await connectToDatabase()
-      const Model = getModuleModel(module)
+      const Model = getModuleModel(moduleSlug)
 
-      let docs: any[] = []
+      let docs: unknown[] = []
       if (action === "ask-one" && itemId) {
         if (!mongoose.Types.ObjectId.isValid(itemId)) {
           return NextResponse.json({ error: "Invalid item id" }, { status: 400 })
