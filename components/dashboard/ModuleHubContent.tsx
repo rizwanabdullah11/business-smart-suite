@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePermissions } from "@/hooks/use-permissions"
+import { useEnabledModules } from "@/hooks/use-enabled-modules"
 import { DASHBOARD_MODULE_GROUPS } from "@/constant/dashboard-module-groups"
 
 type ModuleHubContentProps = {
@@ -10,10 +11,19 @@ type ModuleHubContentProps = {
 
 export function ModuleHubContent({ onAddFolder }: ModuleHubContentProps = {}) {
   const { can, loading } = usePermissions()
+  const { enabledSet } = useEnabledModules()
+
+  const isHrefEnabled = (href: string) => {
+    if (!href || href === "/dashboard") return true
+    if (href.startsWith("/admin")) return true
+    if (href.startsWith("/dashboard")) return true
+    const seg = href.replace(/^\//, "").split("/")[0]
+    return enabledSet.size === 0 ? false : enabledSet.has(seg as any)
+  }
 
   const visibleGroups = DASHBOARD_MODULE_GROUPS.map((group) => ({
     ...group,
-    modules: group.modules.filter((m) => !m.permission || can(m.permission)),
+    modules: group.modules.filter((m) => (!m.permission || can(m.permission)) && isHrefEnabled(m.href)),
   })).filter((group) => group.modules.length > 0)
 
   return (

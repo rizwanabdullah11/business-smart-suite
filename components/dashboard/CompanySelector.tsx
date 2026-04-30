@@ -13,10 +13,20 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import Link from "next/link"
 import { usePermissions } from "@/hooks/use-permissions"
+import { useEnabledModules } from "@/hooks/use-enabled-modules"
 import { DASHBOARD_MODULE_GROUPS } from "@/constant/dashboard-module-groups"
 
 export function CompanySelector() {
   const { can } = usePermissions()
+  const { enabledSet } = useEnabledModules()
+
+  const isHrefEnabled = (href: string) => {
+    if (!href || href === "/dashboard" || href === "/registers") return true
+    if (href.startsWith("/admin")) return true
+    if (href.startsWith("/dashboard")) return true
+    const seg = href.replace(/^\//, "").split("/")[0]
+    return enabledSet.size === 0 ? false : enabledSet.has(seg as any)
+  }
 
   // Build navigation sections with permission filtering
   const navigationSections = [
@@ -30,7 +40,7 @@ export function CompanySelector() {
     ...DASHBOARD_MODULE_GROUPS.map((group) => ({
       label: group.title.toUpperCase(),
       items: group.modules
-        .filter((m) => !m.permission || can(m.permission))
+        .filter((m) => (!m.permission || can(m.permission)) && isHrefEnabled(m.href))
         .map((m) => ({
           icon: <m.icon className="h-5 w-5" />,
           label: m.label,

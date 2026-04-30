@@ -27,6 +27,9 @@ import {
   BarChart,
   Settings,
   FolderOpen,
+  Package,
+  ClipboardCheck,
+  ShieldAlert,
 } from "lucide-react"
 import { Permission } from "@/lib/types/permissions"
 
@@ -78,6 +81,7 @@ export const DASHBOARD_MODULE_GROUPS: DashboardModuleGroup[] = [
     moduleGradient: "linear-gradient(135deg,#6d28d9,#a855f7)",
     shadow: "0 8px 32px rgba(109,40,217,0.25)",
     modules: [
+      { icon: ClipboardCheck, label: "Audit Management", href: "/audit-schedule", permission: Permission.VIEW_AUDIT_SCHEDULE },
       { icon: Briefcase, label: "Business Continuity", href: "/business-continuity" },
       { icon: Users, label: "Management Reviews", href: "/management-reviews" },
       { icon: FileIcon, label: "Job Descriptions", href: "/job-descriptions" },
@@ -98,6 +102,7 @@ export const DASHBOARD_MODULE_GROUPS: DashboardModuleGroup[] = [
     moduleGradient: "linear-gradient(135deg,#047857,#10b981)",
     shadow: "0 8px 32px rgba(5,150,105,0.25)",
     modules: [
+      { icon: Package, label: "Asset Management", href: "/asset-management", permission: Permission.VIEW_ASSETS },
       { icon: Calendar, label: "Audit Schedule", href: "/audit-schedule", permission: Permission.VIEW_AUDIT_SCHEDULE },
       { icon: Users, label: "Interested Parties", href: "/interested-parties" },
       { icon: FileText, label: "Organisational Context", href: "/organisational-context" },
@@ -106,10 +111,12 @@ export const DASHBOARD_MODULE_GROUPS: DashboardModuleGroup[] = [
       { icon: BarChart2, label: "Improvement Register", href: "/improvement-register", permission: Permission.VIEW_IMPROVEMENTS },
       { icon: FileCheck, label: "Statement of Applicability", href: "/statement-of-applicability" },
       { icon: Scale, label: "Legal Register", href: "/legal-register" },
+      { icon: FileCheck, label: "Obligations Register", href: "/obligations-register", permission: Permission.VIEW_OBLIGATIONS },
       { icon: Truck, label: "Suppliers", href: "/suppliers" },
       { icon: GraduationCap, label: "Training", href: "/training" },
       { icon: Zap, label: "Energy Consumption", href: "/energy-consumption" },
       { icon: MessageSquare, label: "Customer Feedback", href: "/customer-feedback" },
+      { icon: ShieldAlert, label: "IT Risk Management", href: "/it-risk-management", permission: Permission.VIEW_IT_RISKS },
     ],
   },
   {

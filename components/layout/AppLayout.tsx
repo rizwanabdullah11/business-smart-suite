@@ -8,6 +8,8 @@ import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { AppPurpleHeader } from "@/components/dashboard/AppPurpleHeader"
 import { Footer } from "@/components/dashboard/Footer"
+import { useEnabledModules } from "@/hooks/use-enabled-modules"
+import { routeSegmentToModuleKey } from "@/lib/modules/catalog"
 
 interface AppLayoutProps {
     children: React.ReactNode
@@ -18,12 +20,30 @@ export function AppLayout({ children }: AppLayoutProps) {
     const pathname = usePathname()
     const { toast } = useToast()
     const { user, loading, isAuthenticated, logout: authLogout } = useAuth()
+    const { loading: modulesLoading, enabledSet } = useEnabledModules()
 
     useEffect(() => {
         if (!loading && !isAuthenticated && pathname !== '/login') {
             router.push('/login')
         }
     }, [loading, isAuthenticated, pathname, router])
+
+    useEffect(() => {
+        if (!isAuthenticated || modulesLoading) return
+        if (!pathname) return
+
+        // Only guard real module routes; skip auth/admin/dashboard routes.
+        if (pathname === "/dashboard" || pathname.startsWith("/dashboard/") || pathname.startsWith("/admin/")) return
+
+        const seg = pathname.replace(/^\//, "").split("/")[0]
+        const moduleKey = routeSegmentToModuleKey(seg)
+        if (!moduleKey) return
+
+        // enabledSet can be empty if the user has no org scope; in that case block module routes.
+        if (enabledSet.size === 0 || !enabledSet.has(moduleKey)) {
+            router.push("/dashboard")
+        }
+    }, [enabledSet, isAuthenticated, modulesLoading, pathname, router])
 
     const handleLogout = async () => {
         await authLogout()

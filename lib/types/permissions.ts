@@ -64,6 +64,22 @@ export enum Permission {
   EDIT_AUDIT_SCHEDULE = "edit:audit_schedule",
   DELETE_AUDIT_SCHEDULE = "delete:audit_schedule",
   REVIEW_AUDIT = "review:audit",
+
+  // Platform Modules (from Platform Modules Guide)
+  VIEW_ASSETS = "view:assets",
+  CREATE_ASSET = "create:asset",
+  EDIT_ASSET = "edit:asset",
+  DELETE_ASSET = "delete:asset",
+
+  VIEW_OBLIGATIONS = "view:obligations",
+  CREATE_OBLIGATION = "create:obligation",
+  EDIT_OBLIGATION = "edit:obligation",
+  DELETE_OBLIGATION = "delete:obligation",
+
+  VIEW_IT_RISKS = "view:it_risks",
+  CREATE_IT_RISK = "create:it_risk",
+  EDIT_IT_RISK = "edit:it_risk",
+  DELETE_IT_RISK = "delete:it_risk",
   
   // Improvement Register
   VIEW_IMPROVEMENTS = "view:improvements",
@@ -153,6 +169,20 @@ export const ROLE_PERMISSIONS: PermissionMap = {
     Permission.CREATE_CATEGORY,
     Permission.EDIT_CATEGORY,
     Permission.DELETE_CATEGORY,
+
+    // Platform Modules
+    Permission.VIEW_ASSETS,
+    Permission.CREATE_ASSET,
+    Permission.EDIT_ASSET,
+    Permission.DELETE_ASSET,
+    Permission.VIEW_OBLIGATIONS,
+    Permission.CREATE_OBLIGATION,
+    Permission.EDIT_OBLIGATION,
+    Permission.DELETE_OBLIGATION,
+    Permission.VIEW_IT_RISKS,
+    Permission.CREATE_IT_RISK,
+    Permission.EDIT_IT_RISK,
+    Permission.DELETE_IT_RISK,
   ],
   
   [Role.ORGANIZATION]: [
@@ -205,6 +235,15 @@ export const ROLE_PERMISSIONS: PermissionMap = {
     Permission.CREATE_USER,
     Permission.EDIT_USER,
     Permission.DELETE_USER,
+
+    // Platform Modules
+    Permission.VIEW_ASSETS,
+    Permission.CREATE_ASSET,
+    Permission.EDIT_ASSET,
+    Permission.DELETE_ASSET,
+    Permission.VIEW_IT_RISKS,
+    Permission.CREATE_IT_RISK,
+    Permission.EDIT_IT_RISK,
   ],
   
   [Role.EMPLOYEE]: [
@@ -226,6 +265,11 @@ export const ROLE_PERMISSIONS: PermissionMap = {
     Permission.VIEW_CATEGORIES,
     Permission.CREATE_CATEGORY,
     Permission.EDIT_CATEGORY,
+
+    // Platform Modules (limited)
+    Permission.VIEW_ASSETS,
+    Permission.EDIT_ASSET,
+    Permission.VIEW_IT_RISKS,
   ],
 
   [Role.AUDITOR]: [
@@ -243,6 +287,11 @@ export const ROLE_PERMISSIONS: PermissionMap = {
     Permission.REVIEW_AUDIT,
     Permission.VIEW_IMPROVEMENTS,
     Permission.VIEW_CATEGORIES,
+
+    // Platform Modules (read-only)
+    Permission.VIEW_ASSETS,
+    Permission.VIEW_OBLIGATIONS,
+    Permission.VIEW_IT_RISKS,
   ],
 }
 

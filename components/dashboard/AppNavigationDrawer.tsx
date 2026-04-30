@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { BarChart2, ChevronRight, LayoutDashboard, LogOut } from "lucide-react"
 import { usePermissions } from "@/hooks/use-permissions"
+import { useEnabledModules } from "@/hooks/use-enabled-modules"
 import { DASHBOARD_MODULE_GROUPS } from "@/constant/dashboard-module-groups"
 
 type AppNavigationDrawerProps = {
@@ -15,6 +16,7 @@ type AppNavigationDrawerProps = {
 
 export function AppNavigationDrawer({ open, onClose, user, onLogout }: AppNavigationDrawerProps) {
   const { can, loading } = usePermissions()
+  const { enabledSet } = useEnabledModules()
   const [openSection, setOpenSection] = useState<string | null>(null)
 
   const userInitial = String(user?.name || user?.email || "U").charAt(0).toUpperCase()
@@ -26,6 +28,14 @@ export function AppNavigationDrawer({ open, onClose, user, onLogout }: AppNaviga
   const handleLogout = async () => {
     onClose()
     await onLogout()
+  }
+
+  const isHrefEnabled = (href: string) => {
+    if (!href || href === "/dashboard") return true
+    if (href.startsWith("/admin")) return true
+    if (href.startsWith("/dashboard")) return true
+    const seg = href.replace(/^\//, "").split("/")[0]
+    return enabledSet.size === 0 ? false : enabledSet.has(seg as any)
   }
 
   return (
@@ -123,7 +133,7 @@ export function AppNavigationDrawer({ open, onClose, user, onLogout }: AppNaviga
             DASHBOARD_MODULE_GROUPS.map((group) => {
               const GroupIcon = group.icon
               const isOpen = openSection === group.title
-              const visibleMods = group.modules.filter((m) => !m.permission || can(m.permission))
+              const visibleMods = group.modules.filter((m) => (!m.permission || can(m.permission)) && isHrefEnabled(m.href))
               if (visibleMods.length === 0) return null
               return (
                 <div key={group.title} className="mb-1">

@@ -9,6 +9,8 @@ export interface IUser extends mongoose.Document {
   organizationId?: mongoose.Types.ObjectId | null
   organizationName?: string | null
   organizationEmail?: string | null
+  plan?: string | null
+  enabledModules?: string[] | null
   isActive: boolean
   createdAt: Date
   updatedAt: Date
@@ -49,6 +51,14 @@ const userSchema = new Schema<IUser>(
     },
     organizationEmail: {
       type: String,
+      default: null,
+    },
+    plan: {
+      type: String,
+      default: null,
+    },
+    enabledModules: {
+      type: [String],
       default: null,
     },
     isActive: {

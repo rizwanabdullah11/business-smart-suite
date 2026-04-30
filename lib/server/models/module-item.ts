@@ -1,6 +1,9 @@
 import mongoose, { Schema, type Model } from "mongoose"
 
 const ALLOWED_MODULES = new Set([
+  "asset-management",
+  "obligations-register",
+  "it-risk-management",
   "policies",
   "procedures",
   "forms",
