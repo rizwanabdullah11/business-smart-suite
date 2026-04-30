@@ -103,8 +103,9 @@ export default function BillingPage() {
       if (!res.ok) throw new Error(data?.message || data?.error || "Failed to save")
       window.dispatchEvent(new Event("auth-change"))
       alert("Plan saved successfully.")
-    } catch (e: any) {
-      alert(e?.message || "Failed to save plan")
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to save plan"
+      alert(msg)
     } finally {
       setSaving(false)
     }

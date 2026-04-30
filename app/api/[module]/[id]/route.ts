@@ -19,15 +19,15 @@ function notFound() {
 export const GET = withAuth(
   async (request: NextRequest, user, { params }: { params: { module: string; id: string } }) => {
     try {
-      const { module, id } = params
-      if (!isSupportedModule(module)) return unsupportedModule(module)
-      if (!isModuleEnabledForUser(user, module)) {
+      const { module: moduleSlug, id } = params
+      if (!isSupportedModule(moduleSlug)) return unsupportedModule(moduleSlug)
+      if (!isModuleEnabledForUser(user, moduleSlug)) {
         return NextResponse.json({ error: "Module is not enabled for your plan" }, { status: 403 })
       }
       if (!mongoose.Types.ObjectId.isValid(id)) return notFound()
 
       await connectToDatabase()
-      const Model = getModuleModel(module)
+      const Model = getModuleModel(moduleSlug)
       const { filter: ownershipFilter } = await buildModuleAccessFilter(request, user)
       const row = await Model.findOne({
         _id: new mongoose.Types.ObjectId(id),
@@ -50,16 +50,16 @@ export const GET = withAuth(
 export const PUT = withAuth(
   async (request: NextRequest, user, { params }: { params: { module: string; id: string } }) => {
     try {
-      const { module, id } = params
-      if (!isSupportedModule(module)) return unsupportedModule(module)
-      if (!isModuleEnabledForUser(user, module)) {
+      const { module: moduleSlug, id } = params
+      if (!isSupportedModule(moduleSlug)) return unsupportedModule(moduleSlug)
+      if (!isModuleEnabledForUser(user, moduleSlug)) {
         return NextResponse.json({ error: "Module is not enabled for your plan" }, { status: 403 })
       }
       if (!mongoose.Types.ObjectId.isValid(id)) return notFound()
 
       const body = await request.json()
       await connectToDatabase()
-      const Model = getModuleModel(module)
+      const Model = getModuleModel(moduleSlug)
       const { filter: ownershipFilter } = await buildModuleAccessFilter(request, user)
 
       const payload = { ...body } as Record<string, unknown>
@@ -82,7 +82,7 @@ export const PUT = withAuth(
 
       if (!updated) return notFound()
 
-      if (module === "certificates") {
+      if (moduleSlug === "certificates") {
         await notifyExpiredCertificates(true)
       }
 
@@ -100,15 +100,15 @@ export const PUT = withAuth(
 export const DELETE = withAuth(
   async (request: NextRequest, user, { params }: { params: { module: string; id: string } }) => {
     try {
-      const { module, id } = params
-      if (!isSupportedModule(module)) return unsupportedModule(module)
-      if (!isModuleEnabledForUser(user, module)) {
+      const { module: moduleSlug, id } = params
+      if (!isSupportedModule(moduleSlug)) return unsupportedModule(moduleSlug)
+      if (!isModuleEnabledForUser(user, moduleSlug)) {
         return NextResponse.json({ error: "Module is not enabled for your plan" }, { status: 403 })
       }
       if (!mongoose.Types.ObjectId.isValid(id)) return notFound()
 
       await connectToDatabase()
-      const Model = getModuleModel(module)
+      const Model = getModuleModel(moduleSlug)
       const { filter: ownershipFilter } = await buildModuleAccessFilter(request, user)
       const deleted = await Model.findOneAndDelete({
         _id: new mongoose.Types.ObjectId(id),

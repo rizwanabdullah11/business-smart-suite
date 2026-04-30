@@ -13,14 +13,14 @@ function unsupportedModule(module: string) {
 export const GET = withAuth(
   async (request: NextRequest, user, { params }: { params: { module: string } }) => {
     try {
-      const module = params.module
-      if (!isSupportedModule(module)) return unsupportedModule(module)
-      if (!isModuleEnabledForUser(user, module)) {
+      const moduleSlug = params.module
+      if (!isSupportedModule(moduleSlug)) return unsupportedModule(moduleSlug)
+      if (!isModuleEnabledForUser(user, moduleSlug)) {
         return NextResponse.json({ error: "Module is not enabled for your plan" }, { status: 403 })
       }
 
       await connectToDatabase()
-      const Model = getModuleModel(module)
+      const Model = getModuleModel(moduleSlug)
       const { filter: ownershipFilter } = await buildModuleAccessFilter(request, user)
       const rows = await Model.find({
         $and: [

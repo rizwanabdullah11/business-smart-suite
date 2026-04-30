@@ -15,14 +15,14 @@ function unsupportedModule(module: string) {
 export const GET = withAuth(
   async (request: NextRequest, user, { params }: { params: { module: string } }) => {
     try {
-      const module = params.module
-      if (!isSupportedModule(module)) return unsupportedModule(module)
-      if (!isModuleEnabledForUser(user, module)) {
+      const moduleSlug = params.module
+      if (!isSupportedModule(moduleSlug)) return unsupportedModule(moduleSlug)
+      if (!isModuleEnabledForUser(user, moduleSlug)) {
         return NextResponse.json({ error: "Module is not enabled for your plan" }, { status: 403 })
       }
 
       await connectToDatabase()
-      const Model = getModuleModel(module)
+      const Model = getModuleModel(moduleSlug)
       const { filter: ownershipFilter } = await buildModuleAccessFilter(request, user)
       const { searchParams } = new URL(request.url)
       const categoryFilter = searchParams.get("category")
@@ -71,9 +71,9 @@ export const GET = withAuth(
 export const POST = withAuth(
   async (request: NextRequest, user, { params }: { params: { module: string } }) => {
     try {
-      const module = params.module
-      if (!isSupportedModule(module)) return unsupportedModule(module)
-      if (!isModuleEnabledForUser(user, module)) {
+      const moduleSlug = params.module
+      if (!isSupportedModule(moduleSlug)) return unsupportedModule(moduleSlug)
+      if (!isModuleEnabledForUser(user, moduleSlug)) {
         return NextResponse.json({ error: "Module is not enabled for your plan" }, { status: 403 })
       }
 
@@ -83,7 +83,7 @@ export const POST = withAuth(
       }
 
       await connectToDatabase()
-      const Model = getModuleModel(module)
+      const Model = getModuleModel(moduleSlug)
       const { activeOrganizationId } = await buildOwnershipFilter(request, user)
       const categoryId = body.category || body.categoryId
       const categoryObjectId =
@@ -113,7 +113,7 @@ export const POST = withAuth(
         createdBy: user.id,
       })
 
-      if (module === "certificates") {
+      if (moduleSlug === "certificates") {
         await notifyExpiredCertificates(true)
       }
 
