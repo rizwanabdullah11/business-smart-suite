@@ -24,6 +24,7 @@ import {
 } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 import { useAuth } from "@/contexts/auth-context"
+import { moduleKeyForSlug } from "@/lib/platform/plans"
 import { readModulePageCache, writeModulePageCache } from "@/lib/client/module-page-cache"
 
 type SortType = "name" | "date"
@@ -89,7 +90,7 @@ export default function DynamicModulePage({
   formFields = defaultFields,
   listFieldKeys,
 }: DynamicModulePageProps) {
-  const { isEmployee } = useAuth()
+  const { isEmployee, isModuleEnabled } = useAuth()
   const [categories, setCategories] = useState<any[]>([])
   const [archivedCategories, setArchivedCategories] = useState<any[]>([])
   const [categoryItemView, setCategoryItemView] = useState<Record<string, "active" | "archived" | "completed" | "highlighted">>({})
@@ -107,6 +108,21 @@ export default function DynamicModulePage({
   const [selectedItems, setSelectedItems] = useState<Record<string, Set<string>>>({})
   const [showAskMe, setShowAskMe] = useState(false)
   const [selectedCategoryId, setSelectedCategoryId] = useState("")
+
+  const platformKey = moduleKeyForSlug(moduleSlug)
+  const moduleAllowed = !platformKey || isModuleEnabled(platformKey)
+  if (!moduleAllowed) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-6">
+        <div className="max-w-lg w-full rounded-2xl border bg-white p-6 text-center">
+          <h2 className="text-xl font-bold mb-2">Module not enabled</h2>
+          <p className="text-sm text-gray-600">
+            This module is not enabled for your subscription plan. Please contact your administrator to enable it.
+          </p>
+        </div>
+      </div>
+    )
+  }
   const [selectedItemId, setSelectedItemId] = useState("")
   const [aiQuestion, setAiQuestion] = useState("")
   const [aiReply, setAiReply] = useState("")

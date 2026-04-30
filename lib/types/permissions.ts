@@ -252,4 +252,6 @@ export interface User {
   email: string
   role: Role
   organizationId?: string
+  subscriptionPlan?: "starter" | "growth" | "enterprise"
+  enabledModules?: string[]
 }

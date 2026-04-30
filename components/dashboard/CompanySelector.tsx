@@ -16,7 +16,7 @@ import { usePermissions } from "@/hooks/use-permissions"
 import { DASHBOARD_MODULE_GROUPS } from "@/constant/dashboard-module-groups"
 
 export function CompanySelector() {
-  const { can } = usePermissions()
+  const { can, isModuleEnabled } = usePermissions()
 
   // Build navigation sections with permission filtering
   const navigationSections = [
@@ -30,7 +30,7 @@ export function CompanySelector() {
     ...DASHBOARD_MODULE_GROUPS.map((group) => ({
       label: group.title.toUpperCase(),
       items: group.modules
-        .filter((m) => !m.permission || can(m.permission))
+        .filter((m) => (!m.permission || can(m.permission)) && (!m.moduleKey || isModuleEnabled(m.moduleKey)))
         .map((m) => ({
           icon: <m.icon className="h-5 w-5" />,
           label: m.label,

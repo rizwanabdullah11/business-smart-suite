@@ -9,11 +9,11 @@ type ModuleHubContentProps = {
 }
 
 export function ModuleHubContent({ onAddFolder }: ModuleHubContentProps = {}) {
-  const { can, loading } = usePermissions()
+  const { can, loading, isModuleEnabled } = usePermissions()
 
   const visibleGroups = DASHBOARD_MODULE_GROUPS.map((group) => ({
     ...group,
-    modules: group.modules.filter((m) => !m.permission || can(m.permission)),
+    modules: group.modules.filter((m) => (!m.permission || can(m.permission)) && (!m.moduleKey || isModuleEnabled(m.moduleKey))),
   })).filter((group) => group.modules.length > 0)
 
   return (

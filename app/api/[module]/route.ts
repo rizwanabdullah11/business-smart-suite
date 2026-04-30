@@ -6,6 +6,7 @@ import { connectToDatabase } from "@/lib/server/db"
 import { getModuleModel, isSupportedModule } from "@/lib/server/models/module-item"
 import { notifyExpiredCertificates } from "@/lib/server/certificate-expiry-notifier"
 import { buildModuleAccessFilter, buildOwnershipFilter, toObjectId } from "@/lib/server/organization-context"
+import { isModuleEnabledForUser } from "@/lib/server/module-access"
 
 function unsupportedModule(module: string) {
   return NextResponse.json({ error: `Unsupported module: ${module}` }, { status: 404 })
@@ -16,6 +17,9 @@ export const GET = withAuth(
     try {
       const module = params.module
       if (!isSupportedModule(module)) return unsupportedModule(module)
+      if (!isModuleEnabledForUser(user, module)) {
+        return NextResponse.json({ error: "Module is not enabled for your plan" }, { status: 403 })
+      }
 
       await connectToDatabase()
       const Model = getModuleModel(module)
@@ -69,6 +73,9 @@ export const POST = withAuth(
     try {
       const module = params.module
       if (!isSupportedModule(module)) return unsupportedModule(module)
+      if (!isModuleEnabledForUser(user, module)) {
+        return NextResponse.json({ error: "Module is not enabled for your plan" }, { status: 403 })
+      }
 
       const body = await request.json()
       if (!body?.title) {

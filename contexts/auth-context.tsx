@@ -17,6 +17,7 @@ interface AuthContextType {
   isOrganization: boolean
   isEmployee: boolean
   isAuditor: boolean
+  isModuleEnabled: (moduleKey: string) => boolean
   refreshUser: () => Promise<void>
   logout: () => Promise<void>
 }
@@ -150,6 +151,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Treat auditors like employees for UI restrictions (read-only, scoped access).
     isEmployee: hasAnyRole(user, [Role.EMPLOYEE, Role.AUDITOR]),
     isAuditor: hasRole(user, Role.AUDITOR),
+    isModuleEnabled: (moduleKey: string) => {
+      const enabled = user?.enabledModules
+      if (!Array.isArray(enabled)) return true
+      return enabled.includes(moduleKey)
+    },
     refreshUser: fetchUser,
     logout,
   }

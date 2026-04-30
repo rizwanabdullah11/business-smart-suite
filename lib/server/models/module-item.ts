@@ -26,6 +26,9 @@ const ALLOWED_MODULES = new Set([
   "training",
   "energy-consumption",
   "customer-feedback",
+  "asset-management",
+  "it-risk-management",
+  "obligations-register",
 ])
 
 export function isSupportedModule(module: string) {

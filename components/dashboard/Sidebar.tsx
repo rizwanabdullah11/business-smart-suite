@@ -39,6 +39,7 @@ import { COLORS } from "@/constant/colors"
 import { usePermissions } from "@/hooks/use-permissions"
 import { Permission } from "@/lib/types/permissions"
 import { getDashboardIcon } from "@/lib/dashboard-icon-map"
+import { moduleKeyForSlug } from "@/lib/platform/plans"
 
 interface SidebarProps {
     // No props needed - sidebar is always expanded
@@ -48,7 +49,7 @@ export function Sidebar({}: SidebarProps = {}) {
     const pathname = usePathname()
     const [expandedSection, setExpandedSection] = useState<string | null>("Core Management")
     const isExpanded = true // Always expanded
-    const { can, isAdmin, isEmployee, loading } = usePermissions()
+    const { can, isAdmin, isEmployee, loading, isModuleEnabled } = usePermissions()
     const [customSections, setCustomSections] = useState<any[]>([])
     const [customModules, setCustomModules] = useState<Array<{ label: string; href: string; icon?: string }>>([])
 
@@ -205,6 +206,9 @@ export function Sidebar({}: SidebarProps = {}) {
             if (item.permission) {
                 return can(item.permission)
             }
+            const slug = String(item.href || "").split("/")[1] || ""
+            const key = slug ? moduleKeyForSlug(slug) : null
+            if (key && !isModuleEnabled(key)) return false
             return true
         })
         // Only show section if it has visible items
