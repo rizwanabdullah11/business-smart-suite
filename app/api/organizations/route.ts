@@ -17,7 +17,7 @@ import mongoose from "mongoose"
 export const GET = withAuth(
   async (request: NextRequest, user) => {
     try {
-      if (user.role === "employee") {
+      if (user.role === "employee" || user.role === "auditor") {
         return NextResponse.json(
           { error: "Forbidden", message: "Employees cannot access organizations" },
           { status: 403 }

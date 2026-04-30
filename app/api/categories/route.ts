@@ -110,8 +110,8 @@ export const GET = withAuth(
             )
           }
 
-          // Employee: categories tied to visible tasks OR categories they created (empty new categories).
-          if (user.role === "employee" && orgObjectId && normalizedType) {
+          // Employee/Auditor: categories tied to visible tasks OR categories they created (empty new categories).
+          if ((user.role === "employee" || user.role === "auditor") && orgObjectId && normalizedType) {
             const creatorCats = await Category.find({
               type: normalizedType,
               organizationId: orgObjectId,
@@ -140,7 +140,7 @@ export const GET = withAuth(
         ]})
       }
 
-      if (user.role === "employee" && !categoryTypeToModule(normalizedType)) {
+      if ((user.role === "employee" || user.role === "auditor") && !categoryTypeToModule(normalizedType)) {
         return NextResponse.json([])
       }
 

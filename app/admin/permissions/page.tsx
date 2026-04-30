@@ -99,6 +99,15 @@ export default function PermissionsPage() {
               color="purple"
               icon={<Eye className="w-6 h-6" />}
             />
+
+            <RoleCard
+              role={Role.AUDITOR}
+              title="Auditor"
+              description="Audit-focused read access with audit review capability"
+              permissions={ROLE_PERMISSIONS[Role.AUDITOR]}
+              color="purple"
+              icon={<Shield className="w-6 h-6" />}
+            />
           </div>
         )}
 
@@ -320,6 +329,12 @@ function PermissionComparisonTable() {
                 Employee
               </div>
             </th>
+            <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">
+              <div className="flex items-center justify-center gap-2">
+                <Shield className="w-4 h-4 text-purple-600" />
+                Auditor
+              </div>
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
@@ -357,6 +372,13 @@ function PermissionComparisonTable() {
                   </td>
                   <td className="px-6 py-4 text-center">
                     {hasPermissionForRole(Role.EMPLOYEE, permission) ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-600 mx-auto" />
+                    ) : (
+                      <XCircle className="w-5 h-5 text-red-400 mx-auto" />
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    {hasPermissionForRole(Role.AUDITOR, permission) ? (
                       <CheckCircle2 className="w-5 h-5 text-green-600 mx-auto" />
                     ) : (
                       <XCircle className="w-5 h-5 text-red-400 mx-auto" />

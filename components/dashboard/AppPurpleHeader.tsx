@@ -159,6 +159,16 @@ export function AppPurpleHeader({ user, onLogout }: AppPurpleHeaderProps) {
             </DialogContent>
           </Dialog>
 
+          {/* User identity (visible in header) */}
+          <div className="hidden sm:flex flex-col items-end leading-tight">
+            <span className="text-sm font-semibold text-white truncate max-w-[180px]">
+              {user?.name || "User"}
+            </span>
+            <span className="text-[11px] text-white/70 truncate max-w-[220px] hidden md:block">
+              {user?.email || ""}
+            </span>
+          </div>
+
           <UserNav user={user} onLogout={onLogout} />
         </div>
       </div>

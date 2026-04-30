@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       if (currentUser.role === "organization") {
         userData.organizationId = new mongoose.Types.ObjectId(currentUser.id)
         userData.role = ROLE.EMPLOYEE
-      } else if (requestedRole === ROLE.EMPLOYEE && body.organizationId) {
+      } else if ((requestedRole === ROLE.EMPLOYEE || requestedRole === ROLE.AUDITOR) && body.organizationId) {
         if (!mongoose.Types.ObjectId.isValid(body.organizationId)) {
           return NextResponse.json(
             { error: "Bad request", message: "Invalid organizationId" },
@@ -63,9 +63,9 @@ export async function POST(request: NextRequest) {
           )
         }
         userData.organizationId = new mongoose.Types.ObjectId(body.organizationId)
-      } else if (requestedRole === ROLE.EMPLOYEE) {
+      } else if (requestedRole === ROLE.EMPLOYEE || requestedRole === ROLE.AUDITOR) {
         return NextResponse.json(
-          { error: "Bad request", message: "organizationId is required for Employee/User role" },
+          { error: "Bad request", message: "organizationId is required for Employee/User/Auditor role" },
           { status: 400 }
         )
       }

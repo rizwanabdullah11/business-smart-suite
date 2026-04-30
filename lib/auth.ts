@@ -62,8 +62,8 @@ export async function getUserFromToken(token: string): Promise<User | null> {
     const userData = await response.json()
     
     // Normalize role to lowercase to handle backend inconsistencies
-    // Backend uses: 'Admin', 'Organization', 'Employee' (capitalized)
-    // Frontend uses: 'admin', 'organization', 'employee' (lowercase)
+    // Backend uses: 'Admin', 'Organization', 'Employee', 'Auditor' (capitalized)
+    // Frontend uses: 'admin', 'organization', 'employee', 'auditor' (lowercase)
     let userRole = (userData.role || "Employee").toLowerCase()
     
     // Map common role variations
@@ -71,12 +71,14 @@ export async function getUserFromToken(token: string): Promise<User | null> {
       userRole = "admin"
     } else if (userRole === "org" || userRole === "manager") {
       userRole = "organization"
+    } else if (userRole === "audit") {
+      userRole = "auditor"
     } else if (userRole === "user" || userRole === "member") {
       userRole = "employee"
     }
     
     // Validate role
-    if (!["admin", "organization", "employee"].includes(userRole)) {
+    if (!["admin", "organization", "employee", "auditor"].includes(userRole)) {
       console.warn(`Invalid role "${userData.role}", defaulting to employee`)
       userRole = "employee"
     }

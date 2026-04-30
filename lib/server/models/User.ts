@@ -34,7 +34,7 @@ const userSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: [ROLE.ADMIN, ROLE.ORGANIZATION, ROLE.EMPLOYEE, "User"],
+      enum: [ROLE.ADMIN, ROLE.ORGANIZATION, ROLE.EMPLOYEE, ROLE.AUDITOR, "User"],
       default: ROLE.EMPLOYEE,
       set: (value: string) => normalizeRole(value),
     },
@@ -68,8 +68,8 @@ userSchema.pre("save", function userPreSave() {
 
 userSchema.pre("validate", function userPreValidate() {
   const role = normalizeRole(this.role)
-  if (role === ROLE.EMPLOYEE && !this.organizationId) {
-    this.invalidate("organizationId", "organizationId is required for Employee/User role")
+  if ((role === ROLE.EMPLOYEE || role === ROLE.AUDITOR) && !this.organizationId) {
+    this.invalidate("organizationId", "organizationId is required for Employee/User/Auditor role")
   }
 })
 

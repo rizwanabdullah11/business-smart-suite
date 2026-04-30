@@ -198,6 +198,19 @@ export default function UsersPage() {
                 >
                   Admins ({users.filter((u) => roleOf(u) === "admin").length})
                 </button>
+                <button
+                  onClick={() => setFilterRole("auditor")}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    filterRole === "auditor" ? "shadow-md" : ""
+                  }`}
+                  style={{
+                    background: filterRole === "auditor" ? COLORS.primary : COLORS.bgWhite,
+                    color: filterRole === "auditor" ? COLORS.textWhite : COLORS.textPrimary,
+                    border: `1px solid ${COLORS.border}`,
+                  }}
+                >
+                  Auditors ({users.filter((u) => roleOf(u) === "auditor").length})
+                </button>
               </>
             )}
             <button
@@ -486,7 +499,7 @@ function AddUserModal({ isAdmin, isOrganization, onClose, onSuccess }: AddUserMo
         // Use the user's name and email as organization details
         userData.organizationName = formData.name
         userData.organizationEmail = formData.email
-      } else if (formData.role === "Employee" && formData.organizationId) {
+      } else if ((formData.role === "Employee" || formData.role === "Auditor") && formData.organizationId) {
         userData.organizationId = formData.organizationId
       }
 
@@ -586,6 +599,7 @@ function AddUserModal({ isAdmin, isOrganization, onClose, onSuccess }: AddUserMo
               style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
             >
               {isAdmin && <option value="Organization">Organization</option>}
+              {isAdmin && <option value="Auditor">Auditor</option>}
               <option value="Employee">Employee</option>
             </select>
           </div>
@@ -599,7 +613,7 @@ function AddUserModal({ isAdmin, isOrganization, onClose, onSuccess }: AddUserMo
             </div>
           )}
 
-          {isAdmin && formData.role === "Employee" && (
+          {isAdmin && (formData.role === "Employee" || formData.role === "Auditor") && (
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
                 Organization
@@ -714,7 +728,7 @@ function EditUserModal({ user, isAdmin, isOrganization, onClose, onSuccess }: Ed
           userData.organizationName = formData.name
           userData.organizationEmail = formData.email
           delete userData.organizationId
-        } else if (formData.role === "Employee" && formData.organizationId) {
+        } else if ((formData.role === "Employee" || formData.role === "Auditor") && formData.organizationId) {
           userData.organizationId = formData.organizationId
         }
       }
@@ -800,7 +814,7 @@ function EditUserModal({ user, isAdmin, isOrganization, onClose, onSuccess }: Ed
                   setFormData({
                     ...formData,
                     role: e.target.value,
-                    organizationId: e.target.value === "Employee" ? formData.organizationId : "",
+                    organizationId: (e.target.value === "Employee" || e.target.value === "Auditor") ? formData.organizationId : "",
                   })
                 }
                 className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -808,12 +822,13 @@ function EditUserModal({ user, isAdmin, isOrganization, onClose, onSuccess }: Ed
               >
                 <option value="Admin">Admin</option>
                 <option value="Organization">Organization</option>
+                <option value="Auditor">Auditor</option>
                 <option value="Employee">Employee</option>
               </select>
             </div>
           )}
 
-          {isAdmin && formData.role === "Employee" && (
+          {isAdmin && (formData.role === "Employee" || formData.role === "Auditor") && (
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
                 Organization

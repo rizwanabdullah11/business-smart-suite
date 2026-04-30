@@ -106,7 +106,11 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       } else if (user.role === "admin" && activeOrganizationId) {
         const orgObjectId = toObjectId(activeOrganizationId)
         if (orgObjectId) {
-          userQuery.$or = [{ organizationId: orgObjectId }, { _id: orgObjectId }]
+          // Only scope if the organization actually exists (stale cookie/header should not hide counts).
+          const orgExists = await User.findOne({ _id: orgObjectId, role: "Organization" }).select("_id").lean()
+          if (orgExists) {
+            userQuery.$or = [{ organizationId: orgObjectId }, { _id: orgObjectId }]
+          }
         }
       }
 
