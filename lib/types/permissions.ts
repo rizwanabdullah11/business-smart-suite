@@ -3,7 +3,8 @@
 export enum Role {
   ADMIN = "admin",
   EMPLOYEE = "employee",
-  ORGANIZATION = "organization"
+  ORGANIZATION = "organization",
+  AUDITOR = "auditor",
 }
 
 export enum Permission {
@@ -225,6 +226,23 @@ export const ROLE_PERMISSIONS: PermissionMap = {
     Permission.VIEW_CATEGORIES,
     Permission.CREATE_CATEGORY,
     Permission.EDIT_CATEGORY,
+  ],
+
+  [Role.AUDITOR]: [
+    // Auditor: view everything needed for audits + review audits, no create/edit/delete content
+    Permission.VIEW_DASHBOARD,
+    Permission.VIEW_ANALYTICS,
+    Permission.VIEW_MANUALS,
+    Permission.VIEW_PROCEDURES,
+    Permission.VIEW_POLICIES,
+    Permission.VIEW_FORMS,
+    Permission.VIEW_CERTIFICATES,
+    Permission.VIEW_RISK_ASSESSMENTS,
+    Permission.VIEW_COSHH,
+    Permission.VIEW_AUDIT_SCHEDULE,
+    Permission.REVIEW_AUDIT,
+    Permission.VIEW_IMPROVEMENTS,
+    Permission.VIEW_CATEGORIES,
   ],
 }
 

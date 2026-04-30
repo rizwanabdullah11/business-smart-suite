@@ -26,6 +26,7 @@ function roleForClient(input?: string): AuthUser["role"] {
   const normalized = normalizeRole(input)
   if (normalized === "Admin") return Role.ADMIN
   if (normalized === "Organization") return Role.ORGANIZATION
+  if (normalized === "Auditor") return Role.AUDITOR
   return Role.EMPLOYEE
 }
 

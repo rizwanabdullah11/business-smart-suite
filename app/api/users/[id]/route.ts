@@ -20,7 +20,7 @@ export const GET = withAuth(
         return NextResponse.json({ error: "User not found" }, { status: 404 })
       }
 
-      if (user.role === "employee") {
+      if (user.role === "employee" || user.role === "auditor") {
         return NextResponse.json(
           { error: "Forbidden", message: "Employees cannot access user management" },
           { status: 403 }
@@ -69,7 +69,7 @@ export const DELETE = withAuth(
         return NextResponse.json({ error: "User not found" }, { status: 404 })
       }
 
-      if (user.role === "employee") {
+      if (user.role === "employee" || user.role === "auditor") {
         return NextResponse.json(
           { error: "Forbidden", message: "Employees cannot delete users" },
           { status: 403 }
@@ -121,7 +121,7 @@ export const PUT = withAuth(
         return NextResponse.json({ error: "User not found" }, { status: 404 })
       }
 
-      if (user.role === "employee") {
+      if (user.role === "employee" || user.role === "auditor") {
         return NextResponse.json(
           { error: "Forbidden", message: "Employees cannot edit users" },
           { status: 403 }

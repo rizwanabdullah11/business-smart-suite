@@ -68,7 +68,7 @@ export const GET = withAuth(
       }
 
       const moduleSlug = categoryTypeToModule(requestedType)
-      if (user.role === "employee") {
+      if (user.role === "employee" || user.role === "auditor") {
         if (!moduleSlug) return NextResponse.json([])
 
         const { filter: moduleAccessFilter } = await buildModuleAccessFilter(request, user)

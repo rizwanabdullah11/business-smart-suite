@@ -20,7 +20,7 @@ import { getActiveOrganizationIdFromRequest } from "@/lib/server/organization-co
 export const GET = withAuth(
   async (request: NextRequest, user) => {
     try {
-      if (user.role === "employee") {
+      if (user.role === "employee" || user.role === "auditor") {
         return NextResponse.json(
           { error: "Forbidden", message: "Employees cannot access user management" },
           { status: 403 }
@@ -43,11 +43,12 @@ export const GET = withAuth(
           { _id: new mongoose.Types.ObjectId(user.id) },
         ]
       } else if (user.role === "admin" && activeOrganizationId && mongoose.Types.ObjectId.isValid(activeOrganizationId)) {
+        // Only scope admin to an organization if it exists (prevents stale cookie/header from hiding all users).
         const orgObjectId = new mongoose.Types.ObjectId(activeOrganizationId)
-        query.$or = [
-          { organizationId: orgObjectId },
-          { _id: orgObjectId },
-        ]
+        const orgExists = await User.findOne({ _id: orgObjectId, role: ROLE.ORGANIZATION }).select("_id").lean()
+        if (orgExists) {
+          query.$or = [{ organizationId: orgObjectId }, { _id: orgObjectId }]
+        }
       }
 
       if (organizationId && mongoose.Types.ObjectId.isValid(organizationId)) {
@@ -135,7 +136,7 @@ export const POST = withAuth(
         role: requestedRole,
       }
 
-      if (requestedRole === ROLE.EMPLOYEE) {
+      if (requestedRole === ROLE.EMPLOYEE || requestedRole === ROLE.AUDITOR) {
         if (body.organizationId) {
           if (!mongoose.Types.ObjectId.isValid(body.organizationId)) {
             return NextResponse.json(
@@ -148,7 +149,7 @@ export const POST = withAuth(
           payload.organizationId = new mongoose.Types.ObjectId(user.id)
         } else {
           return NextResponse.json(
-            { error: "organizationId is required for Employee/User role" },
+            { error: "organizationId is required for Employee/User/Auditor role" },
             { status: 400 }
           )
         }

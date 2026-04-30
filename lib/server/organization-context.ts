@@ -12,7 +12,7 @@ function normalizeId(value?: string | null) {
 
 export function getActiveOrganizationIdFromRequest(request: NextRequest, user: AuthUser) {
   if (user.role === "organization") return normalizeId(user.id)
-  if (user.role === "employee") return normalizeId(user.organizationId || null)
+  if (user.role === "employee" || user.role === "auditor") return normalizeId(user.organizationId || null)
 
   const fromHeader = normalizeId(request.headers.get("x-organization-id"))
   const fromCookie = normalizeId(request.cookies.get("activeOrganizationId")?.value || null)
@@ -90,7 +90,7 @@ function escapeRegex(input: string) {
 }
 
 function buildEmployeePermissionFilter(user: AuthUser) {
-  if (user.role !== "employee") return {}
+  if (user.role !== "employee" && user.role !== "auditor") return {}
 
   const conditions: Record<string, unknown>[] = []
 
@@ -133,7 +133,7 @@ function buildEmployeePermissionFilter(user: AuthUser) {
 
 export async function buildModuleAccessFilter(request: NextRequest, user: AuthUser) {
   const base = await buildOwnershipFilter(request, user)
-  if (user.role !== "employee") return base
+  if (user.role !== "employee" && user.role !== "auditor") return base
 
   const permissionFilter = buildEmployeePermissionFilter(user)
   const baseHasFilter = Object.keys(base.filter || {}).length > 0

@@ -2,6 +2,7 @@ export const ROLE = {
   ADMIN: "Admin",
   ORGANIZATION: "Organization",
   EMPLOYEE: "Employee",
+  AUDITOR: "Auditor",
 } as const
 
 export type CanonicalRole = (typeof ROLE)[keyof typeof ROLE]
@@ -17,6 +18,8 @@ const roleMap: Record<string, CanonicalRole> = {
   user: ROLE.EMPLOYEE,
   employer: ROLE.EMPLOYEE,
   member: ROLE.EMPLOYEE,
+  auditor: ROLE.AUDITOR,
+  audit: ROLE.AUDITOR,
 }
 
 export function normalizeRole(input?: string | null): CanonicalRole {
@@ -24,9 +27,10 @@ export function normalizeRole(input?: string | null): CanonicalRole {
   return roleMap[raw] || ROLE.EMPLOYEE
 }
 
-export function toClientRole(role: string): "admin" | "organization" | "employee" {
+export function toClientRole(role: string): "admin" | "organization" | "employee" | "auditor" {
   const normalized = normalizeRole(role)
   if (normalized === ROLE.ADMIN) return "admin"
   if (normalized === ROLE.ORGANIZATION) return "organization"
+  if (normalized === ROLE.AUDITOR) return "auditor"
   return "employee"
 }

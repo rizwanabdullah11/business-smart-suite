@@ -47,7 +47,7 @@ async function ensureEmployeeCategoryAccess(
   categoryId: mongoose.Types.ObjectId,
   requestedType: string | null
 ) {
-  if (user.role !== "employee") return true
+  if (user.role !== "employee" && user.role !== "auditor") return true
 
   const moduleSlug = categoryTypeToModule(requestedType)
   if (!moduleSlug) return false
