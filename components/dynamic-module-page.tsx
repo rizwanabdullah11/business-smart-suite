@@ -793,11 +793,6 @@ export default function DynamicModulePage({
               </button>
             ) : null}
             {!isEmployee ? (
-              <button type="button" onClick={() => setShowArchived(!showArchived)} className="ui-btn ui-btn-secondary">
-                <Archive className="h-4 w-4" /> {showArchived ? "Show Active" : "Show Archived"}
-              </button>
-            ) : null}
-            {!isEmployee ? (
               <button
                 type="button"
                 onClick={() => {
@@ -840,9 +835,9 @@ export default function DynamicModulePage({
           </div>
         )}
 
-        {/* ── Tabs + Sort ── */}
+        {/* ── Active / Archived (category list) ── */}
         {!isEmployee ? (
-          <div className="mb-5 flex min-h-[2.75rem] flex-wrap items-center justify-between gap-3">
+          <div className="mb-5 flex min-h-[2.75rem] flex-wrap items-center gap-3">
             <div className="inline-flex gap-1 rounded-xl p-1" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
               <button
                 type="button"
@@ -855,29 +850,8 @@ export default function DynamicModulePage({
                 Archived
               </button>
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span style={{ color: COLORS.textSecondary }}>Sort by</span>
-              <button type="button" onClick={() => { setSortType("name"); setSortDirection((d) => sortType === "name" ? (d === "asc" ? "desc" : "asc") : "asc") }} className={sortType === "name" ? "ui-btn-sort-on" : "ui-btn-sort-off"}>
-                Name {sortType === "name" ? (sortDirection === "asc" ? "A-Z" : "Z-A") : ""}
-              </button>
-              <button type="button" onClick={() => { setSortType("date"); setSortDirection((d) => sortType === "date" ? (d === "asc" ? "desc" : "asc") : "asc") }} className={sortType === "date" ? "ui-btn-sort-on" : "ui-btn-sort-off"}>
-                Date {sortType === "date" ? (sortDirection === "asc" ? "Old-New" : "New-Old") : ""}
-              </button>
-            </div>
           </div>
-        ) : (
-          <div className="mb-5 flex justify-end">
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span style={{ color: COLORS.textSecondary }}>Sort by</span>
-              <button type="button" onClick={() => setSortType("name")} className={sortType === "name" ? "ui-btn-sort-on" : "ui-btn-sort-off"}>
-                Name
-              </button>
-              <button type="button" onClick={() => setSortType("date")} className={sortType === "date" ? "ui-btn-sort-on" : "ui-btn-sort-off"}>
-                Date
-              </button>
-            </div>
-          </div>
-        )}
+        ) : null}
 
         {/* ── Category List ── */}
         <div className="space-y-4">
@@ -932,7 +906,7 @@ export default function DynamicModulePage({
                           className="ui-row-action ui-row-action--copy shrink-0"
                           title="Sort by Name"
                         >
-                          <ArrowUpDown className="h-3.5 w-3.5" strokeWidth={2} />
+                          <ArrowUpDown className="h-3 w-3" strokeWidth={2} />
                         </button>
                         <button
                           type="button"
@@ -943,7 +917,7 @@ export default function DynamicModulePage({
                           className="ui-row-action ui-row-action--download shrink-0"
                           title="Sort by Date"
                         >
-                          <Calendar className="h-3.5 w-3.5" strokeWidth={2} />
+                          <Calendar className="h-3 w-3" strokeWidth={2} />
                         </button>
                       </>
                     )}
@@ -959,7 +933,7 @@ export default function DynamicModulePage({
                         className="ui-row-action ui-row-action--edit shrink-0"
                         title="Edit Category"
                       >
-                        <Edit className="h-3.5 w-3.5" strokeWidth={2} />
+                        <Edit className="h-3 w-3" strokeWidth={2} />
                       </button>
                     ) : null}
                     {!showArchived ? (
@@ -974,7 +948,7 @@ export default function DynamicModulePage({
                         className="ui-row-action ui-row-action--add shrink-0"
                         title="Add Item"
                       >
-                        <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+                        <Plus className="h-3 w-3" strokeWidth={2} />
                       </button>
                     ) : null}
                     {!isEmployee ? (
@@ -988,7 +962,7 @@ export default function DynamicModulePage({
                           className="ui-row-action ui-row-action--archive shrink-0"
                           title="Unarchive Category"
                         >
-                          <Archive className="h-3.5 w-3.5" strokeWidth={2} />
+                          <Archive className="h-3 w-3" strokeWidth={2} />
                         </button>
                       ) : (
                         <button
@@ -1000,7 +974,7 @@ export default function DynamicModulePage({
                           className="ui-row-action ui-row-action--archive shrink-0"
                           title="Archive Category"
                         >
-                          <Archive className="h-3.5 w-3.5" strokeWidth={2} />
+                          <Archive className="h-3 w-3" strokeWidth={2} />
                         </button>
                       )
                     ) : null}
@@ -1014,7 +988,7 @@ export default function DynamicModulePage({
                         className="ui-row-action ui-row-action--destructive shrink-0"
                         title="Delete Category"
                       >
-                        <X className="h-3.5 w-3.5" strokeWidth={2.25} />
+                        <X className="h-3 w-3" strokeWidth={2.25} />
                       </button>
                     ) : null}
                   </div>
@@ -1191,7 +1165,7 @@ export default function DynamicModulePage({
                               onClick={() => window.print()}
                               className="ui-row-action ui-row-action--archive ui-row-action--lg"
                             >
-                              <Printer className="h-4 w-4" aria-hidden />
+                              <Printer className="h-3 w-3" aria-hidden />
                             </button>
                             <button
                               type="button"
@@ -1199,10 +1173,10 @@ export default function DynamicModulePage({
                               onClick={() => window.print()}
                               className="ui-row-action ui-row-action--download ui-row-action--lg"
                             >
-                              <Download className="h-4 w-4" aria-hidden />
+                              <Download className="h-3 w-3" aria-hidden />
                             </button>
                             <button type="button" title="Table view" className="ui-row-action ui-row-action--edit ui-row-action--active ui-row-action--lg">
-                              <Type className="h-4 w-4" aria-hidden />
+                              <Type className="h-3 w-3" aria-hidden />
                             </button>
                           </div>
                         ) : null}
@@ -1335,7 +1309,7 @@ export default function DynamicModulePage({
                                               title="Edit"
                                               className="ui-row-action ui-row-action--edit ui-row-action--lg"
                                             >
-                                              <Edit className="h-4 w-4" aria-hidden />
+                                              <Edit className="h-3 w-3" aria-hidden />
                                             </Link>
                                             {isViewingArchivedItems ? (
                                               <button
@@ -1351,7 +1325,7 @@ export default function DynamicModulePage({
                                                 disabled={loadingAction === `unarchive-${item.id}`}
                                                 className="ui-row-action ui-row-action--archive ui-row-action--lg"
                                               >
-                                                <Archive className="h-4 w-4" aria-hidden />
+                                                <Archive className="h-3 w-3" aria-hidden />
                                               </button>
                                             ) : (
                                               <Link
@@ -1359,7 +1333,7 @@ export default function DynamicModulePage({
                                                 title="Documents"
                                                 className="ui-row-action ui-row-action--files ui-row-action--lg"
                                               >
-                                                <Folder className="h-4 w-4" aria-hidden />
+                                                <Folder className="h-3 w-3" aria-hidden />
                                               </Link>
                                             )}
                                             <button
@@ -1368,7 +1342,7 @@ export default function DynamicModulePage({
                                               onClick={() => deleteItem(item.id)}
                                               className="ui-row-action ui-row-action--destructive ui-row-action--lg"
                                             >
-                                              <X className="h-4 w-4 stroke-[2.5]" aria-hidden />
+                                              <X className="h-3 w-3 stroke-[2.5]" aria-hidden />
                                             </button>
                                           </div>
                                         ) : (
@@ -1510,7 +1484,7 @@ export default function DynamicModulePage({
                                             title={item.highlighted ? "Remove Highlight" : "Highlight"}
                                           >
                                             <Star
-                                              className="h-3.5 w-3.5"
+                                              className="h-3 w-3"
                                               strokeWidth={2}
                                               fill={item.highlighted ? "currentColor" : "none"}
                                             />
@@ -1523,7 +1497,7 @@ export default function DynamicModulePage({
                                             className={`ui-row-action ui-row-action--done ${item.approved ? "ui-row-action--active" : ""}`}
                                             title={item.approved ? "Mark as Incomplete" : "Mark as Completed"}
                                           >
-                                            <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+                                            <Check className="h-3 w-3" strokeWidth={2.5} />
                                           </button>
                                           <button
                                             type="button"
@@ -1531,14 +1505,14 @@ export default function DynamicModulePage({
                                             className={`ui-row-action ui-row-action--pause ${item.paused ? "ui-row-action--active" : ""}`}
                                             title={item.paused ? "Resume" : "Pause"}
                                           >
-                                            <Pause className="h-3.5 w-3.5" strokeWidth={2} />
+                                            <Pause className="h-3 w-3" strokeWidth={2} />
                                           </button>
                                           <Link
                                             href={`${itemHrefPrefix}/${item.id}/edit`}
                                             className="ui-row-action ui-row-action--edit"
                                             title="Edit"
                                           >
-                                            <Edit className="h-3.5 w-3.5" strokeWidth={2} />
+                                            <Edit className="h-3 w-3" strokeWidth={2} />
                                           </Link>
                                           <button
                                             type="button"
@@ -1547,7 +1521,7 @@ export default function DynamicModulePage({
                                             className="ui-row-action ui-row-action--copy"
                                             title="Duplicate"
                                           >
-                                            <Copy className="h-3.5 w-3.5" strokeWidth={2} />
+                                            <Copy className="h-3 w-3" strokeWidth={2} />
                                           </button>
                                           <button
                                             type="button"
@@ -1556,7 +1530,7 @@ export default function DynamicModulePage({
                                             className="ui-row-action ui-row-action--download"
                                             title="Download"
                                           >
-                                            <Download className="h-3.5 w-3.5" strokeWidth={2} />
+                                            <Download className="h-3 w-3" strokeWidth={2} />
                                           </button>
                                           {!isViewingArchivedItems ? (
                                             <button
@@ -1568,7 +1542,7 @@ export default function DynamicModulePage({
                                               className="ui-row-action ui-row-action--archive"
                                               title="Archive"
                                             >
-                                              <Archive className="h-3.5 w-3.5" strokeWidth={2} />
+                                              <Archive className="h-3 w-3" strokeWidth={2} />
                                             </button>
                                           ) : (
                                             <button
@@ -1584,7 +1558,7 @@ export default function DynamicModulePage({
                                               className="ui-row-action ui-row-action--archive"
                                               title="Unarchive"
                                             >
-                                              <Archive className="h-3.5 w-3.5" strokeWidth={2} />
+                                              <Archive className="h-3 w-3" strokeWidth={2} />
                                             </button>
                                           )}
                                           <button
@@ -1593,7 +1567,7 @@ export default function DynamicModulePage({
                                             className="ui-row-action ui-row-action--destructive"
                                             title="Delete"
                                           >
-                                            <Trash2 className="h-3.5 w-3.5" strokeWidth={2.25} />
+                                            <Trash2 className="h-3 w-3" strokeWidth={2.25} />
                                           </button>
                                         </div>
                                       )}
