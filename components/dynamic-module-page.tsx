@@ -15,7 +15,7 @@ import {
   ArrowUpDown,
   Copy,
   Download,
-  Bot,
+  BarChart3,
   FileText,
   Folder,
   Printer,
@@ -580,17 +580,33 @@ export default function DynamicModulePage({
   const displayKeys = listFieldKeys?.length ? listFieldKeys : formFields.map((f) => f.key).filter((k) => k !== titleFieldKey).slice(0, 4)
 
   const allItemsForAi = useMemo(() => {
-    const active = categories.flatMap((cat: any) =>
-      (cat.items || []).map((item: any) => ({ ...item, categoryTitle: cat.title, categoryId: cat.id }))
-    )
-    const archived = archivedCategories.flatMap((cat: any) =>
-      (cat.archivedItems || []).map((item: any) => ({
-        ...item,
-        categoryTitle: `${cat.title} (Archived)`,
-        categoryId: cat.id,
-      }))
-    )
-    return [...active, ...archived]
+    const buckets = ["items", "archivedItems", "completedItems", "highlightedItems"] as const
+    const merged = new Map<string, any>()
+    const allCats = [...categories, ...archivedCategories]
+
+    allCats.forEach((cat: any) => {
+      const catTitle = String(cat?.title || "")
+      const categoryTitle = cat?.archived || cat?.isArchived ? `${catTitle} (Archived)` : catTitle
+      const categoryId = cat?.id
+      buckets.forEach((bucketKey) => {
+        const rows = Array.isArray(cat?.[bucketKey]) ? cat[bucketKey] : []
+        rows.forEach((item: any) => {
+          const id = String(item?.id || item?._id || "")
+          if (!id) return
+          const existing = merged.get(id)
+          merged.set(id, {
+            ...(existing || {}),
+            ...item,
+            // always keep these consistent for Insights counting
+            id,
+            categoryId,
+            categoryTitle,
+          })
+        })
+      })
+    })
+
+    return Array.from(merged.values())
   }, [categories, archivedCategories])
 
   const allCategoryOptions = useMemo(() => {
@@ -608,8 +624,9 @@ export default function DynamicModulePage({
 
   useEffect(() => {
     if (!showAskMe) return
-    if (!filteredItemsForAi.some((item: any) => item.id === selectedItemId)) {
-      setSelectedItemId(filteredItemsForAi[0]?.id || "")
+    // Dropdown for selecting a single item was removed from Insights; keep any stale selections cleared.
+    if (selectedItemId && !filteredItemsForAi.some((item: any) => item.id === selectedItemId)) {
+      setSelectedItemId("")
     }
   }, [selectedCategoryId, showAskMe, selectedItemId, filteredItemsForAi])
 
@@ -796,18 +813,16 @@ export default function DynamicModulePage({
               <button
                 type="button"
                 onClick={() => {
-                  const firstCategoryId = allCategoryOptions[0]?.id || ""
-                  setSelectedCategoryId(firstCategoryId)
-                  const firstItem =
-                    allItemsForAi.find((i: any) => i.categoryId === firstCategoryId) || allItemsForAi[0]
-                  setSelectedItemId(firstItem?.id || "")
+                  // Default to "All Categories" so totals reflect the entire module.
+                  setSelectedCategoryId("")
+                  setSelectedItemId("")
                   setAiQuestion("")
                   setAiReply("")
                   setShowAskMe(true)
                 }}
                 className="ui-btn ui-btn-secondary"
               >
-                <Bot className="h-4 w-4" /> Ask Me
+                <BarChart3 className="h-4 w-4" /> Insights
               </button>
             ) : null}
             <Link href={newItemHref} className="ui-btn ui-btn-primary">
@@ -1588,25 +1603,112 @@ export default function DynamicModulePage({
         </div>
 
         {showAskMe && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.35)" }}>
-            <div className="w-full max-w-3xl max-h-[88vh] rounded-2xl shadow-xl overflow-hidden" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
-              <div className="p-5 border-b flex items-center justify-between sticky top-0 z-10" style={{ borderColor: COLORS.border, background: COLORS.bgWhite }}>
-                <div className="flex items-center gap-2">
-                  <Bot className="w-5 h-5" style={{ color: COLORS.purple700 }} />
-                  <h3 className="text-lg font-bold" style={{ color: COLORS.textPrimary }}>
-                    {title} AI Assistant
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(2,6,23,0.55)" }}>
+            <div
+              className="w-full max-w-3xl max-h-[88vh] rounded-3xl shadow-2xl overflow-hidden"
+              style={{ background: "rgba(255,255,255,0.92)", border: `1px solid ${COLORS.border}` }}
+            >
+              <div
+                className="p-5 border-b flex items-center sticky top-0 z-10"
+                style={{
+                  borderColor: COLORS.border,
+                  background:
+                    "linear-gradient(125deg, rgba(250,245,255,0.95) 0%, rgba(248,250,252,0.96) 45%, rgba(239,246,255,0.95) 100%)",
+                }}
+              >
+                <div className="flex-1" />
+
+                <div className="absolute left-1/2 -translate-x-1/2 inline-flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" style={{ color: COLORS.purple700 }} />
+                  <h3 className="text-lg font-extrabold tracking-tight" style={{ color: COLORS.textPrimary }}>
+                    {title} Insights
                   </h3>
                 </div>
-                <button type="button" onClick={() => setShowAskMe(false)} className="ui-btn ui-btn-muted">
-                  Close
-                </button>
+
+                <div className="ml-auto">
+                  <button
+                    type="button"
+                    onClick={() => setShowAskMe(false)}
+                    className="ui-btn ui-btn-secondary"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
               <div className="p-5 space-y-4 overflow-y-auto max-h-[calc(88vh-72px)]">
-                <div className="rounded-xl p-3" style={{ background: COLORS.bgGray, border: `1px solid ${COLORS.border}` }}>
-                  <p className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>
-                    Tip: Select a category for focused summary, or keep "All Categories" for a complete overview.
+                <div className="rounded-2xl p-4 shadow-sm" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
+                  <p className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+                    Overview
+                  </p>
+                  <p className="mt-1 text-sm" style={{ color: COLORS.textSecondary }}>
+                    Select a category to see its status breakdown, or keep “All Categories” for the full module.
                   </p>
                 </div>
+
+                {(() => {
+                  const bucket = selectedCategoryId ? filteredItemsForAi : allItemsForAi
+                  const total = bucket.length
+                  const statusLabel = (raw: any) => String(raw ?? "").trim().toLowerCase()
+                  const archived = bucket.filter((i: any) => Boolean(i?.archived) || Boolean(i?.isArchived) || statusLabel(i?.status) === "archived").length
+                  const highlighted = bucket.filter((i: any) => Boolean(i?.highlighted) || statusLabel(i?.status) === "highlighted").length
+                  const paused = bucket.filter((i: any) => Boolean(i?.paused) || statusLabel(i?.status) === "paused").length
+                  const approved = bucket.filter((i: any) => Boolean(i?.approved) || statusLabel(i?.status) === "approved" || statusLabel(i?.workflowStatus) === "approved").length
+                  const pending = Math.max(total - approved, 0)
+
+                  const scheduled = bucket.filter((i: any) => statusLabel(i?.status) === "scheduled" || statusLabel(i?.workflowStatus) === "scheduled").length
+                  const inProgress = bucket.filter((i: any) => statusLabel(i?.status) === "in progress" || statusLabel(i?.workflowStatus) === "in progress").length
+                  const completed = bucket.filter((i: any) => statusLabel(i?.status) === "completed" || statusLabel(i?.workflowStatus) === "completed").length
+
+                  const showAuditBuckets = isAuditSchedule && (scheduled + inProgress + completed) > 0
+
+                  const cards: Array<{ label: string; value: number; tone: "violet" | "emerald" | "amber" | "slate" | "sky" | "rose" }> = showAuditBuckets
+                    ? [
+                        { label: "Total", value: total, tone: "slate" },
+                        { label: "Scheduled", value: scheduled, tone: "sky" },
+                        { label: "In progress", value: inProgress, tone: "amber" },
+                        { label: "Completed", value: completed || approved, tone: "emerald" },
+                        { label: "Archived", value: archived, tone: "rose" },
+                      ]
+                    : [
+                        { label: "Total", value: total, tone: "slate" },
+                        { label: "Completed", value: approved, tone: "emerald" },
+                        { label: "Pending", value: pending, tone: "amber" },
+                        { label: "Highlighted", value: highlighted, tone: "violet" },
+                        { label: "Paused", value: paused, tone: "sky" },
+                        { label: "Archived", value: archived, tone: "rose" },
+                      ]
+
+                  const toneStyle = (tone: string) => {
+                    if (tone === "emerald") return { border: "rgba(16,185,129,0.25)", bg: "linear-gradient(135deg, rgba(236,253,245,0.9) 0%, rgba(209,250,229,0.65) 100%)", ink: "#065f46" }
+                    if (tone === "amber") return { border: "rgba(245,158,11,0.25)", bg: "linear-gradient(135deg, rgba(255,251,235,0.92) 0%, rgba(254,243,199,0.7) 100%)", ink: "#92400e" }
+                    if (tone === "violet") return { border: "rgba(124,58,237,0.25)", bg: "linear-gradient(135deg, rgba(245,243,255,0.95) 0%, rgba(237,233,254,0.65) 100%)", ink: "#5b21b6" }
+                    if (tone === "sky") return { border: "rgba(56,189,248,0.25)", bg: "linear-gradient(135deg, rgba(240,249,255,0.92) 0%, rgba(224,242,254,0.7) 100%)", ink: "#075985" }
+                    if (tone === "rose") return { border: "rgba(244,63,94,0.22)", bg: "linear-gradient(135deg, rgba(255,241,242,0.92) 0%, rgba(254,205,211,0.62) 100%)", ink: "#9f1239" }
+                    return { border: "rgba(148,163,184,0.35)", bg: "linear-gradient(135deg, rgba(248,250,252,0.95) 0%, rgba(241,245,249,0.7) 100%)", ink: "#0f172a" }
+                  }
+
+                  return (
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {cards.map((c) => {
+                        const t = toneStyle(c.tone)
+                        return (
+                          <div
+                            key={c.label}
+                            className="rounded-2xl border px-4 py-3 shadow-sm"
+                            style={{ borderColor: t.border, background: t.bg }}
+                          >
+                            <p className="text-[0.6875rem] font-bold uppercase tracking-[0.14em]" style={{ color: t.ink }}>
+                              {c.label}
+                            </p>
+                            <p className="mt-1 text-2xl font-extrabold tracking-tight" style={{ color: COLORS.textPrimary }}>
+                              {c.value}
+                            </p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -1615,8 +1717,11 @@ export default function DynamicModulePage({
                     </label>
                     <select
                       value={selectedCategoryId}
-                      onChange={(e) => setSelectedCategoryId(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => {
+                        setSelectedCategoryId(e.target.value)
+                        setSelectedItemId("")
+                      }}
+                      className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/30"
                       style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                     >
                       <option value="">All Categories</option>
@@ -1627,56 +1732,90 @@ export default function DynamicModulePage({
                       ))}
                     </select>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                      Select {itemLabel}
-                    </label>
-                    <select
-                      value={selectedItemId}
-                      onChange={(e) => setSelectedItemId(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
+                {(() => {
+                  const selected = selectedCategoryId ? filteredItemsForAi : allItemsForAi
+
+                  const items = [...selected].sort((a: any, b: any) => {
+                    const at = new Date(a?.updatedAt || a?.createdAt || 0).getTime()
+                    const bt = new Date(b?.updatedAt || b?.createdAt || 0).getTime()
+                    return bt - at
+                  })
+
+                  const tag = (label: string) => (
+                    <span
+                      key={label}
+                      className="rounded-lg border px-2.5 py-1 text-xs font-semibold"
+                      style={{ background: COLORS.bgGray, color: COLORS.textSecondary, borderColor: COLORS.border }}
                     >
-                      <option value="">Select {itemLabel.toLowerCase()}...</option>
-                      {filteredItemsForAi.map((item: any) => (
-                        <option key={item.id} value={item.id}>
-                          {getItemTitle(item)} - {item.categoryTitle}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                      {label}
+                    </span>
+                  )
 
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                    Ask Question (optional)
-                  </label>
-                  <textarea
-                    value={aiQuestion}
-                    onChange={(e) => setAiQuestion(e.target.value)}
-                    placeholder={`Example: summarize this ${itemLabel.toLowerCase()} and key actions`}
-                    rows={4}
-                    className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-400"
-                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
-                  />
-                </div>
+                  return (
+                    <div className="rounded-2xl overflow-hidden shadow-sm" style={{ border: `1px solid ${COLORS.border}`, background: COLORS.bgWhite }}>
+                      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b" style={{ borderColor: COLORS.border }}>
+                        <div>
+                          <p className="text-sm font-bold" style={{ color: COLORS.textPrimary }}>
+                            Live task states
+                          </p>
+                          <p className="text-xs" style={{ color: COLORS.textSecondary }}>
+                            Showing {items.length} {itemLabel.toLowerCase()}{items.length === 1 ? "" : "s"}.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCategoryId("")
+                            setSelectedItemId("")
+                            setAiQuestion("")
+                            setAiReply("")
+                          }}
+                          className="ui-btn ui-btn-secondary"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                      <div className="p-4 space-y-3 overflow-y-auto" style={{ maxHeight: "360px" }}>
+                        {items.length === 0 ? (
+                          <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                            No items found for the selected filter.
+                          </p>
+                        ) : (
+                          items.map((it: any, idx: number) => {
+                            const name = getItemTitle(it) || `${itemLabel} ${idx + 1}`
+                            const chips: string[] = []
+                            const status = String(it?.status || it?.workflowStatus || "").trim()
+                            const statusKey = status.toLowerCase()
+                            const isArchived = Boolean(it?.archived) || Boolean(it?.isArchived) || statusKey === "archived"
+                            const isApproved = Boolean(it?.approved) || statusKey === "approved"
+                            const isPaused = Boolean(it?.paused) || statusKey === "paused"
+                            const isHighlighted = Boolean(it?.highlighted) || statusKey === "highlighted"
 
-                <div className="flex flex-wrap gap-3">
-                  <button type="button" onClick={handleSummarizeAllTasks} disabled={aiLoading} className="ui-btn ui-btn-primary">
-                    {aiLoading
-                      ? "Generating..."
-                      : selectedCategoryId
-                        ? "Generate Summary (Selected Category)"
-                        : "Generate Summary (All Tasks)"}
-                  </button>
-                  <button type="button" onClick={handleAskSelectedTask} disabled={aiLoading} className="ui-btn ui-btn-outline disabled:opacity-70">
-                    Ask Selected {itemLabel}
-                  </button>
-                  <button type="button" onClick={() => { setAiQuestion(""); setAiReply("") }} className="ui-btn ui-btn-muted">
-                    Clear
-                  </button>
-                </div>
+                            if (status) chips.push(`status ${status}`)
+                            if (isApproved) chips.push("completed")
+                            if (isHighlighted) chips.push("highlighted")
+                            if (isPaused) chips.push("paused")
+                            if (isArchived) chips.push("archived")
+                            if (!chips.length) chips.push("pending")
+
+                            return (
+                              <div key={String(it?.id ?? idx)} className="rounded-2xl border p-4" style={{ borderColor: COLORS.border, background: COLORS.bgGrayLight }}>
+                                <div className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+                                  {idx + 1}. {name}
+                                </div>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {chips.map((c) => tag(c))}
+                                </div>
+                              </div>
+                            )
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()}
 
                 {aiReply && (
                   <div className="mt-2 rounded-xl overflow-hidden" style={{ border: `1px solid ${COLORS.border}`, background: COLORS.bgGray }}>
