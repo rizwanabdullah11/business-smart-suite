@@ -9,6 +9,7 @@ import { Input } from "@/components/ui"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui"
 import { useRouter } from "next/navigation"
+import { COLORS } from "@/constant/colors"
 
 type AppPurpleHeaderProps = {
   user: { name?: string; email?: string; role?: string } | null
@@ -50,18 +51,19 @@ export function AppPurpleHeader({ user, onLogout }: AppPurpleHeaderProps) {
   }
 
   return (
-    <header className="w-full fixed top-0 left-0 right-0 z-40 shadow-none">
-      <div className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 p-4 flex justify-between items-center relative overflow-hidden border-0 shadow-none">
-        {/* Animated background elements */}
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/50 via-purple-900/30 to-slate-900/50"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(120,119,198,0.3),transparent_50%)]"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(120,119,198,0.2),transparent_50%)]"></div>
-
-        <div className="flex items-center relative z-10">
+    <header className="fixed left-0 right-0 top-0 z-40 shadow-none">
+      <div
+        className="relative flex items-center justify-between gap-4 overflow-hidden border-0 px-5 py-3.5 sm:px-6"
+        style={{
+          background: COLORS.brandHeaderGradient,
+          boxShadow: "0 12px 32px -20px rgba(15,12,41,0.65)",
+        }}
+      >
+        <div className="relative z-10 flex min-w-0 flex-1 items-center">
           <CompanySelector />
         </div>
 
-        <div className="flex items-center gap-4 relative z-10">
+        <div className="relative z-10 flex flex-shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
           {/* Search Dialog */}
           <Dialog>
             <DialogTrigger asChild>

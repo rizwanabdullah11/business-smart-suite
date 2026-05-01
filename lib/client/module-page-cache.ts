@@ -3,7 +3,10 @@
 export type ModulePageCachePayload = {
   categories: any[]
   archivedCategories: any[]
-  categoryItemView: Record<string, "active" | "archived" | "completed" | "highlighted">
+  categoryItemView: Record<
+    string,
+    "active" | "archived" | "completed" | "highlighted" | "audit_nt" | "audit_ip" | "audit_done"
+  >
   expandedCategories: string[]
   cachedAt: number
 }

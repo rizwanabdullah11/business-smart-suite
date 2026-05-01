@@ -226,7 +226,7 @@ export function Sidebar({}: SidebarProps = {}) {
             className="fixed left-0 top-0 h-screen flex flex-col"
             style={{
                 width: '280px',
-                background: "#341746",
+                background: COLORS.brandShell,
                 borderRight: "1px solid rgba(255,255,255,0.08)",
                 zIndex: 50
             }}
@@ -238,7 +238,7 @@ export function Sidebar({}: SidebarProps = {}) {
             >
                 <div
                     className="h-12 w-12 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)" }}
+                    style={{ background: COLORS.brandMarkGradient }}
                 >
                     <span className="font-bold text-2xl text-white">B</span>
                 </div>
@@ -261,9 +261,9 @@ export function Sidebar({}: SidebarProps = {}) {
                             <div
                                 className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-1 cursor-pointer transition-all duration-200 ${isActive('/dashboard') ? 'font-bold' : 'font-medium'}`}
                                 style={{
-                                    background: isActive('/dashboard') ? "rgba(168,85,247,0.25)" : 'transparent',
-                                    color: isActive('/dashboard') ? "#e9d5ff" : "rgba(255,255,255,0.7)",
-                                    borderLeft: isActive('/dashboard') ? "3px solid #a855f7" : "3px solid transparent",
+                                    background: isActive('/dashboard') ? "rgba(124,58,237,0.22)" : 'transparent',
+                                    color: isActive('/dashboard') ? "#faf5ff" : "rgba(255,255,255,0.72)",
+                                    borderLeft: isActive('/dashboard') ? `3px solid ${COLORS.purple700}` : "3px solid transparent",
                                 }}
                             >
                                 <Home className="w-5 h-5 shrink-0" />
@@ -274,9 +274,9 @@ export function Sidebar({}: SidebarProps = {}) {
                             <div
                                 className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-2 cursor-pointer transition-all duration-200 ${isActive('/dashboard/analytics') ? 'font-bold' : 'font-medium'}`}
                                 style={{
-                                    background: isActive('/dashboard/analytics') ? "rgba(168,85,247,0.25)" : 'transparent',
-                                    color: isActive('/dashboard/analytics') ? "#e9d5ff" : "rgba(255,255,255,0.7)",
-                                    borderLeft: isActive('/dashboard/analytics') ? "3px solid #a855f7" : "3px solid transparent",
+                                    background: isActive('/dashboard/analytics') ? "rgba(124,58,237,0.22)" : 'transparent',
+                                    color: isActive('/dashboard/analytics') ? "#faf5ff" : "rgba(255,255,255,0.72)",
+                                    borderLeft: isActive('/dashboard/analytics') ? `3px solid ${COLORS.purple700}` : "3px solid transparent",
                                 }}
                             >
                                 <LayoutDashboard className="w-5 h-5 shrink-0" />
@@ -326,9 +326,9 @@ export function Sidebar({}: SidebarProps = {}) {
                                                         <div
                                                             className={`flex items-center gap-3 px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 ${active ? 'font-semibold' : 'font-medium'}`}
                                                             style={{
-                                                                background: active ? "rgba(168,85,247,0.25)" : 'transparent',
-                                                                color: active ? "#e9d5ff" : "rgba(255,255,255,0.65)",
-                                                                borderLeft: active ? "3px solid #a855f7" : "3px solid transparent",
+                                                                background: active ? "rgba(124,58,237,0.22)" : 'transparent',
+                                                                color: active ? "#faf5ff" : "rgba(255,255,255,0.68)",
+                                                                borderLeft: active ? `3px solid ${COLORS.purple700}` : "3px solid transparent",
                                                             }}
                                                         >
                                                             <ItemIcon className="w-4 h-4 shrink-0" />

@@ -35,18 +35,10 @@ export default function GettingStartedOverviewPage() {
             From first login to audit-ready — a practical onboarding reference.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Link
-              href="/guides/iso-standards"
-              className="rounded-xl px-4 py-2 text-sm font-semibold"
-              style={{ background: COLORS.bgWhite, color: COLORS.purple700, border: `1px solid ${COLORS.purple200}` }}
-            >
+            <Link href="/guides/iso-standards" className="ui-btn ui-btn-outline">
               View ISO Standards
             </Link>
-            <Link
-              href="/dashboard"
-              className="rounded-xl px-4 py-2 text-sm font-semibold"
-              style={{ background: "#111827", color: COLORS.textWhite, border: "1px solid #111827" }}
-            >
+            <Link href="/dashboard" className="ui-btn ui-btn-primary">
               Back to Dashboard
             </Link>
           </div>
@@ -218,18 +210,20 @@ export default function GettingStartedOverviewPage() {
           <Card>
             <SectionTitle>5) Dashboard guide (by role)</SectionTitle>
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {[
-                ["System Administrator", ["Activity feed", "User management", "Module activation", "Security & MFA", "Billing overview"]],
-                ["Compliance Manager", ["Task completion", "Open CAPAs", "Upcoming audits", "KPI progress", "Training status", "Supplier status"]],
-                ["Standard Employee", ["My tasks", "My training", "My forms", "My documents", "Improvement log"]],
-                ["External Auditor", ["Read-only evidence navigation", "Document register", "Audit trail", "Risk & legal registers", "Training records"]],
-              ].map(([role, items]) => (
+              {(
+                [
+                  ["System Administrator", ["Activity feed", "User management", "Module activation", "Security & MFA", "Billing overview"]],
+                  ["Compliance Manager", ["Task completion", "Open CAPAs", "Upcoming audits", "KPI progress", "Training status", "Supplier status"]],
+                  ["Standard Employee", ["My tasks", "My training", "My forms", "My documents", "Improvement log"]],
+                  ["External Auditor", ["Read-only evidence navigation", "Document register", "Audit trail", "Risk & legal registers", "Training records"]],
+                ] as [string, string[]][]
+              ).map(([role, items]) => (
                 <div key={role} className="rounded-2xl p-4" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
                   <div className="text-sm font-bold" style={{ color: COLORS.purple700 }}>
                     {role}
                   </div>
                   <ul className="mt-2 list-disc pl-5 text-sm" style={{ color: COLORS.textSecondary }}>
-                    {(items as string[]).map((i) => (
+                    {items.map((i) => (
                       <li key={i} className="py-0.5">
                         {i}
                       </li>

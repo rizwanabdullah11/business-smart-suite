@@ -98,7 +98,7 @@ export const COLORS = {
     warning: "#f97316",
     danger: "#dc2626",
 
-    // Purple/Violet Colors (for premium accents)
+    // Purple/Violet — primary accents (tailwind violet scale)
     purple900: "#581c87",
     purple800: "#6b21a8",
     purple700: "#7c3aed",
@@ -109,6 +109,14 @@ export const COLORS = {
     purple200: "#e9d5ff",
     purple100: "#f3e8ff",
     purple50: "#faf5ff",
+
+    /** Unified chrome: sidebar, app header bar, footer, module category strips (same violet family). */
+    brandShell: "#2e1065",
+    brandShellElevated: "#3d2670",
+    brandHeaderGradient: "linear-gradient(90deg, #261050 0%, #3f2275 52%, #261050 100%)",
+    brandHeroGradient: "linear-gradient(145deg,#2e1065 0%,#44207a 32%,#4c1d95 62%,#5b21b6 88%)",
+    brandCategoryBarGradient: "linear-gradient(135deg, #2f1358 0%, #44207a 100%)",
+    brandMarkGradient: "linear-gradient(145deg, #5b21b6 0%, #7c3aed 96%)",
 
     // Pink Colors (for vibrant accents)
     pink900: "#831843",

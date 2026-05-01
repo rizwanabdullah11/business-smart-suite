@@ -864,54 +864,120 @@ export default function UniversalTaskDetailPage() {
   }
 
   if (loading) {
-    return <div className="p-6">Loading...</div>
-  }
-
-  if (error || !item) {
     return (
-      <div className="p-6">
-        <p style={{ color: COLORS.textPrimary }}>{error || "Task not found"}</p>
+      <div
+        className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 via-[#eef1f7] to-slate-200/90"
+      >
+        <div className="ui-card-main flex flex-col items-center gap-4 rounded-3xl border border-white/70 bg-white/95 px-12 py-10 shadow-xl backdrop-blur-sm">
+          <div
+            className="h-11 w-11 animate-spin rounded-full border-[3px] border-violet-100 border-t-violet-600"
+            aria-hidden
+          />
+          <p className="text-[0.9375rem] font-semibold tracking-tight text-slate-600">Loading record…</p>
+        </div>
       </div>
     )
   }
 
+  if (error || !item) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-100 via-[#eef1f7] to-slate-200/90 px-5 py-10">
+        <div className="ui-page-shell">
+          <div className="ui-card-main rounded-3xl border border-red-100 bg-white px-8 py-12 text-center shadow-lg">
+            <p className="ui-section-title mb-2 text-red-900">Something went wrong</p>
+            <p className="text-[0.9375rem] leading-relaxed text-slate-600">{error || "Task not found"}</p>
+            <Link
+              href={backPath}
+              className="mt-8 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:brightness-105"
+              style={{ background: COLORS.primaryGradient }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Go back
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const modulePretty = toTitle(moduleSlug)
+
   return (
-    <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
-      <div className="p-6">
-        <div className="mb-4">
-          <Link href={backPath} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>
-            <ArrowLeft className="w-4 h-4" />
+    <div
+      className="min-h-screen bg-gradient-to-br from-slate-100 via-[#eef1f7] to-slate-200/90 pb-14"
+      style={{ fontFamily: "var(--font-app-sans), ui-sans-serif, system-ui, sans-serif" }}
+    >
+      <div className="ui-page-shell">
+        <div className="mb-8">
+          <Link
+            href={backPath}
+            className="group inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-md transition hover:bg-white hover:shadow-lg"
+            style={{
+              background: "rgba(255,255,255,0.88)",
+              border: `1px solid ${COLORS.border}`,
+              boxShadow: "0 10px 30px -12px rgba(15, 23, 42, 0.12)",
+            }}
+          >
+            <ArrowLeft className="h-4 w-4 transition group-hover:-translate-x-0.5" />
             Back to {toTitle(backPath.replace("/", ""))}
           </Link>
         </div>
 
-        <div className="rounded-xl p-5 mb-4" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
-          <h1 className="text-3xl font-bold mb-1" style={{ color: COLORS.textPrimary }}>{title}</h1>
-          <div className="p-2 text-sm rounded-lg mt-2" style={{ background: "#FEF9C3", color: COLORS.textSecondary }}>
-            {isEmployee ? (
-              <>
-                {user?.name || currentUserName}
-                {categoryLabel ? ` · ${categoryLabel}` : ""}
-                {` · ${toTitle(moduleSlug).replace(/s$/, "")} record`}
-              </>
-            ) : (
-              <>Last viewed: {new Date().toLocaleString()} ({currentUserName})</>
-            )}
-          </div>
-        </div>
+        <article
+          className="ui-card-main overflow-hidden rounded-3xl border border-white/80 bg-white/95 shadow-2xl backdrop-blur-[2px]"
+          style={{ boxShadow: `${COLORS.shadowLg}, 0 0 0 1px rgba(124,58,237,0.06)` }}
+        >
+          <header className="relative border-b border-slate-200/70 px-6 py-10 sm:px-10">
+            <div className="pointer-events-none absolute inset-0 opacity-95 bg-[linear-gradient(125deg,#faf5ff_0%,#f8fafc_38%,#eff6ff_100%)]" />
+            <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-violet-400/15 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-28 left-12 h-48 w-48 rounded-full bg-indigo-400/10 blur-3xl" />
+            <div className="relative">
+              <div className="mb-4 inline-flex flex-wrap items-center gap-3">
+                <span
+                  className="rounded-full border border-violet-200/70 bg-white/90 px-3.5 py-1 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-violet-800 shadow-sm"
+                >
+                  {modulePretty.replace(/s$/, "")}
+                </span>
+                <span className="text-[0.8125rem] font-semibold tracking-tight text-slate-500">
+                  Controlled document overview
+                </span>
+              </div>
+              <h1 className="ui-display-title max-w-[min(52rem,100%)] text-slate-900">{title}</h1>
+              <div
+                className="mt-6 inline-flex max-w-full flex-wrap items-center gap-2 rounded-2xl border border-violet-100/80 px-5 py-3 text-[0.8125rem] font-medium leading-snug text-slate-600 shadow-inner"
+                style={{
+                  background: "linear-gradient(180deg,#ffffff,#fafbfc)",
+                }}
+              >
+                {isEmployee ? (
+                  <>
+                    <span className="font-semibold text-violet-900">{user?.name || currentUserName}</span>
+                    {categoryLabel ? <span className="text-slate-400">·</span> : null}
+                    {categoryLabel ? <span>{categoryLabel}</span> : null}
+                    <span className="text-slate-400">·</span>
+                    <span>{modulePretty.replace(/s$/, "")} record</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Open session —</span>
+                    <span>{new Date().toLocaleString()}</span>
+                    <span className="text-slate-400">·</span>
+                    <span>{currentUserName}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </header>
 
-        <div className="rounded-xl p-4" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
-          <div className="flex items-center gap-2 mb-4 border-b pb-2" style={{ borderColor: COLORS.border }}>
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-200/70 bg-gradient-to-b from-slate-50 to-slate-50/40 px-3 py-3 sm:gap-3 sm:px-5">
             {visibleTabs.map((tab) => (
               <button
                 key={tab}
+                type="button"
                 onClick={() => setActiveTab(tab)}
-                className="px-3 py-1.5 rounded text-sm font-medium"
-                style={{
-                  background: activeTab === tab ? COLORS.bgGray : "transparent",
-                  color: activeTab === tab ? COLORS.textPrimary : COLORS.textSecondary,
-                  border: `1px solid ${activeTab === tab ? COLORS.border : "transparent"}`,
-                }}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold tracking-tight transition ${
+                  activeTab === tab ? "ui-tab-pill-active text-violet-900" : "ui-tab-pill-idle rounded-xl bg-transparent"
+                }`}
               >
                 {tab}
               </button>
@@ -919,23 +985,20 @@ export default function UniversalTaskDetailPage() {
             <button
               type="button"
               onClick={handleDownloadFile}
-              className="ml-auto px-3 py-1.5 rounded text-sm font-medium"
-              style={{ color: COLORS.primary, border: `1px solid ${COLORS.border}` }}
+              className="ml-auto inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold text-violet-800 shadow-sm transition hover:bg-violet-50"
+              style={{ borderColor: "#ddd6fe", background: "rgba(255,255,255,0.9)" }}
             >
-              <Download className="w-4 h-4 inline mr-1 align-text-bottom" /> Download
+              <Download className="h-4 w-4" aria-hidden /> Download
             </button>
           </div>
 
-          {activeTab === "Details" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="px-5 py-8 sm:px-10 sm:py-11">
+            {activeTab === "Details" && (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 lg:gap-x-10">
               {!isEmployee && categoryLabel ? (
                 <div>
-                  <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>
-                    Category
-                  </p>
-                  <div className="px-3 py-2 rounded border" style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}>
-                    {categoryLabel}
-                  </div>
+                  <p className="ui-label mb-2">Category</p>
+                  <div className="ui-value-well">{categoryLabel}</div>
                 </div>
               ) : null}
 
@@ -944,9 +1007,7 @@ export default function UniversalTaskDetailPage() {
               item?.workflowStatus !== null &&
               String(item.workflowStatus).trim() !== "" ? (
                 <div>
-                  <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>
-                    Workflow status
-                  </p>
+                  <p className="ui-label mb-2">Workflow status</p>
                   <div className="inline-flex items-center px-3 py-1.5 rounded-lg border text-sm font-semibold" style={workflowStatusStyle(String(item.workflowStatus))}>
                     {humanizeWorkflowStatus(item.workflowStatus)}
                   </div>
@@ -958,9 +1019,7 @@ export default function UniversalTaskDetailPage() {
               item?.status !== null &&
               String(item.status).trim() !== "" ? (
                 <div>
-                  <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>
-                    Status
-                  </p>
+                  <p className="ui-label mb-2">Status</p>
                   <div className="inline-flex items-center px-3 py-1.5 rounded-lg border text-sm font-semibold" style={workflowStatusStyle(String(item.status))}>
                     {humanizeWorkflowStatus(item.status)}
                   </div>
@@ -969,9 +1028,7 @@ export default function UniversalTaskDetailPage() {
 
               {!isEmployee && assignedPeople.length > 0 ? (
                 <div className="md:col-span-2">
-                  <p className="text-sm font-medium mb-2" style={{ color: COLORS.textSecondary }}>
-                    Assigned ({assignedPeople.length})
-                  </p>
+                  <p className="ui-label mb-3">Assigned ({assignedPeople.length})</p>
                   <div
                     className="mb-3 rounded-lg border px-4 py-3"
                     style={{ borderColor: COLORS.border, background: COLORS.bgGray }}
@@ -1013,19 +1070,14 @@ export default function UniversalTaskDetailPage() {
 
               {detailEntries.map(([key, value]) => (
                 <div key={key}>
-                  <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>
-                    {humanizeFieldKey(key)}
-                  </p>
-                  <div
-                    className="px-3 py-2 rounded border whitespace-pre-wrap break-words"
-                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}
-                  >
+                  <p className="ui-label mb-2">{humanizeFieldKey(key)}</p>
+                  <div className="ui-value-well whitespace-pre-wrap break-words">
                     {formatDetailFieldValue(key, value)}
                   </div>
                 </div>
               ))}
             </div>
-          )}
+            )}
 
           {activeTab === "Document" && (
             <div className="space-y-4">
@@ -1325,7 +1377,9 @@ export default function UniversalTaskDetailPage() {
               {activeTab} tab is ready.
             </div>
           )}
-        </div>
+          </div>
+
+        </article>
 
         {showReviewModal && !isEmployee && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.5)" }}>

@@ -297,10 +297,10 @@ export default function DynamicModuleEditPage({
 
               <div className="flex flex-wrap gap-3 pt-2">
                 <button
+                  type="button"
                   onClick={handleSave}
                   disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-                  style={{ background: "#111827", color: COLORS.textWhite }}
+                  className="ui-btn ui-btn-primary ui-btn-lg disabled:cursor-not-allowed"
                 >
                   {saving ? (
                     <>
@@ -311,11 +311,7 @@ export default function DynamicModuleEditPage({
                     "Save Changes"
                   )}
                 </button>
-                <Link
-                  href={backHref}
-                  className="inline-flex items-center rounded-xl px-5 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5"
-                  style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}
-                >
+                <Link href={backHref} className="ui-btn ui-btn-secondary ui-btn-lg">
                   Cancel
                 </Link>
               </div>

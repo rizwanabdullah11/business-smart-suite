@@ -35,18 +35,10 @@ export default function IsoStandardsPage() {
             Business Smart Suite supports major ISO standards with module-driven workflows and evidence capture.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Link
-              href="/guides/getting-started"
-              className="rounded-xl px-4 py-2 text-sm font-semibold"
-              style={{ background: COLORS.bgWhite, color: COLORS.purple700, border: `1px solid ${COLORS.purple200}` }}
-            >
+            <Link href="/guides/getting-started" className="ui-btn ui-btn-outline">
               Getting started
             </Link>
-            <Link
-              href="/dashboard"
-              className="rounded-xl px-4 py-2 text-sm font-semibold"
-              style={{ background: "#111827", color: COLORS.textWhite, border: "1px solid #111827" }}
-            >
+            <Link href="/dashboard" className="ui-btn ui-btn-primary">
               Back to Dashboard
             </Link>
           </div>
@@ -223,20 +215,22 @@ export default function IsoStandardsPage() {
               Enterprise plan unlocks information security, privacy management, and business continuity support.
             </p>
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[
+              {(
                 [
-                  "ISO 27001:2022",
-                  ["IT Risk Management", "Asset Management", "Training Management", "Document Control", "Audit Management", "Legal Register"],
-                ],
-                ["ISO 27701:2019", ["IT Risk Management", "Legal Register", "Obligations Register", "Document Control"]],
-                ["ISO 22301:2019", ["Risk Register", "Audit Management", "Document Control", "Objectives & Targets", "Improvement Log (CAPA)"]],
-              ].map(([std, mods]) => (
+                  [
+                    "ISO 27001:2022",
+                    ["IT Risk Management", "Asset Management", "Training Management", "Document Control", "Audit Management", "Legal Register"],
+                  ],
+                  ["ISO 27701:2019", ["IT Risk Management", "Legal Register", "Obligations Register", "Document Control"]],
+                  ["ISO 22301:2019", ["Risk Register", "Audit Management", "Document Control", "Objectives & Targets", "Improvement Log (CAPA)"]],
+                ] as [string, string[]][]
+              ).map(([std, mods]) => (
                 <div key={std} className="rounded-2xl p-4" style={{ background: COLORS.bgGrayLight, border: `1px solid ${COLORS.border}` }}>
                   <div className="text-sm font-bold" style={{ color: COLORS.purple700 }}>
                     {std}
                   </div>
                   <ul className="mt-2 list-disc pl-5 text-sm" style={{ color: COLORS.textSecondary }}>
-                    {(mods as string[]).map((m) => (
+                    {mods.map((m) => (
                       <li key={m} className="py-0.5">
                         {m}
                       </li>

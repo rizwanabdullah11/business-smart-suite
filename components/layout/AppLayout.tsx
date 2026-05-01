@@ -69,7 +69,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center" style={{ background: '#3b0764' }}>
+            <div className="flex min-h-screen items-center justify-center" style={{ background: COLORS.brandShell }}>
                 <Loader2 className="w-10 h-10 animate-spin text-purple-300" />
             </div>
         )
@@ -81,13 +81,11 @@ export function AppLayout({ children }: AppLayoutProps) {
 
     const isHome = pathname === '/dashboard'
 
-    /** Match home page gradient so body white never shows through below the fixed header */
-    const HOME_PAGE_BG =
-        "linear-gradient(135deg,#3b0764 0%,#4c1d95 30%,#5b21b6 60%,#6d28d9 100%)"
+    const HOME_PAGE_BG = COLORS.brandHeroGradient
 
     return (
         <div
-            className="min-h-screen"
+            className="min-h-screen flex flex-col"
             style={{ background: isHome ? HOME_PAGE_BG : COLORS.bgGray }}
         >
             <AppPurpleHeader user={user} onLogout={handleLogout} />

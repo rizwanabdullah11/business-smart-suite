@@ -1325,7 +1325,7 @@ export function DashboardContent() {
         <div
           className="rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6 relative overflow-hidden border"
           style={{
-            background: "linear-gradient(135deg,#1a0533 0%,#3b0764 60%,#341746 100%)",
+            background: COLORS.brandHeroGradient,
             borderColor: "rgba(124,58,237,0.35)",
             boxShadow: "0 8px 32px rgba(124,58,237,0.25)",
           }}

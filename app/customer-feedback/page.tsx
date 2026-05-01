@@ -255,11 +255,7 @@ export default function CustomerFeedbackPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href="/customer-feedback/new">
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-md"
-                style={{ background: "#111827", color: COLORS.textWhite, border: "1px solid #111827" }}
-              >
+              <button type="button" className="ui-btn ui-btn-primary">
                 <Plus className="h-4 w-4" />
                 Add New
               </button>
@@ -340,7 +336,7 @@ export default function CustomerFeedbackPage() {
                   {/* Category Header */}
                   <div
                     className="flex flex-col gap-3 px-4 py-1.5 sm:flex-row sm:items-center sm:justify-between"
-                    style={{ background: "#341746", color: "#fff" }}
+                    style={{ background: COLORS.brandCategoryBarGradient, color: "#fff" }}
                   >
                     <button
                       type="button"
