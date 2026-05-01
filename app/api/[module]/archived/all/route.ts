@@ -4,6 +4,7 @@ import { Permission } from "@/lib/types/permissions"
 import { connectToDatabase } from "@/lib/server/db"
 import { getModuleModel, isSupportedModule } from "@/lib/server/models/module-item"
 import { buildModuleAccessFilter } from "@/lib/server/organization-context"
+import { isModuleEnabledForUser } from "@/lib/server/module-access"
 
 function unsupportedModule(module: string) {
   return NextResponse.json({ error: `Unsupported module: ${module}` }, { status: 404 })
@@ -12,11 +13,14 @@ function unsupportedModule(module: string) {
 export const GET = withAuth(
   async (request: NextRequest, user, { params }: { params: { module: string } }) => {
     try {
-      const module = params.module
-      if (!isSupportedModule(module)) return unsupportedModule(module)
+      const moduleSlug = params.module
+      if (!isSupportedModule(moduleSlug)) return unsupportedModule(moduleSlug)
+      if (!isModuleEnabledForUser(user, moduleSlug)) {
+        return NextResponse.json({ error: "Module is not enabled for your plan" }, { status: 403 })
+      }
 
       await connectToDatabase()
-      const Model = getModuleModel(module)
+      const Model = getModuleModel(moduleSlug)
       const { filter: ownershipFilter } = await buildModuleAccessFilter(request, user)
       const rows = await Model.find({
         $and: [

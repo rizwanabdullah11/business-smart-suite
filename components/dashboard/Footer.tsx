@@ -2,13 +2,15 @@
 
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
-import { Mail, Phone, MapPin, Globe } from "lucide-react"
+import { Mail, Phone, Globe } from "lucide-react"
 
 const QUICK_LINKS: { label: string; href: string }[] = [
-  { label: "Home", href: "/dashboard" },
-  { label: "Dashboard", href: "/dashboard/analytics" },
-  { label: "Policies", href: "/policies" },
-  { label: "Procedures", href: "/procedures" },
+  { label: "Dashboard", href: "/dashboard" },
+  { label: "Pricing", href: "/pricing" },
+  { label: "Features", href: "/features" },
+  { label: "Modules", href: "/modules" },
+  { label: "Getting Started", href: "/guides/getting-started" },
+  { label: "ISO Standards", href: "/guides/iso-standards" },
   { label: "Support", href: "mailto:support@businesssmart.com" },
 ]
 
@@ -17,49 +19,39 @@ export function Footer() {
 
     return (
         <footer
-            className="mt-16"
+            className="mt-auto border-t border-white/[0.08]"
             style={{
-                background: "#341746",
-                borderTop: "1px solid rgba(255,255,255,0.08)"
+                background: COLORS.brandShell,
             }}
         >
-            <div className="max-w-7xl mx-auto px-6 py-12">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-                    {/* Company Info */}
-                    <div className="col-span-1 md:col-span-2">
-                        <div className="flex items-center gap-3 mb-4">
+            <div className="mx-auto max-w-7xl px-6 py-10">
+                <div className="grid grid-cols-1 gap-10 md:grid-cols-12 md:gap-10 md:items-start">
+                    <div className="md:col-span-5">
+                        <div className="flex flex-wrap items-center gap-3 mb-5">
                             <div
-                                className="h-12 w-12 rounded-xl flex items-center justify-center shadow-sm"
-                                style={{ background: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)" }}
+                                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl shadow-md"
+                                style={{ background: COLORS.brandMarkGradient }}
                             >
-                                <span className="font-bold text-2xl text-white">B</span>
+                                <span className="text-2xl font-bold text-white">B</span>
                             </div>
-                            <h3 className="text-2xl font-bold text-white">
+                            <h3 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
                                 Business Smart Suite
                             </h3>
                         </div>
-                        <p
-                            className="text-base leading-relaxed mb-4"
-                            style={{ color: "rgba(255,255,255,0.6)" }}
-                        >
-                            ISO 9001 Compliance Management System — Streamline your business operations
-                            with our comprehensive compliance and management solution.
+                        <p className="text-sm leading-relaxed sm:text-[0.9375rem]" style={{ color: "rgba(255,255,255,0.68)" }}>
+                            ISO 9001 compliance management — one place for documents, audits, registers, and
+                            day-to-day quality workflows.
                         </p>
                     </div>
 
-                    {/* Quick Links */}
-                    <div>
-                        <h4 className="text-base font-bold mb-4 text-white">
-                            Quick Links
+                    <div className="md:col-span-3">
+                        <h4 className="mb-4 text-[0.8125rem] font-bold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,0.95)" }}>
+                            Quick links
                         </h4>
-                        <ul className="space-y-3">
+                        <ul className="flex flex-col gap-2.5">
                             {QUICK_LINKS.map(({ label, href }) => (
                                 <li key={href}>
-                                    <Link
-                                        href={href}
-                                        className="text-sm transition-colors hover:text-white"
-                                        style={{ color: "rgba(255,255,255,0.55)" }}
-                                    >
+                                    <Link href={href} className="text-sm transition-colors hover:text-white" style={{ color: "rgba(255,255,255,0.65)" }}>
                                         {label}
                                     </Link>
                                 </li>
@@ -67,27 +59,26 @@ export function Footer() {
                         </ul>
                     </div>
 
-                    {/* Contact Info */}
-                    <div>
-                        <h4 className="text-base font-bold mb-4 text-white">
-                            Contact Us
+                    <div className="md:col-span-4">
+                        <h4 className="mb-4 text-[0.8125rem] font-bold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,0.95)" }}>
+                            Contact
                         </h4>
-                        <ul className="space-y-3">
-                            <li className="flex items-center gap-3">
-                                <Mail className="w-4 h-4 shrink-0" style={{ color: "#a855f7" }} />
-                                <span className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+                        <ul className="flex flex-col gap-3">
+                            <li className="flex items-start gap-3">
+                                <Mail className="mt-0.5 h-4 w-4 shrink-0" style={{ color: COLORS.purple300 }} />
+                                <span className="text-sm" style={{ color: "rgba(255,255,255,0.68)" }}>
                                     support@businesssmart.com
                                 </span>
                             </li>
-                            <li className="flex items-center gap-3">
-                                <Phone className="w-4 h-4 shrink-0" style={{ color: "#a855f7" }} />
-                                <span className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+                            <li className="flex items-start gap-3">
+                                <Phone className="mt-0.5 h-4 w-4 shrink-0" style={{ color: COLORS.purple300 }} />
+                                <span className="text-sm" style={{ color: "rgba(255,255,255,0.68)" }}>
                                     +1 (555) 123-4567
                                 </span>
                             </li>
-                            <li className="flex items-center gap-3">
-                                <Globe className="w-4 h-4 shrink-0" style={{ color: "#a855f7" }} />
-                                <span className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+                            <li className="flex items-start gap-3">
+                                <Globe className="mt-0.5 h-4 w-4 shrink-0" style={{ color: COLORS.purple300 }} />
+                                <span className="text-sm" style={{ color: "rgba(255,255,255,0.68)" }}>
                                     www.businesssmart.com
                                 </span>
                             </li>
@@ -95,10 +86,8 @@ export function Footer() {
                     </div>
                 </div>
 
-                {/* Bottom Bar */}
                 <div
-                    className="pt-6 flex flex-col md:flex-row justify-between items-center gap-4"
-                    style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
+                    className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-white/[0.08] pt-8 md:flex-row md:items-center"
                 >
                     <p className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
                         © {currentYear} Business Smart Suite. All rights reserved.

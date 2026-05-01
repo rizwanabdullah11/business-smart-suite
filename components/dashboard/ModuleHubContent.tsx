@@ -9,11 +9,11 @@ type ModuleHubContentProps = {
 }
 
 export function ModuleHubContent({ onAddFolder }: ModuleHubContentProps = {}) {
-  const { can, loading } = usePermissions()
+  const { can, loading, isModuleEnabled } = usePermissions()
 
   const visibleGroups = DASHBOARD_MODULE_GROUPS.map((group) => ({
     ...group,
-    modules: group.modules.filter((m) => !m.permission || can(m.permission)),
+    modules: group.modules.filter((m) => (!m.permission || can(m.permission)) && (!m.moduleKey || isModuleEnabled(m.moduleKey))),
   })).filter((group) => group.modules.length > 0)
 
   return (
@@ -83,9 +83,9 @@ export function ModuleHubContent({ onAddFolder }: ModuleHubContentProps = {}) {
                     <p className="text-purple-200 text-xl drop-shadow">Your comprehensive business management portal</p>
                   </div>
                   <div className="flex items-center gap-4">
-                    <Link href="/analytics">
+                    <Link href="/dashboard/analytics">
                       <button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-400/50 backdrop-blur-sm">
-                        Analytics Dashboard
+                        Analytics & PDF
                       </button>
                     </Link>
                     <button

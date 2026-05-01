@@ -17,6 +17,7 @@ import {
 import { Briefcase, Calendar, Users, ArrowLeft } from 'lucide-react'
 import Link from "next/link"
 import { Loader } from '@/components/ui/loader'
+import { COLORS } from "@/constant/colors"
 
 interface Control {
   id: string
@@ -478,7 +479,8 @@ export default function StatementOfApplicabilityClient({
           ) : Object.entries(controlsBySection).map(([section, sectionControls]) => (
             <div key={section} className="mb-4">
               <div 
-                className="bg-[#2d1e3e] text-white p-3 flex justify-between items-center rounded-sm cursor-pointer"
+                className="flex cursor-pointer items-center justify-between px-4 py-3.5 text-white transition-[filter] hover:brightness-[1.03]"
+                style={{ background: COLORS.brandCategoryBarGradient }}
                 onClick={() => setExpandedSection(expandedSection === section ? null : section)}
               >
                 <span>{section}</span>

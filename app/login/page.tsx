@@ -248,6 +248,37 @@ export default function LoginPage() {
 
                 <div className="relative z-10 w-full max-w-[420px]">
 
+                    {/* Public marketing strip — links to public pages */}
+                    <div className="mb-6 flex items-center justify-center gap-1 text-xs font-semibold">
+                        <Link
+                            href="/welcome"
+                            className="rounded-lg px-2.5 py-1.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 transition-colors"
+                        >
+                            Home
+                        </Link>
+                        <span className="text-gray-300">·</span>
+                        <Link
+                            href="/modules"
+                            className="rounded-lg px-2.5 py-1.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 transition-colors"
+                        >
+                            Modules
+                        </Link>
+                        <span className="text-gray-300">·</span>
+                        <Link
+                            href="/features"
+                            className="rounded-lg px-2.5 py-1.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 transition-colors"
+                        >
+                            Features
+                        </Link>
+                        <span className="text-gray-300">·</span>
+                        <Link
+                            href="/pricing"
+                            className="rounded-lg px-2.5 py-1.5 text-purple-700 hover:bg-purple-50 transition-colors"
+                        >
+                            Pricing
+                        </Link>
+                    </div>
+
                     {/* Mobile brand header */}
                     <div className="flex lg:hidden items-center justify-center gap-2 mb-10">
                         <div
@@ -395,8 +426,19 @@ export default function LoginPage() {
                         </div>
                     </div>
 
+                    {/* New here? */}
+                    <div className="mt-6 text-center text-sm text-gray-600">
+                        New to Business Smart Suite?{" "}
+                        <Link
+                            href="/pricing"
+                            className="font-bold text-purple-700 hover:text-purple-900 hover:underline"
+                        >
+                            View plans &amp; get started
+                        </Link>
+                    </div>
+
                     {/* Footer note */}
-                    <p className="text-center text-xs text-gray-400 mt-6">
+                    <p className="text-center text-xs text-gray-400 mt-4">
                         © {new Date().getFullYear()} Business Smart Suite. All rights reserved.
                     </p>
                 </div>

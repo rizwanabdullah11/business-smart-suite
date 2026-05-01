@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type CSSProperties } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Loader2 } from "lucide-react"
@@ -160,10 +160,11 @@ export default function DynamicModuleEditPage({
 
   const renderField = (field: DynamicEditField) => {
     const value = formData[field.key]
-    const commonStyle = {
-      borderColor: COLORS.border,
-      color: COLORS.textPrimary,
-      background: COLORS.bgGrayLight,
+    const commonStyle: CSSProperties = {
+      border: "none",
+      outline: "none",
+      color: "#0f172a",
+      background: "#f1f5f9",
     }
 
     if (field.type === "textarea") {
@@ -174,7 +175,7 @@ export default function DynamicModuleEditPage({
           rows={4}
           placeholder={field.placeholder}
           disabled={saving}
-          className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all disabled:opacity-50"
+          className="w-full px-4 py-3 rounded-xl border-0 focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/35 transition-all disabled:opacity-50 placeholder:text-slate-500"
           style={commonStyle}
         />
       )
@@ -186,7 +187,7 @@ export default function DynamicModuleEditPage({
           value={String(value ?? "")}
           onChange={(e) => updateField(field.key, e.target.value)}
           disabled={saving}
-          className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all disabled:opacity-50"
+          className="w-full px-4 py-3 rounded-xl border-0 focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/35 transition-all disabled:opacity-50"
           style={commonStyle}
         >
           {(field.options || []).map((option) => (
@@ -200,14 +201,17 @@ export default function DynamicModuleEditPage({
 
     if (field.type === "checkbox") {
       return (
-        <label className="inline-flex items-center gap-3 px-4 py-3 rounded-xl border" style={commonStyle}>
+        <label
+          className="inline-flex items-center gap-3 rounded-xl px-4 py-3 border-0 focus-within:ring-2 focus-within:ring-[#7c3aed]/35"
+          style={{ ...commonStyle, background: "#f1f5f9" }}
+        >
           <input
             type="checkbox"
             checked={Boolean(value)}
             onChange={(e) => updateField(field.key, e.target.checked)}
             disabled={saving}
           />
-          <span>{field.label}</span>
+          <span style={{ color: "#0f172a" }}>{field.label}</span>
         </label>
       )
     }
@@ -219,7 +223,7 @@ export default function DynamicModuleEditPage({
         onChange={(e) => updateField(field.key, e.target.value)}
         placeholder={field.placeholder}
         disabled={saving}
-        className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all disabled:opacity-50"
+        className="w-full px-4 py-3 rounded-xl border-0 focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/35 transition-all disabled:opacity-50 placeholder:text-slate-500"
         style={commonStyle}
       />
     )
@@ -281,9 +285,9 @@ export default function DynamicModuleEditPage({
                 </div>
               ) : null}
 
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-x-10">
                 {fields.map((field) => (
-                  <div key={field.key} className={field.type === "textarea" || field.type === "checkbox" ? "md:col-span-2" : ""}>
+                  <div key={field.key} className={field.type === "textarea" || field.type === "checkbox" || field.key === "issueDate" ? "md:col-span-2" : ""}>
                     {field.type !== "checkbox" ? (
                       <label className="mb-2 block text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
                         {field.label}
@@ -297,10 +301,10 @@ export default function DynamicModuleEditPage({
 
               <div className="flex flex-wrap gap-3 pt-2">
                 <button
+                  type="button"
                   onClick={handleSave}
                   disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-                  style={{ background: "#111827", color: COLORS.textWhite }}
+                  className="ui-btn ui-btn-primary ui-btn-lg disabled:cursor-not-allowed"
                 >
                   {saving ? (
                     <>
@@ -311,11 +315,7 @@ export default function DynamicModuleEditPage({
                     "Save Changes"
                   )}
                 </button>
-                <Link
-                  href={backHref}
-                  className="inline-flex items-center rounded-xl px-5 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5"
-                  style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}
-                >
+                <Link href={backHref} className="ui-btn ui-btn-secondary ui-btn-lg">
                   Cancel
                 </Link>
               </div>

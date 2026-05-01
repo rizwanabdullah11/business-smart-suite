@@ -125,10 +125,12 @@ export const GET = withAuth(
             )
             if (merged.length > 0) {
               andConditions.push({ _id: { $in: merged.map((id) => new mongoose.Types.ObjectId(id)) } })
-            } else {
+            } else if (user.role === "employee") {
               andConditions.push({
                 $or: [{ createdBy: user.id }, ...(toObjectId(user.id) ? [{ createdBy: toObjectId(user.id) }] : [])],
               })
+            } else if (user.role === "auditor") {
+              andConditions.push({ _id: { $exists: false } })
             }
           }
         }

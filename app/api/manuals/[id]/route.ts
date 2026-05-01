@@ -5,6 +5,7 @@ import { connectToDatabase } from "@/lib/server/db"
 import Manual from "@/lib/server/models/Manual"
 import mongoose from "mongoose"
 import { buildModuleAccessFilter } from "@/lib/server/organization-context"
+import { isModuleEnabledForUser } from "@/lib/server/module-access"
 
 function notFound() {
   return NextResponse.json({ error: "Manual not found" }, { status: 404 })
@@ -13,6 +14,9 @@ function notFound() {
 export const GET = withAuth(
   async (request: NextRequest, user, { params }: { params: { id: string } }) => {
     try {
+      if (!isModuleEnabledForUser(user, "manual")) {
+        return NextResponse.json({ error: "Module is not enabled for your plan" }, { status: 403 })
+      }
       const { id } = params
       if (!mongoose.Types.ObjectId.isValid(id)) return notFound()
       await connectToDatabase()
@@ -41,6 +45,9 @@ export const GET = withAuth(
 export const PUT = withAuth(
   async (request: NextRequest, user, { params }: { params: { id: string } }) => {
     try {
+      if (!isModuleEnabledForUser(user, "manual")) {
+        return NextResponse.json({ error: "Module is not enabled for your plan" }, { status: 403 })
+      }
       const { id } = params
       if (!mongoose.Types.ObjectId.isValid(id)) return notFound()
       const body = await request.json()
@@ -83,6 +90,9 @@ export const PUT = withAuth(
 export const DELETE = withAuth(
   async (request: NextRequest, user, { params }: { params: { id: string } }) => {
     try {
+      if (!isModuleEnabledForUser(user, "manual")) {
+        return NextResponse.json({ error: "Module is not enabled for your plan" }, { status: 403 })
+      }
       const { id } = params
       if (!mongoose.Types.ObjectId.isValid(id)) return notFound()
       await connectToDatabase()

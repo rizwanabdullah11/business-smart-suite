@@ -9,25 +9,35 @@ import {
   Trash2,
   Check,
   X,
-  GripVertical,
-  Star,
   Pause,
   Calendar,
   Type,
   ArrowUpDown,
-  ChevronDown,
-  ChevronRight,
   Copy,
   Download,
-  Bot,
+  BarChart3,
+  FileText,
+  Folder,
+  Printer,
+  Star,
   type LucideIcon,
 } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 import { useAuth } from "@/contexts/auth-context"
+import { moduleKeyForSlug } from "@/lib/platform/plans"
 import { readModulePageCache, writeModulePageCache } from "@/lib/client/module-page-cache"
 
 type SortType = "name" | "date"
 type FieldType = "text" | "number" | "date" | "textarea" | "select" | "checkbox"
+
+type CategoryItemViewTab =
+  | "active"
+  | "archived"
+  | "completed"
+  | "highlighted"
+  | "audit_nt"
+  | "audit_ip"
+  | "audit_done"
 
 type ModuleField = {
   key: string
@@ -41,12 +51,16 @@ type ModuleField = {
 
 type DynamicModulePageProps = {
   moduleSlug: string
+  /** REST segment when it differs from the route slug (e.g. module `manual` → `/api/manuals`). */
+  apiModuleSlug?: string
   title: string
   description: string
   itemLabel: string
   icon: LucideIcon
   newItemHref: string
   itemHrefPrefix: string
+  /** e.g. "/audit-schedule" → Workflow link `/audit-schedule/:id/workflow` (shown next to titles for all roles) */
+  workflowHrefPrefix?: string
   categoryType?: string
   titleFieldKey?: string
   dateFieldKey?: string
@@ -77,22 +91,25 @@ function toFieldValue(field: ModuleField) {
 
 export default function DynamicModulePage({
   moduleSlug,
+  apiModuleSlug,
   title,
   description,
   itemLabel,
   icon: Icon,
   newItemHref,
   itemHrefPrefix,
+  workflowHrefPrefix,
   categoryType,
   titleFieldKey = "title",
   dateFieldKey = "issueDate",
   formFields = defaultFields,
   listFieldKeys,
 }: DynamicModulePageProps) {
-  const { isEmployee } = useAuth()
+  const apiPath = apiModuleSlug ?? moduleSlug
+  const { isEmployee, isModuleEnabled } = useAuth()
   const [categories, setCategories] = useState<any[]>([])
   const [archivedCategories, setArchivedCategories] = useState<any[]>([])
-  const [categoryItemView, setCategoryItemView] = useState<Record<string, "active" | "archived" | "completed" | "highlighted">>({})
+  const [categoryItemView, setCategoryItemView] = useState<Record<string, CategoryItemViewTab>>({})
   const [showArchived, setShowArchived] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>([])
   const [editingCategory, setEditingCategory] = useState<string | null>(null)
@@ -107,6 +124,21 @@ export default function DynamicModulePage({
   const [selectedItems, setSelectedItems] = useState<Record<string, Set<string>>>({})
   const [showAskMe, setShowAskMe] = useState(false)
   const [selectedCategoryId, setSelectedCategoryId] = useState("")
+
+  const platformKey = moduleKeyForSlug(moduleSlug)
+  const moduleAllowed = !platformKey || isModuleEnabled(platformKey)
+  if (!moduleAllowed) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-6">
+        <div className="max-w-lg w-full rounded-2xl border bg-white p-6 text-center">
+          <h2 className="text-xl font-bold mb-2">Module not enabled</h2>
+          <p className="text-sm text-gray-600">
+            This module is not enabled for your subscription plan. Please contact your administrator to enable it.
+          </p>
+        </div>
+      </div>
+    )
+  }
   const [selectedItemId, setSelectedItemId] = useState("")
   const [aiQuestion, setAiQuestion] = useState("")
   const [aiReply, setAiReply] = useState("")
@@ -137,7 +169,7 @@ export default function DynamicModulePage({
     }
     loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when role resolves
-  }, [cacheKey, isEmployee, moduleSlug, effectiveCategoryType])
+  }, [cacheKey, isEmployee, moduleSlug, effectiveCategoryType, apiPath])
 
   const getItemCategoryId = (item: any) => {
     const raw = item?.category?._id || item?.categoryId || item?.category || null
@@ -167,12 +199,12 @@ export default function DynamicModulePage({
               headers: { Authorization: `Bearer ${token}` },
             })
           : Promise.resolve(null),
-        fetch(`/api/${moduleSlug}`, {
+        fetch(`/api/${apiPath}`, {
           credentials: "include",
           headers: { Authorization: `Bearer ${token}` },
         }),
         !isEmployee
-          ? fetch(`/api/${moduleSlug}/archived/all`, {
+          ? fetch(`/api/${apiPath}/archived/all`, {
               credentials: "include",
               headers: { Authorization: `Bearer ${token}` },
             })
@@ -240,7 +272,7 @@ export default function DynamicModulePage({
       setCategoryItemView((prev) => {
         const next = { ...prev }
         allCategories.forEach((cat: any) => {
-          if (!next[cat.id]) next[cat.id] = "active"
+          if (!next[cat.id]) next[cat.id] = moduleSlug === "audit-schedule" ? "audit_nt" : "active"
         })
         writeModulePageCache(cacheKey, {
           categories: merged,
@@ -272,7 +304,7 @@ export default function DynamicModulePage({
     try {
       setLoadingAction(`${actionKey}-${itemId}`)
       const token = localStorage.getItem("token")
-      const response = await fetch(`/api/${moduleSlug}/${itemId}`, {
+      const response = await fetch(`/api/${apiPath}/${itemId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
@@ -321,7 +353,7 @@ export default function DynamicModulePage({
     if (!confirm("Are you sure you want to delete this item?")) return
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`/api/${moduleSlug}/${itemId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
+      const response = await fetch(`/api/${apiPath}/${itemId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
       if (!response.ok) throw new Error("Failed to delete item")
       await loadData()
     } catch {
@@ -348,7 +380,7 @@ export default function DynamicModulePage({
       copyPayload.archived = false
       copyPayload.isArchived = false
 
-      const response = await fetch(`/api/${moduleSlug}`, {
+      const response = await fetch(`/api/${apiPath}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(copyPayload),
@@ -373,7 +405,7 @@ export default function DynamicModulePage({
       // Re-fetch latest row to ensure we get document fields.
       if (!fileData) {
         const token = localStorage.getItem("token")
-        const response = await fetch(`/api/${moduleSlug}/${item.id}`, {
+        const response = await fetch(`/api/${apiPath}/${item.id}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         })
         if (response.ok) {
@@ -464,7 +496,7 @@ export default function DynamicModulePage({
     try {
       const token = localStorage.getItem("token")
       const payload = { ...newItemData, title: titleValue, category: categoryId, categoryId }
-      const response = await fetch(`/api/${moduleSlug}`, {
+      const response = await fetch(`/api/${apiPath}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
@@ -548,17 +580,33 @@ export default function DynamicModulePage({
   const displayKeys = listFieldKeys?.length ? listFieldKeys : formFields.map((f) => f.key).filter((k) => k !== titleFieldKey).slice(0, 4)
 
   const allItemsForAi = useMemo(() => {
-    const active = categories.flatMap((cat: any) =>
-      (cat.items || []).map((item: any) => ({ ...item, categoryTitle: cat.title, categoryId: cat.id }))
-    )
-    const archived = archivedCategories.flatMap((cat: any) =>
-      (cat.archivedItems || []).map((item: any) => ({
-        ...item,
-        categoryTitle: `${cat.title} (Archived)`,
-        categoryId: cat.id,
-      }))
-    )
-    return [...active, ...archived]
+    const buckets = ["items", "archivedItems", "completedItems", "highlightedItems"] as const
+    const merged = new Map<string, any>()
+    const allCats = [...categories, ...archivedCategories]
+
+    allCats.forEach((cat: any) => {
+      const catTitle = String(cat?.title || "")
+      const categoryTitle = cat?.archived || cat?.isArchived ? `${catTitle} (Archived)` : catTitle
+      const categoryId = cat?.id
+      buckets.forEach((bucketKey) => {
+        const rows = Array.isArray(cat?.[bucketKey]) ? cat[bucketKey] : []
+        rows.forEach((item: any) => {
+          const id = String(item?.id || item?._id || "")
+          if (!id) return
+          const existing = merged.get(id)
+          merged.set(id, {
+            ...(existing || {}),
+            ...item,
+            // always keep these consistent for Insights counting
+            id,
+            categoryId,
+            categoryTitle,
+          })
+        })
+      })
+    })
+
+    return Array.from(merged.values())
   }, [categories, archivedCategories])
 
   const allCategoryOptions = useMemo(() => {
@@ -576,8 +624,9 @@ export default function DynamicModulePage({
 
   useEffect(() => {
     if (!showAskMe) return
-    if (!filteredItemsForAi.some((item: any) => item.id === selectedItemId)) {
-      setSelectedItemId(filteredItemsForAi[0]?.id || "")
+    // Dropdown for selecting a single item was removed from Insights; keep any stale selections cleared.
+    if (selectedItemId && !filteredItemsForAi.some((item: any) => item.id === selectedItemId)) {
+      setSelectedItemId("")
     }
   }, [selectedCategoryId, showAskMe, selectedItemId, filteredItemsForAi])
 
@@ -597,7 +646,7 @@ export default function DynamicModulePage({
     setAiLoading(true)
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`/api/${moduleSlug}/ai`, {
+      const response = await fetch(`/api/${apiPath}/ai`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -688,11 +737,39 @@ export default function DynamicModulePage({
     return parsed.toLocaleDateString("en-GB")
   }
 
-  const getItemStatusTone = (item: any) => {
-    if (item.paused) return { label: "Paused", bg: "#fffaf3", color: "#c2410c", border: "#fed7aa" }
-    if (item.approved) return { label: "Done", bg: "#f4fcf6", color: "#047857", border: "#a7f3d0" }
-    if (item.highlighted) return { label: "Starred", bg: "#faf5ff", color: "#7c3aed", border: "#e9d5ff" }
-    return { label: "Active", bg: "#f8fafc", color: "#475569", border: "#e2e8f0" }
+  const isAuditSchedule = moduleSlug === "audit-schedule"
+
+  const normalizeAuditCategoryView = (view: CategoryItemViewTab): CategoryItemViewTab => {
+    if (!isAuditSchedule) return view
+    if (view === "active" || view === "highlighted") return "audit_nt"
+    if (view === "completed") return "audit_done"
+    return view
+  }
+
+  const mergeLiveAuditItems = (category: any) => {
+    const raw = [...(category.items || []), ...(category.completedItems || [])]
+    const map = new Map<string, any>()
+    raw.forEach((i: any) => map.set(String(i.id), i))
+    return Array.from(map.values())
+  }
+
+  const filterAuditTabItems = (category: any, tabKey: string) => {
+    if (tabKey === "archived") return category.archivedItems || []
+    const merged = mergeLiveAuditItems(category)
+    return merged.filter((item: any) => {
+      const s = String(item.status ?? "Scheduled").trim()
+      if (tabKey === "audit_nt") return s === "Scheduled" || s === ""
+      if (tabKey === "audit_ip") return s === "In Progress"
+      if (tabKey === "audit_done") return s === "Completed" || Boolean(item.approved)
+      return true
+    })
+  }
+
+  const formatPlannedMonthYear = (value?: string) => {
+    if (!value) return "—"
+    const d = new Date(value)
+    if (Number.isNaN(d.getTime())) return String(value)
+    return d.toLocaleDateString("en-US", { month: "short", year: "numeric" })
   }
 
   const visibleCategories = showArchived ? archivedCategories : categories
@@ -702,38 +779,54 @@ export default function DynamicModulePage({
       <div className="mx-auto p-4 sm:p-6">
 
         {/* ── Header ── */}
-        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex items-start gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "#eef2ff", color: "#4338ca", border: "1px solid #c7d2fe" }}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h1 className="text-3xl font-bold tracking-tight" style={{ color: COLORS.textPrimary }}>{title}</h1>
-              </div>
+        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <div
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+              style={{
+                background: COLORS.purple50,
+                color: COLORS.purple700,
+                border: `1px solid ${COLORS.purple200}`,
+              }}
+            >
+              <Icon className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-3xl font-bold tracking-tight" style={{ color: COLORS.textPrimary }}>
+                {title}
+              </h1>
+              {description.trim() ? (
+                <p className="mt-1 text-sm" style={{ color: COLORS.textSecondary }}>
+                  {description}
+                </p>
+              ) : null}
             </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
             {!isEmployee ? (
-              <button type="button" onClick={() => setShowAddCategory(!showAddCategory)} className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-sm" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>
+              <button type="button" onClick={() => setShowAddCategory(!showAddCategory)} className="ui-btn ui-btn-secondary">
                 <Plus className="h-4 w-4" /> Add Category
               </button>
             ) : null}
             {!isEmployee ? (
-              <button type="button" onClick={() => setShowArchived(!showArchived)} className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-sm" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>
-                <Archive className="h-4 w-4" /> {showArchived ? "Show Active" : "Show Archived"}
+              <button
+                type="button"
+                onClick={() => {
+                  // Default to "All Categories" so totals reflect the entire module.
+                  setSelectedCategoryId("")
+                  setSelectedItemId("")
+                  setAiQuestion("")
+                  setAiReply("")
+                  setShowAskMe(true)
+                }}
+                className="ui-btn ui-btn-secondary"
+              >
+                <BarChart3 className="h-4 w-4" /> Insights
               </button>
             ) : null}
-            {!isEmployee ? (
-              <button type="button" onClick={() => { const firstCategoryId = allCategoryOptions[0]?.id || ""; setSelectedCategoryId(firstCategoryId); const firstItem = allItemsForAi.find((i: any) => i.categoryId === firstCategoryId) || allItemsForAi[0]; setSelectedItemId(firstItem?.id || ""); setAiQuestion(""); setAiReply(""); setShowAskMe(true) }} className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-sm" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>
-                <Bot className="h-4 w-4" /> Ask Me
-              </button>
-            ) : null}
-            <Link href={newItemHref}>
-              <button type="button" className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-md" style={{ background: "#111827", color: "#fff", border: "1px solid #111827" }}>
-                <Plus className="h-4 w-4" /> Add New
-              </button>
+            <Link href={newItemHref} className="ui-btn ui-btn-primary">
+              <Plus className="h-4 w-4" /> Add New
             </Link>
           </div>
         </div>
@@ -747,134 +840,170 @@ export default function DynamicModulePage({
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <input type="text" value={newCategoryTitle} onChange={(e) => setNewCategoryTitle(e.target.value)} placeholder="Enter category name" className="flex-1 rounded-xl px-4 py-3 outline-none focus:ring-2" style={{ background: COLORS.bgGrayLight, border: `1px solid ${COLORS.border}`, color: COLORS.textPrimary }} onKeyDown={(e) => e.key === "Enter" && addCategory()} />
-              <button onClick={addCategory} className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ background: "#111827", color: "#fff" }}>Create</button>
-              <button onClick={() => { setShowAddCategory(false); setNewCategoryTitle("") }} className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>Cancel</button>
+              <button onClick={addCategory} type="button" className="ui-btn ui-btn-primary ui-btn-lg">
+                Create
+              </button>
+              <button type="button" onClick={() => { setShowAddCategory(false); setNewCategoryTitle("") }} className="ui-btn ui-btn-secondary ui-btn-lg">
+                Cancel
+              </button>
             </div>
           </div>
         )}
 
-        {/* ── Tabs + Sort ── */}
+        {/* ── Active / Archived (category list) ── */}
         {!isEmployee ? (
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex rounded-xl p-1" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
+          <div className="mb-5 flex min-h-[2.75rem] flex-wrap items-center gap-3">
+            <div className="inline-flex gap-1 rounded-xl p-1" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
               <button
                 type="button"
                 onClick={() => setShowArchived(false)}
-                className="rounded-lg px-4 py-2 text-sm font-semibold transition-all"
-                style={{
-                  background: !showArchived ? COLORS.purple700 : COLORS.purple50,
-                  color: !showArchived ? COLORS.textWhite : COLORS.purple700,
-                  border: `1px solid ${!showArchived ? COLORS.purple700 : COLORS.purple200}`,
-                }}
+                className={!showArchived ? "ui-btn-segment-active" : "ui-btn-segment-inactive"}
               >
                 Active
               </button>
-              <button
-                type="button"
-                onClick={() => setShowArchived(true)}
-                className="rounded-lg px-4 py-2 text-sm font-semibold transition-all"
-                style={{
-                  background: showArchived ? COLORS.purple700 : COLORS.purple50,
-                  color: showArchived ? COLORS.textWhite : COLORS.purple700,
-                  border: `1px solid ${showArchived ? COLORS.purple700 : COLORS.purple200}`,
-                }}
-              >
+              <button type="button" onClick={() => setShowArchived(true)} className={showArchived ? "ui-btn-segment-active" : "ui-btn-segment-inactive"}>
                 Archived
               </button>
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span style={{ color: COLORS.textSecondary }}>Sort by</span>
-              <button type="button" onClick={() => { setSortType("name"); setSortDirection((d) => sortType === "name" ? (d === "asc" ? "desc" : "asc") : "asc") }} className="rounded-lg px-3 py-2 font-semibold" style={{ background: sortType === "name" ? COLORS.purple50 : COLORS.bgWhite, color: sortType === "name" ? COLORS.purple700 : COLORS.textPrimary, border: `1px solid ${sortType === "name" ? COLORS.purple200 : COLORS.border}` }}>
-                Name {sortType === "name" ? (sortDirection === "asc" ? "A-Z" : "Z-A") : ""}
-              </button>
-              <button type="button" onClick={() => { setSortType("date"); setSortDirection((d) => sortType === "date" ? (d === "asc" ? "desc" : "asc") : "asc") }} className="rounded-lg px-3 py-2 font-semibold" style={{ background: sortType === "date" ? COLORS.purple50 : COLORS.bgWhite, color: sortType === "date" ? COLORS.purple700 : COLORS.textPrimary, border: `1px solid ${sortType === "date" ? COLORS.purple200 : COLORS.border}` }}>
-                Date {sortType === "date" ? (sortDirection === "asc" ? "Old-New" : "New-Old") : ""}
-              </button>
-            </div>
           </div>
-        ) : (
-          <div className="mb-5 flex justify-end">
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span style={{ color: COLORS.textSecondary }}>Sort by</span>
-              <button type="button" onClick={() => setSortType("name")} className="rounded-lg px-3 py-2 font-semibold" style={{ background: sortType === "name" ? COLORS.purple50 : COLORS.bgWhite, color: sortType === "name" ? COLORS.purple700 : COLORS.textPrimary, border: `1px solid ${sortType === "name" ? COLORS.purple200 : COLORS.border}` }}>Name</button>
-              <button type="button" onClick={() => setSortType("date")} className="rounded-lg px-3 py-2 font-semibold" style={{ background: sortType === "date" ? COLORS.purple50 : COLORS.bgWhite, color: sortType === "date" ? COLORS.purple700 : COLORS.textPrimary, border: `1px solid ${sortType === "date" ? COLORS.purple200 : COLORS.border}` }}>Date</button>
-            </div>
-          </div>
-        )}
+        ) : null}
 
         {/* ── Category List ── */}
         <div className="space-y-4">
           {visibleCategories.map((category) => {
-            const currentItemView = categoryItemView[category.id] ?? "active"
-            const currentItems = currentItemView === "archived" ? (category.archivedItems || []) : currentItemView === "completed" ? (category.completedItems || []) : currentItemView === "highlighted" ? (category.highlightedItems || []) : (category.items || [])
+            const rawCategoryView: CategoryItemViewTab =
+              categoryItemView[category.id] ?? (isAuditSchedule ? "audit_nt" : "active")
+            const currentItemView = normalizeAuditCategoryView(rawCategoryView)
+
+            let currentItems: any[]
+            if (
+              isAuditSchedule &&
+              (currentItemView === "audit_nt" ||
+                currentItemView === "audit_ip" ||
+                currentItemView === "audit_done")
+            ) {
+              currentItems = filterAuditTabItems(category, currentItemView)
+            } else if (currentItemView === "archived") {
+              currentItems = category.archivedItems || []
+            } else if (currentItemView === "completed") {
+              currentItems = category.completedItems || []
+            } else if (currentItemView === "highlighted") {
+              currentItems = category.highlightedItems || []
+            } else {
+              currentItems = category.items || []
+            }
             const sortedItems = sortItems(currentItems)
             const isViewingArchivedItems = currentItemView === "archived"
             const isExpanded = expandedCategories.includes(category.id)
 
             return (
-              <div key={category.id} className="mb-4">
+              <div key={category.id} className="mb-6 overflow-hidden rounded-xl border bg-white shadow-sm" style={{ borderColor: COLORS.border }}>
 
                 {/* Category Header */}
-                <div className="bg-[#2d1e3e] text-white p-3 flex justify-between items-center rounded-sm cursor-pointer" onClick={() => toggleCategory(category.id)}>
-                  <div className="flex items-center gap-2">
-                    <Icon className="h-5 w-5" />
-                    <span className="font-semibold">{category.title}</span>
+                <div
+                  className="flex cursor-pointer items-center justify-between gap-4 px-4 py-3.5 text-white transition-[filter] hover:brightness-[1.03]"
+                  style={{ background: COLORS.brandCategoryBarGradient }}
+                  onClick={() => toggleCategory(category.id)}
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Icon className="h-5 w-5 shrink-0 opacity-95" aria-hidden />
+                    <span className="truncate font-semibold tracking-tight">{category.title}</span>
                   </div>
-                  <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                     {!showArchived && (
                       <>
-                      <div className="mr-1 flex h-7 w-5 items-center justify-center opacity-50">
-                      <svg width="12" height="14" viewBox="0 0 12 14" fill="white"><circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/><circle cx="3" cy="7" r="1.5"/><circle cx="9" cy="7" r="1.5"/><circle cx="3" cy="12" r="1.5"/><circle cx="9" cy="12" r="1.5"/></svg>
-                    </div>
-                        <button 
-                          type="button" 
+                        <button
+                          type="button"
                           onClick={() => {
                             setSortType("name")
-                            setSortDirection((d) => sortType === "name" ? (d === "asc" ? "desc" : "asc") : "asc")
+                            setSortDirection((d) => (sortType === "name" ? (d === "asc" ? "desc" : "asc") : "asc"))
                           }}
-                          className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-white/10 text-white border-none" 
+                          className="ui-row-action ui-row-action--copy shrink-0"
                           title="Sort by Name"
                         >
-                          <ArrowUpDown className="h-3 w-3" />
+                          <ArrowUpDown className="h-3 w-3" strokeWidth={2} />
                         </button>
-                        <button 
-                          type="button" 
+                        <button
+                          type="button"
                           onClick={() => {
                             setSortType("date")
-                            setSortDirection((d) => sortType === "date" ? (d === "asc" ? "desc" : "asc") : "asc")
+                            setSortDirection((d) => (sortType === "date" ? (d === "asc" ? "desc" : "asc") : "asc"))
                           }}
-                          className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-white/10 text-white border-none" 
+                          className="ui-row-action ui-row-action--download shrink-0"
                           title="Sort by Date"
                         >
-                          <Calendar className="h-3 w-3" />
+                          <Calendar className="h-3 w-3" strokeWidth={2} />
                         </button>
                       </>
                     )}
                     
                     {!isEmployee ? (
-                      <button type="button" onClick={(e) => { e.stopPropagation(); setEditingCategory(category.id); setEditTitle(category.title) }} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-gray-600 text-white border-none" title="Edit Category">
-                        <Edit className="h-3 w-3" />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditingCategory(category.id)
+                          setEditTitle(category.title)
+                        }}
+                        className="ui-row-action ui-row-action--edit shrink-0"
+                        title="Edit Category"
+                      >
+                        <Edit className="h-3 w-3" strokeWidth={2} />
                       </button>
                     ) : null}
                     {!showArchived ? (
-                      <button type="button" onClick={(e) => { e.stopPropagation(); if (isViewingArchivedItems) setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" })); setAddingItemToCategory(category.id); if (!expandedCategories.includes(category.id)) setExpandedCategories([category.id]) }} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-green-500 text-white border-none" title="Add Item">
-                        <Plus className="h-3 w-3" />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (isViewingArchivedItems) setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))
+                          setAddingItemToCategory(category.id)
+                          if (!expandedCategories.includes(category.id)) setExpandedCategories([category.id])
+                        }}
+                        className="ui-row-action ui-row-action--add shrink-0"
+                        title="Add Item"
+                      >
+                        <Plus className="h-3 w-3" strokeWidth={2} />
                       </button>
                     ) : null}
                     {!isEmployee ? (
                       showArchived ? (
-                        <button type="button" onClick={(e) => { e.stopPropagation(); unarchiveCategory(category.id) }} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-green-600 text-white border-none" title="Unarchive Category">
-                          <Archive className="h-3 w-3" />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            unarchiveCategory(category.id)
+                          }}
+                          className="ui-row-action ui-row-action--archive shrink-0"
+                          title="Unarchive Category"
+                        >
+                          <Archive className="h-3 w-3" strokeWidth={2} />
                         </button>
                       ) : (
-                        <button type="button" onClick={(e) => { e.stopPropagation(); archiveCategory(category.id) }} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-gray-600 text-white border-none" title="Archive Category">
-                          <Archive className="h-3 w-3" />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            archiveCategory(category.id)
+                          }}
+                          className="ui-row-action ui-row-action--archive shrink-0"
+                          title="Archive Category"
+                        >
+                          <Archive className="h-3 w-3" strokeWidth={2} />
                         </button>
                       )
                     ) : null}
                     {!isEmployee ? (
-                      <button type="button" onClick={(e) => { e.stopPropagation(); deleteCategory(category.id) }} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-red-500 text-white border-none" title="Delete Category">
-                        <X className="h-3 w-3" />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          deleteCategory(category.id)
+                        }}
+                        className="ui-row-action ui-row-action--destructive shrink-0"
+                        title="Delete Category"
+                      >
+                        <X className="h-3 w-3" strokeWidth={2.25} />
                       </button>
                     ) : null}
                   </div>
@@ -886,34 +1015,113 @@ export default function DynamicModulePage({
                     <div className="mb-3 text-sm font-semibold" style={{ color: COLORS.textPrimary }}>Rename Category</div>
                     <div className="flex flex-col gap-3 sm:flex-row">
                       <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="flex-1 rounded-xl px-4 py-3 outline-none transition-all focus:ring-2" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }} onKeyDown={(e) => e.key === "Enter" && saveEditCategory(category.id)} autoFocus />
-                      <button onClick={() => saveEditCategory(category.id)} className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold" style={{ background: COLORS.purple700, color: COLORS.textWhite }}><Check className="h-4 w-4" />Save</button>
-                      <button onClick={() => { setEditingCategory(null); setEditTitle("") }} className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}><X className="h-4 w-4" />Cancel</button>
+                      <button type="button" onClick={() => saveEditCategory(category.id)} className="ui-btn ui-btn-primary ui-btn-lg">
+                        <Check className="h-4 w-4" />
+                        Save
+                      </button>
+                      <button type="button" onClick={() => { setEditingCategory(null); setEditTitle("") }} className="ui-btn ui-btn-secondary ui-btn-lg">
+                        <X className="h-4 w-4" />
+                        Cancel
+                      </button>
                     </div>
                   </div>
                 )}
 
                 {/* Expanded Body */}
                 {isExpanded ? (
-                  <div className="p-4 sm:p-5">
+                  <div className="border-t bg-white px-4 py-5 sm:px-5">
 
                     {/* Sub-tabs + count */}
-                    <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="flex flex-wrap gap-2">
-                        {(["active","archived","completed","highlighted"] as const).filter((v) => v !== "archived" || !isEmployee).filter((v) => v !== "highlighted" || !isEmployee).map((view) => {
-                          const count = view === "archived" ? (category.archivedItems || []).length : view === "completed" ? (category.completedItems || []).length : view === "highlighted" ? (category.highlightedItems || []).length : (category.items || []).length
-                          const label = view === "archived" ? "Archived" : view === "completed" ? "Done" : view === "highlighted" ? "Starred" : "Active"
-                          return (
-                            <button key={view} type="button" onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: view }))} className="rounded-lg px-3 py-2 text-sm font-semibold" style={{ background: currentItemView === view ? "#faf5ff" : COLORS.bgWhite, color: currentItemView === view ? COLORS.purple700 : COLORS.textSecondary, border: `1px solid ${currentItemView === view ? COLORS.purple200 : "#ececf3"}` }}>
-                              {label} ({count})
-                            </button>
-                          )
-                        })}
+                    <div className="mb-5 flex min-h-[2.75rem] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {isAuditSchedule ? (
+                          <>
+                            {(
+                              [
+                                { view: "audit_nt" as const, label: "Audits not yet started" },
+                                { view: "audit_ip" as const, label: "Audits currently in progress" },
+                                { view: "audit_done" as const, label: "Completed Audits" },
+                              ] as const
+                            ).map(({ view, label }) => {
+                              const count = filterAuditTabItems(category, view).length
+                              const active = currentItemView === view
+                              return (
+                                <button
+                                  key={view}
+                                  type="button"
+                                  onClick={() =>
+                                    setCategoryItemView((prev) => ({ ...prev, [category.id]: view }))
+                                  }
+                                  className={active ? "ui-btn-audit-active" : "ui-btn-audit-idle"}
+                                >
+                                  {label}
+                                  <span className={active ? " ml-1.5 opacity-90" : " ml-1.5 opacity-70"}>({count})</span>
+                                </button>
+                              )
+                            })}
+                            {!isEmployee ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCategoryItemView((prev) => ({ ...prev, [category.id]: "archived" }))
+                                }
+                                className={currentItemView === "archived" ? "ui-btn-audit-active" : "ui-btn-audit-idle"}
+                              >
+                                Archived
+                                <span
+                                  className={
+                                    currentItemView === "archived" ? " ml-1.5 opacity-90" : " ml-1.5 opacity-70"
+                                  }
+                                >
+                                  ({category.archivedItems?.length ?? 0})
+                                </span>
+                              </button>
+                            ) : null}
+                          </>
+                        ) : (
+                          (["active", "archived", "completed", "highlighted"] as const)
+                            .filter((v) => v !== "archived" || !isEmployee)
+                            .filter((v) => v !== "highlighted" || !isEmployee)
+                            .map((view) => {
+                              const count =
+                                view === "archived"
+                                  ? (category.archivedItems || []).length
+                                  : view === "completed"
+                                    ? (category.completedItems || []).length
+                                    : view === "highlighted"
+                                      ? (category.highlightedItems || []).length
+                                      : (category.items || []).length
+                              const label =
+                                view === "archived"
+                                  ? "Archived"
+                                  : view === "completed"
+                                    ? "Done"
+                                    : view === "highlighted"
+                                      ? "Starred"
+                                      : "Active"
+                              return (
+                                <button
+                                  key={view}
+                                  type="button"
+                                  onClick={() =>
+                                    setCategoryItemView((prev) => ({ ...prev, [category.id]: view }))
+                                  }
+                                  className={currentItemView === view ? "ui-btn-pill-on" : "ui-btn-pill-off"}
+                                >
+                                  {label} ({count})
+                                </button>
+                              )
+                            })
+                        )}
                       </div>
-                      <div className="text-xs sm:text-sm" style={{ color: COLORS.textSecondary }}>Showing {sortedItems.length} result{sortedItems.length === 1 ? "" : "s"}</div>
+                      <div className="text-xs sm:text-sm flex items-center whitespace-nowrap tabular-nums" style={{ color: COLORS.textSecondary }}>
+                        Showing {sortedItems.length} result{sortedItems.length === 1 ? "" : "s"}
+                      </div>
                     </div>
 
                     {/* Add Item Form */}
-                    {addingItemToCategory === category.id && currentItemView === "active" ? (
+                    {addingItemToCategory === category.id &&
+                    (isAuditSchedule ? currentItemView !== "archived" : currentItemView === "active") ? (
                       <div className="mb-5 rounded-2xl p-5" style={{ background: COLORS.bgGrayLight, border: `1px dashed ${COLORS.borderHover}` }}>
                         <div className="mb-4">
                           <h3 className="text-base font-semibold" style={{ color: COLORS.textPrimary }}>Add New {itemLabel}</h3>
@@ -928,23 +1136,251 @@ export default function DynamicModulePage({
                           ))}
                         </div>
                         <div className="mt-4 flex flex-wrap gap-3">
-                          <button onClick={() => addItemToCategory(category.id)} className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ background: "#111827", color: "#fff" }}>Add {itemLabel}</button>
-                          <button onClick={() => setAddingItemToCategory(null)} className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>Cancel</button>
+                          <button type="button" onClick={() => addItemToCategory(category.id)} className="ui-btn ui-btn-primary ui-btn-lg">
+                            Add {itemLabel}
+                          </button>
+                          <button type="button" onClick={() => setAddingItemToCategory(null)} className="ui-btn ui-btn-secondary ui-btn-lg">
+                            Cancel
+                          </button>
                         </div>
                       </div>
                     ) : null}
 
                     {/* Empty State */}
                     {sortedItems.length === 0 ? (
-                      <div className="rounded-2xl px-6 py-12 text-center" style={{ background: COLORS.bgGrayLight, border: `1px solid ${COLORS.border}` }}>
+                      <div
+                        className="rounded-2xl px-6 py-12 text-center"
+                        style={{ background: COLORS.bgGrayLight, border: `1px solid ${COLORS.border}` }}
+                      >
                         <Icon className="mx-auto mb-3 h-10 w-10" style={{ color: COLORS.textLight }} />
                         <div className="mb-1 text-base font-semibold" style={{ color: COLORS.textPrimary }}>
-                          {isViewingArchivedItems ? `No archived ${itemLabel.toLowerCase()}s` : currentItemView === "completed" ? `No completed ${itemLabel.toLowerCase()}s` : currentItemView === "highlighted" ? `No starred ${itemLabel.toLowerCase()}s` : `No ${itemLabel.toLowerCase()}s in this category`}
+                          {isViewingArchivedItems
+                            ? `No archived ${itemLabel.toLowerCase()}s`
+                            : isAuditSchedule
+                              ? "No audits match this tab."
+                              : currentItemView === "completed"
+                                ? `No completed ${itemLabel.toLowerCase()}s`
+                                : currentItemView === "highlighted"
+                                  ? `No starred ${itemLabel.toLowerCase()}s`
+                                  : `No ${itemLabel.toLowerCase()}s in this category`}
                         </div>
-                        <p className="text-sm" style={{ color: COLORS.textSecondary }}>Use the + button to add the first one.</p>
+                        <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                          {isAuditSchedule
+                            ? "Use the + button in the category bar to add an audit, or switch to another tab."
+                            : "Use the + button to add the first one."}
+                        </p>
                       </div>
+                    ) : isAuditSchedule ? (
+                      <>
+                        {!isEmployee ? (
+                          <div className="mb-4 flex flex-wrap justify-end gap-2">
+                            <button
+                              type="button"
+                              title="Print list"
+                              onClick={() => window.print()}
+                              className="ui-row-action ui-row-action--archive ui-row-action--lg"
+                            >
+                              <Printer className="h-3 w-3" aria-hidden />
+                            </button>
+                            <button
+                              type="button"
+                              title="Export (use print to PDF)"
+                              onClick={() => window.print()}
+                              className="ui-row-action ui-row-action--download ui-row-action--lg"
+                            >
+                              <Download className="h-3 w-3" aria-hidden />
+                            </button>
+                            <button type="button" title="Table view" className="ui-row-action ui-row-action--edit ui-row-action--active ui-row-action--lg">
+                              <Type className="h-3 w-3" aria-hidden />
+                            </button>
+                          </div>
+                        ) : null}
+                        <div className="overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm">
+                          <div className="overflow-x-auto">
+                            <table className="w-full min-w-[720px] border-collapse text-left text-[0.9375rem]">
+                              <thead>
+                                <tr className="border-b-2 border-slate-800 bg-white">
+                                  <th
+                                    scope="col"
+                                    className="w-14 px-3 py-4 text-center text-[0.65rem] font-bold uppercase tracking-wider text-slate-600"
+                                  >
+                                    <span className="sr-only">Record</span>
+                                    <FileText className="mx-auto h-4 w-4 text-slate-500" aria-hidden />
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    className="px-4 py-4 text-xs font-bold uppercase tracking-wide text-slate-600"
+                                  >
+                                    Title
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    className="px-3 py-4 text-center text-xs font-bold uppercase tracking-wide text-slate-600"
+                                  >
+                                    Planned start
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    className="px-3 py-4 text-xs font-bold uppercase tracking-wide text-slate-600"
+                                  >
+                                    Actual start
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    className="px-3 py-4 text-xs font-bold uppercase tracking-wide text-slate-600"
+                                  >
+                                    Auditor
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    className="px-3 py-4 text-xs font-bold uppercase tracking-wide text-slate-600"
+                                  >
+                                    Follow up
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    className="px-3 py-4 text-center text-xs font-bold uppercase tracking-wide text-slate-600"
+                                  >
+                                    Completed
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    className="w-[8.5rem] px-3 py-4 text-right text-xs font-bold uppercase tracking-wide text-slate-600"
+                                  >
+                                    &nbsp;
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {sortedItems.map((item: any) => {
+                                  const planned = item?.[dateFieldKey]
+                                  const actualRaw = item?.actualStart ?? item?.actualStartedAt ?? item?.actualStartDate
+                                  const followRaw = item?.followUp ?? item?.followUpDate
+                                  const done =
+                                    Boolean(item.approved) || String(item.status ?? "").trim() === "Completed"
+                                  return (
+                                    <tr
+                                      key={item.id}
+                                      className="border-b border-slate-200 transition-colors hover:bg-slate-50/80"
+                                    >
+                                      <td className="px-3 py-4 text-center align-middle">
+                                        <FileText className="mx-auto h-5 w-5 text-slate-400" aria-hidden />
+                                      </td>
+                                      <td className="px-4 py-4 align-middle font-medium text-slate-800">
+                                        <div className="flex flex-col gap-1">
+                                          <Link
+                                            href={`${itemHrefPrefix}/${item.id}`}
+                                            className="text-[0.9375rem] font-semibold text-slate-900 hover:underline"
+                                          >
+                                            {getItemTitle(item)}
+                                          </Link>
+                                          {workflowHrefPrefix ? (
+                                            <Link
+                                              href={`${workflowHrefPrefix}/${item.id}/workflow`}
+                                              className="text-xs font-semibold text-violet-600 hover:underline"
+                                            >
+                                              Workflow
+                                            </Link>
+                                          ) : null}
+                                        </div>
+                                      </td>
+                                      <td className="px-3 py-4 text-center align-middle">
+                                        {planned ? (
+                                          <span className="inline-flex min-h-[2.25rem] min-w-[5.75rem] items-center justify-center rounded bg-emerald-600 px-3 text-sm font-bold text-white shadow-sm">
+                                            {formatPlannedMonthYear(planned)}
+                                          </span>
+                                        ) : (
+                                          <span className="text-slate-400">—</span>
+                                        )}
+                                      </td>
+                                      <td className="px-3 py-4 align-middle text-slate-700">
+                                        {actualRaw
+                                          ? String(actualRaw).includes("T") || String(actualRaw).match(/^\d{4}-\d{2}-\d{2}$/)
+                                            ? formatDisplayDate(String(actualRaw))
+                                            : String(actualRaw)
+                                          : "—"}
+                                      </td>
+                                      <td className="px-3 py-4 align-middle text-slate-700">
+                                        {String(item.auditor ?? "—")}
+                                      </td>
+                                      <td className="px-3 py-4 align-middle text-slate-700">
+                                        {followRaw ? formatDisplayDate(String(followRaw)) : "—"}
+                                      </td>
+                                      <td className="px-3 py-4 text-center align-middle">
+                                        {done ? (
+                                          <span className="inline-flex items-center justify-center gap-1 text-sm font-semibold text-emerald-700">
+                                            <Check className="h-4 w-4 shrink-0" aria-hidden />
+                                            <span className="hidden sm:inline">Yes</span>
+                                          </span>
+                                        ) : (
+                                          <span className="text-slate-400">—</span>
+                                        )}
+                                      </td>
+                                      <td className="px-3 py-4 align-middle">
+                                        {!isEmployee ? (
+                                          <div className="flex justify-end gap-1.5">
+                                            <Link
+                                              href={`${itemHrefPrefix}/${item.id}/edit`}
+                                              title="Edit"
+                                              className="ui-row-action ui-row-action--edit ui-row-action--lg"
+                                            >
+                                              <Edit className="h-3 w-3" aria-hidden />
+                                            </Link>
+                                            {isViewingArchivedItems ? (
+                                              <button
+                                                type="button"
+                                                title="Restore from archive"
+                                                onClick={() =>
+                                                  updateItem(
+                                                    item.id,
+                                                    { archived: false, isArchived: false },
+                                                    "unarchive"
+                                                  )
+                                                }
+                                                disabled={loadingAction === `unarchive-${item.id}`}
+                                                className="ui-row-action ui-row-action--archive ui-row-action--lg"
+                                              >
+                                                <Archive className="h-3 w-3" aria-hidden />
+                                              </button>
+                                            ) : (
+                                              <Link
+                                                href={`${itemHrefPrefix}/${item.id}/documents`}
+                                                title="Documents"
+                                                className="ui-row-action ui-row-action--files ui-row-action--lg"
+                                              >
+                                                <Folder className="h-3 w-3" aria-hidden />
+                                              </Link>
+                                            )}
+                                            <button
+                                              type="button"
+                                              title="Delete"
+                                              onClick={() => deleteItem(item.id)}
+                                              className="ui-row-action ui-row-action--destructive ui-row-action--lg"
+                                            >
+                                              <X className="h-3 w-3 stroke-[2.5]" aria-hidden />
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <div className="flex justify-end">
+                                            <Link
+                                              href={`${itemHrefPrefix}/${item.id}`}
+                                              className="text-sm font-semibold text-blue-600 hover:underline"
+                                            >
+                                              View
+                                            </Link>
+                                          </div>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  )
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </>
                     ) : (
-                      /* Table */
+                      /* Standard module table */
                       <div className="border border-gray-200 rounded-lg overflow-hidden">
                         <div className="overflow-x-auto">
                           <table className="min-w-full text-left">
@@ -954,10 +1390,18 @@ export default function DynamicModulePage({
                                   <input
                                     type="checkbox"
                                     className="h-4 w-4 rounded cursor-pointer"
-                                    checked={sortedItems.length > 0 && sortedItems.every((i: any) => selectedItems[category.id]?.has(i.id))}
+                                    checked={
+                                      sortedItems.length > 0 &&
+                                      sortedItems.every((i: any) =>
+                                        selectedItems[category.id]?.has(i.id)
+                                      )
+                                    }
                                     onChange={(e) => {
                                       if (e.target.checked) {
-                                        setSelectedItems((prev) => ({ ...prev, [category.id]: new Set(sortedItems.map((i: any) => i.id)) }))
+                                        setSelectedItems((prev) => ({
+                                          ...prev,
+                                          [category.id]: new Set(sortedItems.map((i: any) => i.id)),
+                                        }))
                                       } else {
                                         setSelectedItems((prev) => ({ ...prev, [category.id]: new Set() }))
                                       }
@@ -966,20 +1410,23 @@ export default function DynamicModulePage({
                                 </th>
                                 <th className="pl-0 pr-4 py-3 text-base font-medium">{itemLabel}</th>
                                 {displayKeys.slice(0, -1).map((key) => (
-                                  <th key={key} className="px-4 py-3 text-base font-medium">{fieldLabelMap[key] || key}</th>
+                                  <th key={key} className="px-4 py-3 text-base font-medium">
+                                    {fieldLabelMap[key] || key}
+                                  </th>
                                 ))}
-                                <th className="px-4 py-3 text-base font-medium">{displayKeys.length > 0 ? (fieldLabelMap[displayKeys[displayKeys.length - 1]] || displayKeys[displayKeys.length - 1]) : "Location"}</th>
+                                <th className="px-4 py-3 text-base font-medium">
+                                  {displayKeys.length > 0
+                                    ? fieldLabelMap[displayKeys[displayKeys.length - 1]] ||
+                                      displayKeys[displayKeys.length - 1]
+                                    : "Location"}
+                                </th>
                                 <th className="px-4 py-3 text-base font-medium text-right">Actions</th>
                               </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                              {sortedItems.map((item: any, index: number) => {
-                                const statusTone = getItemStatusTone(item)
+                              {sortedItems.map((item: any) => {
                                 return (
-                                  <tr
-                                    key={item.id}
-                                    className="hover:bg-gray-50 transition-colors"
-                                  >
+                                  <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="pl-4 pr-0 py-3 align-middle">
                                       <input
                                         type="checkbox"
@@ -997,16 +1444,34 @@ export default function DynamicModulePage({
                                     </td>
                                     <td className="pl-0 pr-4 py-3 align-middle">
                                       <div className="flex items-center gap-1">
-                                        <div className="flex h-8 w-8 items-center justify-center bg-blue-100 rounded" style={{ minWidth: '32px' }}>
-                                          <Icon className="h-4 w-4 text-blue-600" aria-hidden="true" />
+                                        <div
+                                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-violet-100 bg-violet-50/90"
+                                          style={{ minWidth: "32px" }}
+                                        >
+                                          <Icon className="h-4 w-4 text-violet-700" aria-hidden />
                                         </div>
-                                        <Link href={`${itemHrefPrefix}/${item.id}`} className="text-blue-600 hover:underline text-base">
+                                        <Link
+                                          href={`${itemHrefPrefix}/${item.id}`}
+                                          className="text-base font-medium text-slate-800 hover:text-violet-700 hover:underline"
+                                        >
                                           {getItemTitle(item)}
                                         </Link>
+                                        {workflowHrefPrefix ? (
+                                          <Link
+                                            href={`${workflowHrefPrefix}/${item.id}/workflow`}
+                                            className="ml-2 text-xs font-semibold text-violet-600 hover:underline whitespace-nowrap"
+                                          >
+                                            Workflow
+                                          </Link>
+                                        ) : null}
                                       </div>
                                     </td>
                                     {displayKeys.slice(0, -1).map((key) => (
-                                      <td key={key} className="px-4 py-3 align-middle text-base" style={{ color: COLORS.textPrimary }}>
+                                      <td
+                                        key={key}
+                                        className="px-4 py-3 align-middle text-base"
+                                        style={{ color: COLORS.textPrimary }}
+                                      >
                                         {key.toLowerCase().includes("date") ? (
                                           formatDisplayDate(item?.[key])
                                         ) : (
@@ -1014,38 +1479,111 @@ export default function DynamicModulePage({
                                         )}
                                       </td>
                                     ))}
-                                    <td className="px-4 py-3 align-middle text-base" style={{ color: COLORS.textPrimary }}>
-                                      {displayKeys.length > 0 ? String(item?.[displayKeys[displayKeys.length - 1]] ?? "—") : (item.location || "—")}
+                                    <td
+                                      className="px-4 py-3 align-middle text-base"
+                                      style={{ color: COLORS.textPrimary }}
+                                    >
+                                      {displayKeys.length > 0
+                                        ? String(item?.[displayKeys[displayKeys.length - 1]] ?? "—")
+                                        : item.location || "—"}
                                     </td>
                                     <td className="px-4 py-3 align-middle">
                                       {!isEmployee && (
-                                        <div className="flex gap-1 justify-end">
-                                          {isEmployee ? (
-                                              <>
-                                                <button type="button" className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-gray-400 text-white border-none cursor-grab" title="Drag">
-                                                  <GripVertical className="h-3 w-3" />
-                                                </button>
-                                                <button type="button" onClick={() => updateItem(item.id, { approved: !item.approved }, "approve")} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-green-500 text-white border-none" title={item.approved ? "Reopen" : "Mark done"}><Check className="h-3 w-3" /></button>
-                                                <Link href={`${itemHrefPrefix}/${item.id}/edit`}><button type="button" className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-indigo-600 text-white border-none" title="Edit"><Edit className="h-3 w-3" /></button></Link>
-                                                <button type="button" onClick={() => downloadItem(item)} disabled={loadingAction === `download-${item.id}`} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50 bg-indigo-500 text-white border-none" title="Download"><Download className="h-3 w-3" /></button>
-                                              </>
-                                            ) : (
-                                              <>
-                                              
-                                            <button type="button" onClick={() => updateItem(item.id, { highlighted: !item.highlighted }, "highlight")} className={`flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 ${item.highlighted ? "bg-gray-200" : "bg-yellow-500 text-white"} border-none`} title={item.highlighted ? "Remove Highlight" : "Highlight"}><div className="h-3 w-3 bg-yellow-500"></div></button>
-                                            <button type="button" onClick={() => updateItem(item.id, { approved: !item.approved }, "approve")} className={`flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 ${item.approved ? "bg-gray-200" : "bg-green-500 text-white"} border-none`} title={item.approved ? "Mark as Incomplete" : "Mark as Completed"}><Check className="h-3 w-3" /></button>
-                                            <button type="button" onClick={() => updateItem(item.id, { paused: !item.paused }, "pause")} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-orange-500 text-white border-none" title={item.paused ? "Resume" : "Pause"}><Pause className="h-3 w-3" /></button>
-                                            <Link href={`${itemHrefPrefix}/${item.id}/edit`}><button type="button" className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-indigo-600 text-white border-none" title="Edit"><Edit className="h-3 w-3" /></button></Link>
-                                            <button type="button" onClick={() => copyItem(category.id, item)} disabled={loadingAction === `copy-${item.id}`} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50 bg-indigo-500 text-white border-none" title="Duplicate"><Copy className="h-3 w-3" /></button>
-                                            <button type="button" onClick={() => downloadItem(item)} disabled={loadingAction === `download-${item.id}`} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50 bg-indigo-500 text-white border-none" title="Download"><Download className="h-3 w-3" /></button>
-                                            {!isViewingArchivedItems ? (
-                                              <button type="button" onClick={() => updateItem(item.id, { archived: true, isArchived: true }, "archive")} disabled={loadingAction === `archive-${item.id}`} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50 bg-gray-600 text-white border-none" title="Archive"><Archive className="h-3 w-3" /></button>
-                                            ) : (
-                                              <button type="button" onClick={() => updateItem(item.id, { archived: false, isArchived: false }, "unarchive")} disabled={loadingAction === `unarchive-${item.id}`} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50 bg-green-600 text-white border-none" title="Unarchive"><Archive className="h-3 w-3" /></button>
-                                            )}
-                                            <button type="button" onClick={() => deleteItem(item.id)} className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-red-500 text-white border-none" title="Delete"><Trash2 className="h-3 w-3" /></button>
-                                          </>
-                                        )}
+                                        <div className="flex flex-wrap justify-end gap-1">
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              updateItem(item.id, { highlighted: !item.highlighted }, "highlight")
+                                            }
+                                            className={`ui-row-action ui-row-action--star ${item.highlighted ? "ui-row-action--active" : ""}`}
+                                            title={item.highlighted ? "Remove Highlight" : "Highlight"}
+                                          >
+                                            <Star
+                                              className="h-3 w-3"
+                                              strokeWidth={2}
+                                              fill={item.highlighted ? "currentColor" : "none"}
+                                            />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              updateItem(item.id, { approved: !item.approved }, "approve")
+                                            }
+                                            className={`ui-row-action ui-row-action--done ${item.approved ? "ui-row-action--active" : ""}`}
+                                            title={item.approved ? "Mark as Incomplete" : "Mark as Completed"}
+                                          >
+                                            <Check className="h-3 w-3" strokeWidth={2.5} />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => updateItem(item.id, { paused: !item.paused }, "pause")}
+                                            className={`ui-row-action ui-row-action--pause ${item.paused ? "ui-row-action--active" : ""}`}
+                                            title={item.paused ? "Resume" : "Pause"}
+                                          >
+                                            <Pause className="h-3 w-3" strokeWidth={2} />
+                                          </button>
+                                          <Link
+                                            href={`${itemHrefPrefix}/${item.id}/edit`}
+                                            className="ui-row-action ui-row-action--edit"
+                                            title="Edit"
+                                          >
+                                            <Edit className="h-3 w-3" strokeWidth={2} />
+                                          </Link>
+                                          <button
+                                            type="button"
+                                            onClick={() => copyItem(category.id, item)}
+                                            disabled={loadingAction === `copy-${item.id}`}
+                                            className="ui-row-action ui-row-action--copy"
+                                            title="Duplicate"
+                                          >
+                                            <Copy className="h-3 w-3" strokeWidth={2} />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => downloadItem(item)}
+                                            disabled={loadingAction === `download-${item.id}`}
+                                            className="ui-row-action ui-row-action--download"
+                                            title="Download"
+                                          >
+                                            <Download className="h-3 w-3" strokeWidth={2} />
+                                          </button>
+                                          {!isViewingArchivedItems ? (
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                updateItem(item.id, { archived: true, isArchived: true }, "archive")
+                                              }
+                                              disabled={loadingAction === `archive-${item.id}`}
+                                              className="ui-row-action ui-row-action--archive"
+                                              title="Archive"
+                                            >
+                                              <Archive className="h-3 w-3" strokeWidth={2} />
+                                            </button>
+                                          ) : (
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                updateItem(
+                                                  item.id,
+                                                  { archived: false, isArchived: false },
+                                                  "unarchive"
+                                                )
+                                              }
+                                              disabled={loadingAction === `unarchive-${item.id}`}
+                                              className="ui-row-action ui-row-action--archive"
+                                              title="Unarchive"
+                                            >
+                                              <Archive className="h-3 w-3" strokeWidth={2} />
+                                            </button>
+                                          )}
+                                          <button
+                                            type="button"
+                                            onClick={() => deleteItem(item.id)}
+                                            className="ui-row-action ui-row-action--destructive"
+                                            title="Delete"
+                                          >
+                                            <Trash2 className="h-3 w-3" strokeWidth={2.25} />
+                                          </button>
                                         </div>
                                       )}
                                     </td>
@@ -1065,25 +1603,112 @@ export default function DynamicModulePage({
         </div>
 
         {showAskMe && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.35)" }}>
-            <div className="w-full max-w-3xl max-h-[88vh] rounded-2xl shadow-xl overflow-hidden" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
-              <div className="p-5 border-b flex items-center justify-between sticky top-0 z-10" style={{ borderColor: COLORS.border, background: COLORS.bgWhite }}>
-                <div className="flex items-center gap-2">
-                  <Bot className="w-5 h-5" style={{ color: COLORS.primary }} />
-                  <h3 className="text-lg font-bold" style={{ color: COLORS.textPrimary }}>
-                    {title} AI Assistant
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(2,6,23,0.55)" }}>
+            <div
+              className="w-full max-w-3xl max-h-[88vh] rounded-3xl shadow-2xl overflow-hidden"
+              style={{ background: "rgba(255,255,255,0.92)", border: `1px solid ${COLORS.border}` }}
+            >
+              <div
+                className="p-5 border-b flex items-center sticky top-0 z-10"
+                style={{
+                  borderColor: COLORS.border,
+                  background:
+                    "linear-gradient(125deg, rgba(250,245,255,0.95) 0%, rgba(248,250,252,0.96) 45%, rgba(239,246,255,0.95) 100%)",
+                }}
+              >
+                <div className="flex-1" />
+
+                <div className="absolute left-1/2 -translate-x-1/2 inline-flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" style={{ color: COLORS.purple700 }} />
+                  <h3 className="text-lg font-extrabold tracking-tight" style={{ color: COLORS.textPrimary }}>
+                    {title} Insights
                   </h3>
                 </div>
-                <button onClick={() => setShowAskMe(false)} className="px-3 py-1.5 rounded-lg text-sm" style={{ background: COLORS.bgGray, color: COLORS.textPrimary }}>
-                  Close
-                </button>
+
+                <div className="ml-auto">
+                  <button
+                    type="button"
+                    onClick={() => setShowAskMe(false)}
+                    className="ui-btn ui-btn-secondary"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
               <div className="p-5 space-y-4 overflow-y-auto max-h-[calc(88vh-72px)]">
-                <div className="rounded-xl p-3" style={{ background: COLORS.bgGray, border: `1px solid ${COLORS.border}` }}>
-                  <p className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>
-                    Tip: Select a category for focused summary, or keep "All Categories" for a complete overview.
+                <div className="rounded-2xl p-4 shadow-sm" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
+                  <p className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+                    Overview
+                  </p>
+                  <p className="mt-1 text-sm" style={{ color: COLORS.textSecondary }}>
+                    Select a category to see its status breakdown, or keep “All Categories” for the full module.
                   </p>
                 </div>
+
+                {(() => {
+                  const bucket = selectedCategoryId ? filteredItemsForAi : allItemsForAi
+                  const total = bucket.length
+                  const statusLabel = (raw: any) => String(raw ?? "").trim().toLowerCase()
+                  const archived = bucket.filter((i: any) => Boolean(i?.archived) || Boolean(i?.isArchived) || statusLabel(i?.status) === "archived").length
+                  const highlighted = bucket.filter((i: any) => Boolean(i?.highlighted) || statusLabel(i?.status) === "highlighted").length
+                  const paused = bucket.filter((i: any) => Boolean(i?.paused) || statusLabel(i?.status) === "paused").length
+                  const approved = bucket.filter((i: any) => Boolean(i?.approved) || statusLabel(i?.status) === "approved" || statusLabel(i?.workflowStatus) === "approved").length
+                  const pending = Math.max(total - approved, 0)
+
+                  const scheduled = bucket.filter((i: any) => statusLabel(i?.status) === "scheduled" || statusLabel(i?.workflowStatus) === "scheduled").length
+                  const inProgress = bucket.filter((i: any) => statusLabel(i?.status) === "in progress" || statusLabel(i?.workflowStatus) === "in progress").length
+                  const completed = bucket.filter((i: any) => statusLabel(i?.status) === "completed" || statusLabel(i?.workflowStatus) === "completed").length
+
+                  const showAuditBuckets = isAuditSchedule && (scheduled + inProgress + completed) > 0
+
+                  const cards: Array<{ label: string; value: number; tone: "violet" | "emerald" | "amber" | "slate" | "sky" | "rose" }> = showAuditBuckets
+                    ? [
+                        { label: "Total", value: total, tone: "slate" },
+                        { label: "Scheduled", value: scheduled, tone: "sky" },
+                        { label: "In progress", value: inProgress, tone: "amber" },
+                        { label: "Completed", value: completed || approved, tone: "emerald" },
+                        { label: "Archived", value: archived, tone: "rose" },
+                      ]
+                    : [
+                        { label: "Total", value: total, tone: "slate" },
+                        { label: "Completed", value: approved, tone: "emerald" },
+                        { label: "Pending", value: pending, tone: "amber" },
+                        { label: "Highlighted", value: highlighted, tone: "violet" },
+                        { label: "Paused", value: paused, tone: "sky" },
+                        { label: "Archived", value: archived, tone: "rose" },
+                      ]
+
+                  const toneStyle = (tone: string) => {
+                    if (tone === "emerald") return { border: "rgba(16,185,129,0.25)", bg: "linear-gradient(135deg, rgba(236,253,245,0.9) 0%, rgba(209,250,229,0.65) 100%)", ink: "#065f46" }
+                    if (tone === "amber") return { border: "rgba(245,158,11,0.25)", bg: "linear-gradient(135deg, rgba(255,251,235,0.92) 0%, rgba(254,243,199,0.7) 100%)", ink: "#92400e" }
+                    if (tone === "violet") return { border: "rgba(124,58,237,0.25)", bg: "linear-gradient(135deg, rgba(245,243,255,0.95) 0%, rgba(237,233,254,0.65) 100%)", ink: "#5b21b6" }
+                    if (tone === "sky") return { border: "rgba(56,189,248,0.25)", bg: "linear-gradient(135deg, rgba(240,249,255,0.92) 0%, rgba(224,242,254,0.7) 100%)", ink: "#075985" }
+                    if (tone === "rose") return { border: "rgba(244,63,94,0.22)", bg: "linear-gradient(135deg, rgba(255,241,242,0.92) 0%, rgba(254,205,211,0.62) 100%)", ink: "#9f1239" }
+                    return { border: "rgba(148,163,184,0.35)", bg: "linear-gradient(135deg, rgba(248,250,252,0.95) 0%, rgba(241,245,249,0.7) 100%)", ink: "#0f172a" }
+                  }
+
+                  return (
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {cards.map((c) => {
+                        const t = toneStyle(c.tone)
+                        return (
+                          <div
+                            key={c.label}
+                            className="rounded-2xl border px-4 py-3 shadow-sm"
+                            style={{ borderColor: t.border, background: t.bg }}
+                          >
+                            <p className="text-[0.6875rem] font-bold uppercase tracking-[0.14em]" style={{ color: t.ink }}>
+                              {c.label}
+                            </p>
+                            <p className="mt-1 text-2xl font-extrabold tracking-tight" style={{ color: COLORS.textPrimary }}>
+                              {c.value}
+                            </p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -1092,8 +1717,11 @@ export default function DynamicModulePage({
                     </label>
                     <select
                       value={selectedCategoryId}
-                      onChange={(e) => setSelectedCategoryId(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => {
+                        setSelectedCategoryId(e.target.value)
+                        setSelectedItemId("")
+                      }}
+                      className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/30"
                       style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                     >
                       <option value="">All Categories</option>
@@ -1104,56 +1732,90 @@ export default function DynamicModulePage({
                       ))}
                     </select>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                      Select {itemLabel}
-                    </label>
-                    <select
-                      value={selectedItemId}
-                      onChange={(e) => setSelectedItemId(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
+                {(() => {
+                  const selected = selectedCategoryId ? filteredItemsForAi : allItemsForAi
+
+                  const items = [...selected].sort((a: any, b: any) => {
+                    const at = new Date(a?.updatedAt || a?.createdAt || 0).getTime()
+                    const bt = new Date(b?.updatedAt || b?.createdAt || 0).getTime()
+                    return bt - at
+                  })
+
+                  const tag = (label: string) => (
+                    <span
+                      key={label}
+                      className="rounded-lg border px-2.5 py-1 text-xs font-semibold"
+                      style={{ background: COLORS.bgGray, color: COLORS.textSecondary, borderColor: COLORS.border }}
                     >
-                      <option value="">Select {itemLabel.toLowerCase()}...</option>
-                      {filteredItemsForAi.map((item: any) => (
-                        <option key={item.id} value={item.id}>
-                          {getItemTitle(item)} - {item.categoryTitle}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                      {label}
+                    </span>
+                  )
 
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-                    Ask Question (optional)
-                  </label>
-                  <textarea
-                    value={aiQuestion}
-                    onChange={(e) => setAiQuestion(e.target.value)}
-                    placeholder={`Example: summarize this ${itemLabel.toLowerCase()} and key actions`}
-                    rows={4}
-                    className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-400"
-                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
-                  />
-                </div>
+                  return (
+                    <div className="rounded-2xl overflow-hidden shadow-sm" style={{ border: `1px solid ${COLORS.border}`, background: COLORS.bgWhite }}>
+                      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b" style={{ borderColor: COLORS.border }}>
+                        <div>
+                          <p className="text-sm font-bold" style={{ color: COLORS.textPrimary }}>
+                            Live task states
+                          </p>
+                          <p className="text-xs" style={{ color: COLORS.textSecondary }}>
+                            Showing {items.length} {itemLabel.toLowerCase()}{items.length === 1 ? "" : "s"}.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCategoryId("")
+                            setSelectedItemId("")
+                            setAiQuestion("")
+                            setAiReply("")
+                          }}
+                          className="ui-btn ui-btn-secondary"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                      <div className="p-4 space-y-3 overflow-y-auto" style={{ maxHeight: "360px" }}>
+                        {items.length === 0 ? (
+                          <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                            No items found for the selected filter.
+                          </p>
+                        ) : (
+                          items.map((it: any, idx: number) => {
+                            const name = getItemTitle(it) || `${itemLabel} ${idx + 1}`
+                            const chips: string[] = []
+                            const status = String(it?.status || it?.workflowStatus || "").trim()
+                            const statusKey = status.toLowerCase()
+                            const isArchived = Boolean(it?.archived) || Boolean(it?.isArchived) || statusKey === "archived"
+                            const isApproved = Boolean(it?.approved) || statusKey === "approved"
+                            const isPaused = Boolean(it?.paused) || statusKey === "paused"
+                            const isHighlighted = Boolean(it?.highlighted) || statusKey === "highlighted"
 
-                <div className="flex flex-wrap gap-3">
-                  <button onClick={handleSummarizeAllTasks} disabled={aiLoading} className="px-5 py-2.5 rounded-lg font-medium" style={{ background: COLORS.primaryGradient, color: COLORS.textWhite, opacity: aiLoading ? 0.7 : 1 }}>
-                    {aiLoading
-                      ? "Generating..."
-                      : selectedCategoryId
-                        ? "Generate Summary (Selected Category)"
-                        : "Generate Summary (All Tasks)"}
-                  </button>
-                  <button onClick={handleAskSelectedTask} disabled={aiLoading} className="px-5 py-2.5 rounded-lg font-medium" style={{ background: COLORS.bgWhite, color: COLORS.primary, border: `1px solid ${COLORS.primary}`, opacity: aiLoading ? 0.7 : 1 }}>
-                    Ask Selected {itemLabel}
-                  </button>
-                  <button onClick={() => { setAiQuestion(""); setAiReply("") }} className="px-5 py-2.5 rounded-lg font-medium" style={{ background: COLORS.bgGray, color: COLORS.textPrimary }}>
-                    Clear
-                  </button>
-                </div>
+                            if (status) chips.push(`status ${status}`)
+                            if (isApproved) chips.push("completed")
+                            if (isHighlighted) chips.push("highlighted")
+                            if (isPaused) chips.push("paused")
+                            if (isArchived) chips.push("archived")
+                            if (!chips.length) chips.push("pending")
+
+                            return (
+                              <div key={String(it?.id ?? idx)} className="rounded-2xl border p-4" style={{ borderColor: COLORS.border, background: COLORS.bgGrayLight }}>
+                                <div className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+                                  {idx + 1}. {name}
+                                </div>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {chips.map((c) => tag(c))}
+                                </div>
+                              </div>
+                            )
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()}
 
                 {aiReply && (
                   <div className="mt-2 rounded-xl overflow-hidden" style={{ border: `1px solid ${COLORS.border}`, background: COLORS.bgGray }}>

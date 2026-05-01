@@ -14,7 +14,7 @@ type AppNavigationDrawerProps = {
 }
 
 export function AppNavigationDrawer({ open, onClose, user, onLogout }: AppNavigationDrawerProps) {
-  const { can, loading } = usePermissions()
+  const { can, loading, isModuleEnabled } = usePermissions()
   const [openSection, setOpenSection] = useState<string | null>(null)
 
   const userInitial = String(user?.name || user?.email || "U").charAt(0).toUpperCase()
@@ -123,7 +123,9 @@ export function AppNavigationDrawer({ open, onClose, user, onLogout }: AppNaviga
             DASHBOARD_MODULE_GROUPS.map((group) => {
               const GroupIcon = group.icon
               const isOpen = openSection === group.title
-              const visibleMods = group.modules.filter((m) => !m.permission || can(m.permission))
+              const visibleMods = group.modules.filter(
+                (m) => (!m.permission || can(m.permission)) && (!m.moduleKey || isModuleEnabled(m.moduleKey))
+              )
               if (visibleMods.length === 0) return null
               return (
                 <div key={group.title} className="mb-1">

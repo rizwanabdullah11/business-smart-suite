@@ -5,6 +5,7 @@ import { connectToDatabase } from "@/lib/server/db"
 import Manual from "@/lib/server/models/Manual"
 import mongoose from "mongoose"
 import { buildModuleAccessFilter, buildOwnershipFilter, toObjectId } from "@/lib/server/organization-context"
+import { isModuleEnabledForUser } from "@/lib/server/module-access"
 
 function extractCategoryId(input: unknown): string | null {
   if (!input) return null
@@ -19,6 +20,9 @@ function extractCategoryId(input: unknown): string | null {
 export const GET = withAuth(
   async (request: NextRequest, user) => {
     try {
+      if (!isModuleEnabledForUser(user, "manual")) {
+        return NextResponse.json({ error: "Module is not enabled for your plan" }, { status: 403 })
+      }
       await connectToDatabase()
       const { searchParams } = new URL(request.url)
       const categoryFilter = searchParams.get("category")
@@ -74,6 +78,9 @@ export const GET = withAuth(
 export const POST = withAuth(
   async (request: NextRequest, user) => {
     try {
+      if (!isModuleEnabledForUser(user, "manual")) {
+        return NextResponse.json({ error: "Module is not enabled for your plan" }, { status: 403 })
+      }
       const body = await request.json()
       if (!body?.title) {
         return NextResponse.json({ error: "Manual title is required" }, { status: 400 })

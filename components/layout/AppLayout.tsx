@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { COLORS } from "@/constant/colors"
@@ -13,17 +13,42 @@ interface AppLayoutProps {
     children: React.ReactNode
 }
 
+/**
+ * Routes rendered without the authenticated app chrome.
+ * Public marketing pages render their own header/footer via MarketingShell,
+ * so AppLayout simply forwards children and skips the login redirect.
+ */
+const PUBLIC_ROUTES = new Set<string>([
+    '/login',
+    '/welcome',
+    '/pricing',
+    '/features',
+    '/modules',
+])
+
+function isPublicPath(pathname: string | null): boolean {
+    if (!pathname) return false
+    if (PUBLIC_ROUTES.has(pathname)) return true
+    // Allow nested public routes (e.g. /pricing#anchor would never hit here, but future /modules/[slug] would).
+    for (const base of PUBLIC_ROUTES) {
+        if (base !== '/login' && pathname.startsWith(base + '/')) return true
+    }
+    return false
+}
+
 export function AppLayout({ children }: AppLayoutProps) {
     const router = useRouter()
     const pathname = usePathname()
     const { toast } = useToast()
     const { user, loading, isAuthenticated, logout: authLogout } = useAuth()
 
+    const publicPath = isPublicPath(pathname)
+
     useEffect(() => {
-        if (!loading && !isAuthenticated && pathname !== '/login') {
+        if (!loading && !isAuthenticated && !publicPath) {
             router.push('/login')
         }
-    }, [loading, isAuthenticated, pathname, router])
+    }, [loading, isAuthenticated, publicPath, router])
 
     const handleLogout = async () => {
         await authLogout()
@@ -38,9 +63,13 @@ export function AppLayout({ children }: AppLayoutProps) {
         return <>{children}</>
     }
 
+    if (publicPath) {
+        return <>{children}</>
+    }
+
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center" style={{ background: '#3b0764' }}>
+            <div className="flex min-h-screen items-center justify-center" style={{ background: COLORS.brandShell }}>
                 <Loader2 className="w-10 h-10 animate-spin text-purple-300" />
             </div>
         )
@@ -52,13 +81,11 @@ export function AppLayout({ children }: AppLayoutProps) {
 
     const isHome = pathname === '/dashboard'
 
-    /** Match home page gradient so body white never shows through below the fixed header */
-    const HOME_PAGE_BG =
-        "linear-gradient(135deg,#3b0764 0%,#4c1d95 30%,#5b21b6 60%,#6d28d9 100%)"
+    const HOME_PAGE_BG = COLORS.brandHeroGradient
 
     return (
         <div
-            className="min-h-screen"
+            className="min-h-screen flex flex-col"
             style={{ background: isHome ? HOME_PAGE_BG : COLORS.bgGray }}
         >
             <AppPurpleHeader user={user} onLogout={handleLogout} />

@@ -10,6 +10,34 @@ import { useAuth } from "@/contexts/auth-context"
 const FULL_TABS = ["Details", "Document", "Version history", "Reviews", "Permissions", "Audits"] as const
 const EMPLOYEE_TABS = ["Details", "Document", "Version history", "Reviews", "Audits"] as const
 
+/** Tinted panels for dynamic detail rows (cycles for variety) */
+const DETAIL_FIELD_PANEL_STYLES = [
+  {
+    shell: "border-violet-200/80 bg-gradient-to-br from-violet-50 via-fuchsia-50/50 to-white",
+    label: "text-violet-800",
+    value: "text-slate-900",
+  },
+  {
+    shell: "border-sky-200/75 bg-gradient-to-br from-sky-50 via-cyan-50/40 to-white",
+    label: "text-sky-800",
+    value: "text-slate-900",
+  },
+  {
+    shell: "border-amber-200/70 bg-gradient-to-br from-amber-50 via-orange-50/40 to-white",
+    label: "text-amber-900",
+    value: "text-slate-900",
+  },
+  {
+    shell: "border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-teal-50/40 to-white",
+    label: "text-emerald-900",
+    value: "text-slate-900",
+  },
+] as const
+
+function detailPanelStyle(idx: number) {
+  return DETAIL_FIELD_PANEL_STYLES[idx % DETAIL_FIELD_PANEL_STYLES.length]
+}
+
 function toTitle(moduleSlug: string) {
   if (!moduleSlug) return "Task"
   return moduleSlug
@@ -185,6 +213,11 @@ function sortDetailEntries(entries: [string, unknown][]): [string, unknown][] {
   })
 }
 
+function isWideDetailKey(key: string) {
+  const k = key.toLowerCase()
+  return k.includes("description") || k.includes("notes") || k.includes("content") || k.includes("remark") || k.includes("summary")
+}
+
 function formatDetailFieldValue(key: string, value: unknown): string {
   if (value === null || value === undefined) return "—"
   if (typeof value === "boolean") return value ? "Yes" : "No"
@@ -218,7 +251,7 @@ function parseVersionNumber(input: unknown) {
 export default function UniversalTaskDetailPage() {
   const params = useParams<{ module: string; id: string }>()
   const searchParams = useSearchParams()
-  const { isEmployee, user } = useAuth()
+  const { isEmployee, user, isAuditor, isAdmin, isOrganization } = useAuth()
   const moduleSlug = params?.module || ""
   const id = params?.id || ""
   const backPath = searchParams.get("back") || `/${moduleSlug}`
@@ -239,6 +272,10 @@ export default function UniversalTaskDetailPage() {
   const [employeeUsers, setEmployeeUsers] = useState<Array<{ id: string; name: string; role: string; email: string }>>([])
   const [selectedPermissionUserId, setSelectedPermissionUserId] = useState("")
   const [permissionUsersLoading, setPermissionUsersLoading] = useState(false)
+  const [auditorPickerUsers, setAuditorPickerUsers] = useState<
+    Array<{ id: string; name: string; role: string; email: string }>
+  >([])
+  const [auditorPickerLoading, setAuditorPickerLoading] = useState(false)
   const [showAuditModal, setShowAuditModal] = useState(false)
   const [savingAudit, setSavingAudit] = useState(false)
   const [currentUserName, setCurrentUserName] = useState("Current User")
@@ -264,6 +301,7 @@ export default function UniversalTaskDetailPage() {
     auditType: "Internal",
     auditDate: "",
     auditor: "",
+    auditorUserId: "",
     status: "Open",
     findings: "",
   })
@@ -408,6 +446,11 @@ export default function UniversalTaskDetailPage() {
     })
   }, [item])
 
+  const rawAudits = useMemo(
+    () => (Array.isArray(item?.audits) ? item.audits : []),
+    [item]
+  )
+
   const assignedPeople = useMemo(() => {
     const merged = new Map<
       string,
@@ -455,10 +498,49 @@ export default function UniversalTaskDetailPage() {
       })
     })
 
-    return Array.from(merged.values())
-  }, [permissionsHistory, taskAssigneesList])
+    rawAudits.forEach((entry: Record<string, unknown>, idx: number) => {
+      const rawId = entry?.auditorUserId
+      let userId = ""
+      if (rawId != null && typeof rawId !== "object") userId = String(rawId).trim()
+      else if (rawId && typeof rawId === "object") {
+        const oid = (rawId as { toString?: () => string }).toString?.()
+        if (oid) userId = oid.trim()
+      }
+      const emailRaw = String(entry.auditorEmail || "").trim()
+      const displayName = String(entry.auditor || "").trim()
+      if (!userId && !emailRaw && !displayName) return
 
-  const audits = useMemo(() => {
+      const emailKey = emailRaw.toLowerCase()
+      const key = (userId || emailKey || displayName.toLowerCase() || `audit-${idx}`).toLowerCase()
+
+      const auditType = entry.auditType ? String(entry.auditType) : ""
+      const auditStatus =
+        entry.status != null && String(entry.status).trim() !== "" ? String(entry.status) : ""
+      const auditDate = entry.auditDate ? String(entry.auditDate) : undefined
+      const createdAt = entry.createdAt ? String(entry.createdAt) : undefined
+      const auditLabel =
+        [auditType && `${auditType} audit`, auditStatus].filter(Boolean).join(" · ") || "Auditor"
+
+      const existing = merged.get(key)
+      const prevLevel = existing?.accessLevel
+      const parts = prevLevel ? prevLevel.split(" · ") : []
+      if (auditLabel && !parts.includes(auditLabel)) parts.push(auditLabel)
+      const accessLevel = parts.length ? parts.join(" · ") : undefined
+
+      merged.set(key, {
+        userId: existing?.userId || userId || undefined,
+        name: existing?.name || displayName || emailRaw || `Auditor ${idx + 1}`,
+        email: existing?.email || emailRaw || undefined,
+        dueDate: existing?.dueDate || auditDate,
+        assignedAt: existing?.assignedAt || createdAt,
+        accessLevel,
+      })
+    })
+
+    return Array.from(merged.values())
+  }, [permissionsHistory, taskAssigneesList, rawAudits])
+
+  const auditsSortedDesc = useMemo(() => {
     if (!Array.isArray(item?.audits)) return []
     return [...item.audits].sort((a: any, b: any) => {
       const aTime = new Date(a?.auditDate || a?.createdAt || 0).getTime()
@@ -466,6 +548,33 @@ export default function UniversalTaskDetailPage() {
       return bTime - aTime
     })
   }, [item])
+
+  /** Organization, employees (incl. read-only viewers), and admins see all document audits; assigned auditors see only their rows. */
+  const audits = useMemo(() => {
+    if (!isAuditor || isAdmin) return auditsSortedDesc
+
+    const uid = user?.id != null ? String(user.id).trim() : ""
+    const myEmail = String(user?.email || "").trim().toLowerCase()
+    const myName = String(user?.name || "").trim().toLowerCase()
+
+    return auditsSortedDesc.filter((a: Record<string, unknown>) => {
+      const rawId = a?.auditorUserId
+      let aid = rawId != null ? String(rawId).trim() : ""
+      if (rawId && typeof rawId === "object") {
+        const oid = (rawId as { toString?: () => string }).toString?.()
+        if (oid) aid = oid
+      }
+      if (uid && aid && uid === aid) return true
+
+      const email = String(a?.auditorEmail || "").trim().toLowerCase()
+      if (myEmail && email && email === myEmail) return true
+
+      const name = String(a?.auditor || "").trim().toLowerCase()
+      if (myName && name && name === myName) return true
+
+      return false
+    })
+  }, [auditsSortedDesc, isAuditor, isAdmin, user?.id, user?.email, user?.name])
 
   const reviewSummary = useMemo(() => {
     const overdue = reviews.filter((review: any) => getReviewRealtimeState(review?.nextReviewDate).label === "Overdue").length
@@ -753,6 +862,33 @@ export default function UniversalTaskDetailPage() {
     }
   }
 
+  const loadAuditorsForAuditModal = async () => {
+    try {
+      setAuditorPickerLoading(true)
+      const token = localStorage.getItem("token")
+      const response = await fetch("/api/users?role=auditor", {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (!response.ok) throw new Error("Failed to load auditors")
+      const data = await response.json()
+      const normalized = (Array.isArray(data) ? data : [])
+        .map((u: any) => ({
+          id: String(u?._id || u?.id || ""),
+          name: String(u?.name || "Unknown User"),
+          role: String(u?.role || "Auditor"),
+          email: String(u?.email || ""),
+        }))
+        .filter((u: { id: string }) => Boolean(u.id))
+      setAuditorPickerUsers(normalized.filter((u) => String(u.role).toLowerCase() === "auditor"))
+    } catch (err) {
+      console.error("Failed to load auditors:", err)
+      setAuditorPickerUsers([])
+    } finally {
+      setAuditorPickerLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!showPermissionModal) return
     loadPermissionUsers()
@@ -760,14 +896,15 @@ export default function UniversalTaskDetailPage() {
 
   useEffect(() => {
     if (!showAuditModal) return
-    loadPermissionUsers()
+    void loadAuditorsForAuditModal()
   }, [showAuditModal])
 
   const handleSaveAudit = async () => {
-    if (!auditForm.auditor.trim() || !auditForm.auditDate) {
-      alert("Auditor and Audit Date are required")
+    if (!auditForm.auditorUserId.trim() || !auditForm.auditDate) {
+      alert("Please select an auditor (from your organization) and an audit date.")
       return
     }
+    const selectedAuditor = auditorPickerUsers.find((u) => u.id === auditForm.auditorUserId.trim())
     const now = new Date().toISOString()
     setSavingAudit(true)
     try {
@@ -776,7 +913,9 @@ export default function UniversalTaskDetailPage() {
         {
           auditType: auditForm.auditType,
           auditDate: auditForm.auditDate,
-          auditor: auditForm.auditor.trim(),
+          auditor: String(selectedAuditor?.name || auditForm.auditor || "").trim(),
+          auditorUserId: auditForm.auditorUserId.trim(),
+          auditorEmail: selectedAuditor?.email?.trim() || undefined,
           status: auditForm.status,
           findings: auditForm.findings.trim(),
           updatedBy: currentUserName,
@@ -789,6 +928,7 @@ export default function UniversalTaskDetailPage() {
         auditType: "Internal",
         auditDate: "",
         auditor: "",
+        auditorUserId: "",
         status: "Open",
         findings: "",
       })
@@ -801,54 +941,114 @@ export default function UniversalTaskDetailPage() {
   }
 
   if (loading) {
-    return <div className="p-6">Loading...</div>
-  }
-
-  if (error || !item) {
     return (
-      <div className="p-6">
-        <p style={{ color: COLORS.textPrimary }}>{error || "Task not found"}</p>
+      <div
+        className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 via-[#eef1f7] to-slate-200/90"
+      >
+        <div className="ui-card-main flex flex-col items-center gap-4 rounded-3xl border border-white/70 bg-white/95 px-12 py-10 shadow-xl backdrop-blur-sm">
+          <div
+            className="h-11 w-11 animate-spin rounded-full border-[3px] border-violet-100 border-t-violet-600"
+            aria-hidden
+          />
+          <p className="text-[0.9375rem] font-semibold tracking-tight text-slate-600">Loading record…</p>
+        </div>
       </div>
     )
   }
 
+  if (error || !item) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-100 via-[#eef1f7] to-slate-200/90 px-5 py-10">
+        <div className="ui-page-shell">
+          <div className="ui-card-main rounded-3xl border border-red-100 bg-white px-8 py-12 text-center shadow-lg">
+            <p className="ui-section-title mb-2 text-red-900">Something went wrong</p>
+            <p className="text-[0.9375rem] leading-relaxed text-slate-600">{error || "Task not found"}</p>
+            <Link
+              href={backPath}
+              className="mt-8 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:brightness-105"
+              style={{ background: COLORS.primaryGradient }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Go back
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const modulePretty = toTitle(moduleSlug)
+
   return (
-    <div className="min-h-screen" style={{ background: COLORS.bgGray }}>
-      <div className="p-6">
-        <div className="mb-4">
-          <Link href={backPath} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium" style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}>
-            <ArrowLeft className="w-4 h-4" />
-            Back to {toTitle(backPath.replace("/", ""))}
+    <div
+      className="min-h-screen bg-gradient-to-br from-slate-100 via-[#eef1f7] to-slate-200/90 pb-14"
+      style={{ fontFamily: "var(--font-app-sans), ui-sans-serif, system-ui, sans-serif" }}
+    >
+      <div className="ui-task-detail-shell">
+        <div className="mb-5">
+          <Link
+            href={backPath}
+            aria-label={`Back to ${toTitle(backPath.replace("/", ""))}`}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full text-violet-700 transition hover:bg-white/90 hover:text-violet-900 hover:shadow-md"
+          >
+            <ArrowLeft className="h-5 w-5" strokeWidth={2.25} aria-hidden />
           </Link>
         </div>
 
-        <div className="rounded-xl p-5 mb-4" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
-          <h1 className="text-3xl font-bold mb-1" style={{ color: COLORS.textPrimary }}>{title}</h1>
-          <div className="p-2 text-sm rounded-lg mt-2" style={{ background: "#FEF9C3", color: COLORS.textSecondary }}>
-            {isEmployee ? (
-              <>
-                {user?.name || currentUserName}
-                {categoryLabel ? ` · ${categoryLabel}` : ""}
-                {` · ${toTitle(moduleSlug).replace(/s$/, "")} record`}
-              </>
-            ) : (
-              <>Last viewed: {new Date().toLocaleString()} ({currentUserName})</>
-            )}
-          </div>
-        </div>
+        <article
+          className="ui-card-main w-full overflow-hidden rounded-3xl border-x-0 border-t-0 border-b border-slate-200/75 bg-white/95 pb-px shadow-2xl backdrop-blur-[2px]"
+          style={{ boxShadow: "0 24px 56px -26px rgba(15, 23, 42, 0.22)" }}
+        >
+          <header className="relative border-b border-slate-200/70 px-4 py-9 sm:px-6 sm:py-10">
+            <div className="pointer-events-none absolute inset-0 opacity-95 bg-[linear-gradient(125deg,#faf5ff_0%,#f8fafc_38%,#eff6ff_100%)]" />
+            <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-violet-400/15 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-28 left-12 h-48 w-48 rounded-full bg-indigo-400/10 blur-3xl" />
+            <div className="relative">
+              <div className="mb-4 inline-flex flex-wrap items-center gap-3">
+                <span
+                  className="rounded-full border border-violet-200/70 bg-white/90 px-3.5 py-1 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-violet-800 shadow-sm"
+                >
+                  {modulePretty.replace(/s$/, "")}
+                </span>
+                <span className="text-[0.8125rem] font-semibold tracking-tight text-violet-600">
+                  Controlled document overview
+                </span>
+              </div>
+              <h1 className="ui-display-title max-w-[min(52rem,100%)] bg-gradient-to-r from-violet-700 via-fuchsia-700 to-indigo-700 bg-clip-text text-transparent">
+                {title}
+              </h1>
+              <div
+                className="mt-6 inline-flex max-w-full flex-wrap items-center gap-2 rounded-2xl border border-violet-200/90 bg-gradient-to-r from-violet-50 via-indigo-50/90 to-fuchsia-50/80 px-5 py-3 text-[0.8125rem] font-medium leading-snug text-violet-950 shadow-sm"
+              >
+                {isEmployee ? (
+                  <>
+                    <span className="font-semibold text-violet-900">{user?.name || currentUserName}</span>
+                    {categoryLabel ? <span className="text-violet-400">·</span> : null}
+                    {categoryLabel ? <span className="text-indigo-900">{categoryLabel}</span> : null}
+                    <span className="text-violet-400">·</span>
+                    <span className="text-fuchsia-950/90">{modulePretty.replace(/s$/, "")} record</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="font-semibold text-violet-900">Open session —</span>
+                    <span className="text-violet-800/90">{new Date().toLocaleString()}</span>
+                    <span className="text-violet-400">·</span>
+                    <span className="font-medium text-indigo-900">{currentUserName}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </header>
 
-        <div className="rounded-xl p-4" style={{ background: COLORS.bgWhite, border: `1px solid ${COLORS.border}` }}>
-          <div className="flex items-center gap-2 mb-4 border-b pb-2" style={{ borderColor: COLORS.border }}>
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-200/70 bg-gradient-to-b from-slate-50 to-slate-50/40 px-3 py-3 sm:gap-3 sm:px-6">
             {visibleTabs.map((tab) => (
               <button
                 key={tab}
+                type="button"
                 onClick={() => setActiveTab(tab)}
-                className="px-3 py-1.5 rounded text-sm font-medium"
-                style={{
-                  background: activeTab === tab ? COLORS.bgGray : "transparent",
-                  color: activeTab === tab ? COLORS.textPrimary : COLORS.textSecondary,
-                  border: `1px solid ${activeTab === tab ? COLORS.border : "transparent"}`,
-                }}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold tracking-tight transition ${
+                  activeTab === tab ? "ui-tab-pill-active text-violet-900" : "ui-tab-pill-idle rounded-xl bg-transparent"
+                }`}
               >
                 {tab}
               </button>
@@ -856,23 +1056,20 @@ export default function UniversalTaskDetailPage() {
             <button
               type="button"
               onClick={handleDownloadFile}
-              className="ml-auto px-3 py-1.5 rounded text-sm font-medium"
-              style={{ color: COLORS.primary, border: `1px solid ${COLORS.border}` }}
+              className="ml-auto inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold text-violet-800 shadow-sm transition hover:bg-violet-50"
+              style={{ borderColor: "#ddd6fe", background: "rgba(255,255,255,0.9)" }}
             >
-              <Download className="w-4 h-4 inline mr-1 align-text-bottom" /> Download
+              <Download className="h-4 w-4" aria-hidden /> Download
             </button>
           </div>
 
-          {activeTab === "Details" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="px-4 py-8 sm:px-6 sm:py-10">
+            {activeTab === "Details" && (
+            <div className="grid grid-cols-1 gap-8 text-slate-900 md:grid-cols-2 md:gap-x-12 md:gap-y-8">
               {!isEmployee && categoryLabel ? (
-                <div>
-                  <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>
-                    Category
-                  </p>
-                  <div className="px-3 py-2 rounded border" style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}>
-                    {categoryLabel}
-                  </div>
+                <div className="min-w-0 rounded-2xl border border-violet-200/85 bg-gradient-to-br from-violet-100/90 via-fuchsia-50/50 to-indigo-50/80 p-5 shadow-sm">
+                  <p className="mb-2 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-violet-700">Category</p>
+                  <div className={`text-base font-semibold ${detailPanelStyle(0).value}`}>{categoryLabel}</div>
                 </div>
               ) : null}
 
@@ -880,10 +1077,8 @@ export default function UniversalTaskDetailPage() {
               item?.workflowStatus !== undefined &&
               item?.workflowStatus !== null &&
               String(item.workflowStatus).trim() !== "" ? (
-                <div>
-                  <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>
-                    Workflow status
-                  </p>
+                <div className="min-w-0 rounded-2xl border border-fuchsia-200/70 bg-gradient-to-br from-fuchsia-50/90 to-white p-5 shadow-sm">
+                  <p className="mb-2 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-fuchsia-800">Workflow status</p>
                   <div className="inline-flex items-center px-3 py-1.5 rounded-lg border text-sm font-semibold" style={workflowStatusStyle(String(item.workflowStatus))}>
                     {humanizeWorkflowStatus(item.workflowStatus)}
                   </div>
@@ -894,10 +1089,8 @@ export default function UniversalTaskDetailPage() {
               item?.status !== undefined &&
               item?.status !== null &&
               String(item.status).trim() !== "" ? (
-                <div>
-                  <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>
-                    Status
-                  </p>
+                <div className="min-w-0 rounded-2xl border border-sky-200/75 bg-gradient-to-br from-sky-50/95 to-cyan-50/40 p-5 shadow-sm">
+                  <p className="mb-2 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-sky-800">Status</p>
                   <div className="inline-flex items-center px-3 py-1.5 rounded-lg border text-sm font-semibold" style={workflowStatusStyle(String(item.status))}>
                     {humanizeWorkflowStatus(item.status)}
                   </div>
@@ -906,38 +1099,34 @@ export default function UniversalTaskDetailPage() {
 
               {!isEmployee && assignedPeople.length > 0 ? (
                 <div className="md:col-span-2">
-                  <p className="text-sm font-medium mb-2" style={{ color: COLORS.textSecondary }}>
-                    Assigned ({assignedPeople.length})
-                  </p>
-                  <div
-                    className="mb-3 rounded-lg border px-4 py-3"
-                    style={{ borderColor: COLORS.border, background: COLORS.bgGray }}
-                  >
-                    <p className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+                  <p className="mb-3 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-emerald-800">Assigned ({assignedPeople.length})</p>
+                  <div className="mb-4 rounded-2xl border border-emerald-200/80 bg-gradient-to-r from-emerald-100/85 via-teal-50/90 to-cyan-50/50 px-5 py-4 shadow-sm">
+                    <p className="text-sm font-semibold text-emerald-950">
                       {assignedPeople.length} {assignedPeople.length === 1 ? "person" : "people"} assigned
                     </p>
-                    <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                    <p className="mt-1 text-sm leading-relaxed text-emerald-900/90">
                       {assignedPeople
                         .map((a: Record<string, unknown>) => String(a.name || a.email || "Assignee"))
                         .join(", ")}
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {assignedPeople.map((a: Record<string, unknown>, idx: number) => (
                       <div
                         key={`${String(a.userId ?? idx)}-${idx}`}
-                        className="flex-1 min-w-[200px] max-w-md px-4 py-3 rounded-lg border"
-                        style={{ borderColor: COLORS.border, background: COLORS.bgGray }}
+                        className={`min-w-0 rounded-2xl border p-5 shadow-sm ${
+                          idx % 2 === 0
+                            ? "border-sky-200/75 bg-gradient-to-br from-sky-50 to-blue-50/80"
+                            : "border-rose-200/70 bg-gradient-to-br from-rose-50 to-orange-50/70"
+                        }`}
                       >
-                        <p className="font-semibold" style={{ color: COLORS.textPrimary }}>
+                        <p className="font-semibold text-slate-900">
                           {String(a.name || a.email || "Assignee")}
                         </p>
                         {a.email ? (
-                          <p className="text-sm mt-0.5" style={{ color: COLORS.textSecondary }}>
-                            {String(a.email)}
-                          </p>
+                          <p className="mt-0.5 text-sm text-slate-800">{String(a.email)}</p>
                         ) : null}
-                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: COLORS.textSecondary }}>
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-700">
                           {a.dueDate ? <span>Due: {formatDate(String(a.dueDate))}</span> : null}
                           {a.assignedAt ? <span>Assigned: {formatDateTime(String(a.assignedAt))}</span> : null}
                           {a.accessLevel ? <span>Access: {String(a.accessLevel)}</span> : null}
@@ -948,21 +1137,22 @@ export default function UniversalTaskDetailPage() {
                 </div>
               ) : null}
 
-              {detailEntries.map(([key, value]) => (
-                <div key={key}>
-                  <p className="text-sm font-medium mb-1" style={{ color: COLORS.textSecondary }}>
-                    {humanizeFieldKey(key)}
-                  </p>
+              {detailEntries.map(([key, value], idx) => {
+                const pane = detailPanelStyle(idx)
+                return (
                   <div
-                    className="px-3 py-2 rounded border whitespace-pre-wrap break-words"
-                    style={{ borderColor: COLORS.border, color: COLORS.textPrimary }}
+                    key={key}
+                    className={`min-w-0 rounded-2xl border p-5 shadow-sm ${pane.shell} ${isWideDetailKey(key) ? "md:col-span-2" : ""}`}
                   >
-                    {formatDetailFieldValue(key, value)}
+                    <p className={`mb-2 text-[0.6875rem] font-bold uppercase tracking-[0.12em] ${pane.label}`}>{humanizeFieldKey(key)}</p>
+                    <div className={`whitespace-pre-wrap break-words text-[0.9375rem] font-medium leading-relaxed ${pane.value}`}>
+                      {formatDetailFieldValue(key, value)}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
-          )}
+            )}
 
           {activeTab === "Document" && (
             <div className="space-y-4">
@@ -1197,7 +1387,7 @@ export default function UniversalTaskDetailPage() {
                 </div>
               </div>
 
-              {!isEmployee ? (
+              {(isOrganization || isAdmin) ? (
                 <button
                   onClick={() => setShowAuditModal(true)}
                   className="px-4 py-2 rounded-lg font-medium"
@@ -1209,7 +1399,9 @@ export default function UniversalTaskDetailPage() {
 
               {audits.length === 0 ? (
                 <div className="py-10 text-center" style={{ color: COLORS.textSecondary }}>
-                  No audits available for this document.
+                  {isAuditor && !isAdmin
+                    ? "No audits on this document are assigned to you yet. Your organization assigns auditors when they add an audit."
+                    : "No audits available for this document."}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1260,7 +1452,9 @@ export default function UniversalTaskDetailPage() {
               {activeTab} tab is ready.
             </div>
           )}
-        </div>
+          </div>
+
+        </article>
 
         {showReviewModal && !isEmployee && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.5)" }}>
@@ -1536,7 +1730,7 @@ export default function UniversalTaskDetailPage() {
           </div>
         )}
 
-        {showAuditModal && !isEmployee && (
+        {showAuditModal && (isOrganization || isAdmin) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.5)" }}>
             <div className="w-full max-w-xl rounded-2xl p-6" style={{ background: COLORS.bgWhite }}>
               <div className="flex items-center justify-between mb-4">
@@ -1570,25 +1764,33 @@ export default function UniversalTaskDetailPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: COLORS.textPrimary }}>Employee Auditor</label>
+                  <label className="block text-sm font-medium mb-1" style={{ color: COLORS.textPrimary }}>Auditor</label>
                   <select
-                    value={auditForm.auditor}
-                    onChange={(e) => setAuditForm((prev) => ({ ...prev, auditor: e.target.value }))}
+                    value={auditForm.auditorUserId}
+                    onChange={(e) => {
+                      const nextId = e.target.value
+                      const u = auditorPickerUsers.find((x) => x.id === nextId)
+                      setAuditForm((prev) => ({
+                        ...prev,
+                        auditorUserId: nextId,
+                        auditor: u?.name ?? "",
+                      }))
+                    }}
                     className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
                     style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                   >
                     <option value="">
-                      {permissionUsersLoading ? "Loading employees..." : "Select employee auditor"}
+                      {auditorPickerLoading ? "Loading auditors..." : "Select organization auditor"}
                     </option>
-                    {employeeUsers.map((u) => (
-                      <option key={u.id} value={u.name}>
+                    {auditorPickerUsers.map((u) => (
+                      <option key={u.id} value={u.id}>
                         {u.name} ({u.email})
                       </option>
                     ))}
                   </select>
-                  {!permissionUsersLoading && employeeUsers.length === 0 ? (
+                  {!auditorPickerLoading && auditorPickerUsers.length === 0 ? (
                     <p className="text-xs mt-1" style={{ color: COLORS.textSecondary }}>
-                      No employees found for this organization.
+                      No auditors in your organization. Create an Auditor user under User management.
                     </p>
                   ) : null}
                 </div>

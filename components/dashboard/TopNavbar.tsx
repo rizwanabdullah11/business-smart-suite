@@ -130,7 +130,7 @@ export function TopNavbar({ user, isCollapsed, onLogout, onAddFolder }: TopNavba
                     onClick={onAddFolder}
                     className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all duration-300 hover:scale-105 hover:shadow-lg"
                     style={{
-                        background: "linear-gradient(135deg, #7c3aed 0%, #341746 100%)",
+                        background: COLORS.brandMarkGradient,
                         color: COLORS.textWhite,
                         boxShadow: COLORS.shadowPurple
                     }}

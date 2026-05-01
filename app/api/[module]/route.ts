@@ -6,6 +6,7 @@ import { connectToDatabase } from "@/lib/server/db"
 import { getModuleModel, isSupportedModule } from "@/lib/server/models/module-item"
 import { notifyExpiredCertificates } from "@/lib/server/certificate-expiry-notifier"
 import { buildModuleAccessFilter, buildOwnershipFilter, toObjectId } from "@/lib/server/organization-context"
+import { isModuleEnabledForUser } from "@/lib/server/module-access"
 
 function unsupportedModule(module: string) {
   return NextResponse.json({ error: `Unsupported module: ${module}` }, { status: 404 })
@@ -14,11 +15,14 @@ function unsupportedModule(module: string) {
 export const GET = withAuth(
   async (request: NextRequest, user, { params }: { params: { module: string } }) => {
     try {
-      const module = params.module
-      if (!isSupportedModule(module)) return unsupportedModule(module)
+      const moduleSlug = params.module
+      if (!isSupportedModule(moduleSlug)) return unsupportedModule(moduleSlug)
+      if (!isModuleEnabledForUser(user, moduleSlug)) {
+        return NextResponse.json({ error: "Module is not enabled for your plan" }, { status: 403 })
+      }
 
       await connectToDatabase()
-      const Model = getModuleModel(module)
+      const Model = getModuleModel(moduleSlug)
       const { filter: ownershipFilter } = await buildModuleAccessFilter(request, user)
       const { searchParams } = new URL(request.url)
       const categoryFilter = searchParams.get("category")
@@ -67,8 +71,11 @@ export const GET = withAuth(
 export const POST = withAuth(
   async (request: NextRequest, user, { params }: { params: { module: string } }) => {
     try {
-      const module = params.module
-      if (!isSupportedModule(module)) return unsupportedModule(module)
+      const moduleSlug = params.module
+      if (!isSupportedModule(moduleSlug)) return unsupportedModule(moduleSlug)
+      if (!isModuleEnabledForUser(user, moduleSlug)) {
+        return NextResponse.json({ error: "Module is not enabled for your plan" }, { status: 403 })
+      }
 
       const body = await request.json()
       if (!body?.title) {
@@ -76,7 +83,7 @@ export const POST = withAuth(
       }
 
       await connectToDatabase()
-      const Model = getModuleModel(module)
+      const Model = getModuleModel(moduleSlug)
       const { activeOrganizationId } = await buildOwnershipFilter(request, user)
       const categoryId = body.category || body.categoryId
       const categoryObjectId =
@@ -106,7 +113,7 @@ export const POST = withAuth(
         createdBy: user.id,
       })
 
-      if (module === "certificates") {
+      if (moduleSlug === "certificates") {
         await notifyExpiredCertificates(true)
       }
 

@@ -27,6 +27,8 @@ import {
   BarChart,
   Settings,
   FolderOpen,
+  Rocket,
+  BadgeCheck,
 } from "lucide-react"
 import { Permission } from "@/lib/types/permissions"
 
@@ -35,6 +37,7 @@ export type DashboardModuleItem = {
   label: string
   href: string
   permission?: Permission
+  moduleKey?: string
 }
 
 export type DashboardModuleGroup = {
@@ -60,12 +63,14 @@ export const DASHBOARD_MODULE_GROUPS: DashboardModuleGroup[] = [
     moduleGradient: "linear-gradient(135deg,#1d4ed8,#3b82f6)",
     shadow: "0 8px 32px rgba(37,99,235,0.25)",
     modules: [
-      { icon: BookOpen, label: "Manual", href: "/manual", permission: Permission.VIEW_MANUALS },
-      { icon: FileText, label: "Policies", href: "/policies", permission: Permission.VIEW_POLICIES },
-      { icon: ClipboardList, label: "Procedures", href: "/procedures", permission: Permission.VIEW_PROCEDURES },
-      { icon: FileInput, label: "Forms", href: "/forms", permission: Permission.VIEW_FORMS },
-      { icon: Award, label: "Certificates", href: "/certificate", permission: Permission.VIEW_CERTIFICATES },
-      { icon: FolderOpen, label: "Documents", href: "/documents", permission: Permission.VIEW_MANUALS },
+      { icon: BookOpen, label: "Manual", href: "/manual", permission: Permission.VIEW_MANUALS, moduleKey: "document-control" },
+      { icon: FileText, label: "Policies", href: "/policies", permission: Permission.VIEW_POLICIES, moduleKey: "document-control" },
+      { icon: ClipboardList, label: "Procedures", href: "/procedures", permission: Permission.VIEW_PROCEDURES, moduleKey: "document-control" },
+      { icon: FileInput, label: "Forms", href: "/forms", permission: Permission.VIEW_FORMS, moduleKey: "document-control" },
+      { icon: Award, label: "Certificates", href: "/certificate", permission: Permission.VIEW_CERTIFICATES, moduleKey: "document-control" },
+      { icon: FolderOpen, label: "Documents", href: "/documents", permission: Permission.VIEW_MANUALS, moduleKey: "document-control" },
+      { icon: Rocket, label: "Getting Started", href: "/guides/getting-started" },
+      { icon: BadgeCheck, label: "ISO Standards", href: "/guides/iso-standards" },
     ],
   },
   {
@@ -82,9 +87,10 @@ export const DASHBOARD_MODULE_GROUPS: DashboardModuleGroup[] = [
       { icon: Users, label: "Management Reviews", href: "/management-reviews" },
       { icon: FileIcon, label: "Job Descriptions", href: "/job-descriptions" },
       { icon: FileWarning, label: "Work Instructions", href: "/work-instructions" },
-      { icon: AlertOctagon, label: "Risk Assessments", href: "/risk-assessments", permission: Permission.VIEW_RISK_ASSESSMENTS },
+      { icon: AlertOctagon, label: "Risk Register", href: "/risk-assessments", permission: Permission.VIEW_RISK_ASSESSMENTS, moduleKey: "risk-register" },
       { icon: AlertOctagon, label: "COSHH", href: "/coshh", permission: Permission.VIEW_COSHH },
-      { icon: FileCode, label: "Technical File", href: "/technical-file" },
+      { icon: FileCode, label: "IT Risk Management", href: "/it-risk-management", moduleKey: "it-risk-management" },
+      { icon: FileCode, label: "Technical File", href: "/technical-file", moduleKey: "it-risk-management" },
       { icon: AlertTriangle, label: "IMS Aspects & Impacts", href: "/ims-aspects-impacts" },
     ],
   },
@@ -98,18 +104,20 @@ export const DASHBOARD_MODULE_GROUPS: DashboardModuleGroup[] = [
     moduleGradient: "linear-gradient(135deg,#047857,#10b981)",
     shadow: "0 8px 32px rgba(5,150,105,0.25)",
     modules: [
-      { icon: Calendar, label: "Audit Schedule", href: "/audit-schedule", permission: Permission.VIEW_AUDIT_SCHEDULE },
-      { icon: Users, label: "Interested Parties", href: "/interested-parties" },
-      { icon: FileText, label: "Organisational Context", href: "/organisational-context" },
-      { icon: Target, label: "Objectives", href: "/objectives" },
-      { icon: PenTool, label: "Maintenance", href: "/maintenance" },
-      { icon: BarChart2, label: "Improvement Register", href: "/improvement-register", permission: Permission.VIEW_IMPROVEMENTS },
-      { icon: FileCheck, label: "Statement of Applicability", href: "/statement-of-applicability" },
-      { icon: Scale, label: "Legal Register", href: "/legal-register" },
-      { icon: Truck, label: "Suppliers", href: "/suppliers" },
-      { icon: GraduationCap, label: "Training", href: "/training" },
-      { icon: Zap, label: "Energy Consumption", href: "/energy-consumption" },
+      { icon: Calendar, label: "Audit Management", href: "/audit-schedule", permission: Permission.VIEW_AUDIT_SCHEDULE, moduleKey: "audit-management" },
+      { icon: Users, label: "Stakeholders", href: "/interested-parties", moduleKey: "stakeholder-management" },
+      { icon: FileText, label: "Business Environment", href: "/organisational-context", moduleKey: "business-environment" },
+      { icon: Target, label: "Objectives & Targets", href: "/objectives", moduleKey: "objectives-targets" },
+      { icon: PenTool, label: "Equipment Maintenance", href: "/maintenance", moduleKey: "equipment-maintenance" },
+      { icon: BarChart2, label: "Improvement Log (CAPA)", href: "/improvement-register", permission: Permission.VIEW_IMPROVEMENTS, moduleKey: "improvement-log" },
+      { icon: FileCheck, label: "Statement of Applicability", href: "/statement-of-applicability", moduleKey: "it-risk-management" },
+      { icon: Scale, label: "Legal Register", href: "/legal-register", moduleKey: "legal-register" },
+      { icon: Truck, label: "Suppliers", href: "/suppliers", moduleKey: "supplier-management" },
+      { icon: GraduationCap, label: "Training", href: "/training", moduleKey: "training-management" },
+      { icon: Zap, label: "Environmental Aspects", href: "/energy-consumption", moduleKey: "environmental-aspects" },
       { icon: MessageSquare, label: "Customer Feedback", href: "/customer-feedback" },
+      { icon: FileText, label: "Asset Management", href: "/asset-management", moduleKey: "asset-management" },
+      { icon: FileText, label: "Obligations Register", href: "/obligations-register", moduleKey: "obligations-register" },
     ],
   },
   {
@@ -125,6 +133,7 @@ export const DASHBOARD_MODULE_GROUPS: DashboardModuleGroup[] = [
       { icon: Users, label: "Users", href: "/admin/users", permission: Permission.VIEW_USERS },
       { icon: Users, label: "Permissions", href: "/admin/permissions", permission: Permission.MANAGE_ROLES },
       { icon: BarChart2, label: "Diagnostics", href: "/admin/diagnostics", permission: Permission.MANAGE_ROLES },
+      { icon: Settings, label: "Billing & Plan", href: "/admin/billing", permission: Permission.MANAGE_ORGANIZATION_SETTINGS },
     ],
   },
 ]

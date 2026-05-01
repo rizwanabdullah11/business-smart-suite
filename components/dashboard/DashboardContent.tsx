@@ -212,6 +212,20 @@ export function DashboardContent() {
 
   useEffect(() => {
     if (authLoading || !isAuthenticated) return
+    setExportEndDate((prev) => {
+      if (prev) return prev
+      return new Date().toISOString().slice(0, 10)
+    })
+    setExportStartDate((prev) => {
+      if (prev) return prev
+      const d = new Date()
+      d.setDate(d.getDate() - 30)
+      return d.toISOString().slice(0, 10)
+    })
+  }, [authLoading, isAuthenticated])
+
+  useEffect(() => {
+    if (authLoading || !isAuthenticated) return
 
     let cancelled = false
     const activeOrganizationId = localStorage.getItem("activeOrganizationId") || "no-org"
@@ -1325,7 +1339,7 @@ export function DashboardContent() {
         <div
           className="rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6 relative overflow-hidden border"
           style={{
-            background: "linear-gradient(135deg,#1a0533 0%,#3b0764 60%,#341746 100%)",
+            background: COLORS.brandHeroGradient,
             borderColor: "rgba(124,58,237,0.35)",
             boxShadow: "0 8px 32px rgba(124,58,237,0.25)",
           }}

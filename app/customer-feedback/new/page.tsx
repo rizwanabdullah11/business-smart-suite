@@ -236,16 +236,11 @@ export default function NewCustomerFeedbackPage() {
                 type="button"
                 onClick={handleCreate}
                 disabled={saving || categoriesLoading}
-                className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-                style={{ background: "#111827", color: COLORS.textWhite }}
+                className="ui-btn ui-btn-primary ui-btn-lg disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving ? "Creating…" : "Create Feedback"}
               </button>
-              <Link
-                href="/customer-feedback"
-                className="inline-flex items-center rounded-xl px-5 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5"
-                style={{ background: COLORS.bgWhite, color: COLORS.textPrimary, border: `1px solid ${COLORS.border}` }}
-              >
+              <Link href="/customer-feedback" className="ui-btn ui-btn-secondary ui-btn-lg">
                 Cancel
               </Link>
             </div>
