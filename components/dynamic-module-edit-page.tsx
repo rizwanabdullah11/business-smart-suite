@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type CSSProperties } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Loader2 } from "lucide-react"
@@ -160,10 +160,11 @@ export default function DynamicModuleEditPage({
 
   const renderField = (field: DynamicEditField) => {
     const value = formData[field.key]
-    const commonStyle = {
-      borderColor: COLORS.border,
-      color: COLORS.textPrimary,
-      background: COLORS.bgGrayLight,
+    const commonStyle: CSSProperties = {
+      border: "none",
+      outline: "none",
+      color: "#0f172a",
+      background: "#f1f5f9",
     }
 
     if (field.type === "textarea") {
@@ -174,7 +175,7 @@ export default function DynamicModuleEditPage({
           rows={4}
           placeholder={field.placeholder}
           disabled={saving}
-          className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all disabled:opacity-50"
+          className="w-full px-4 py-3 rounded-xl border-0 focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/35 transition-all disabled:opacity-50 placeholder:text-slate-500"
           style={commonStyle}
         />
       )
@@ -186,7 +187,7 @@ export default function DynamicModuleEditPage({
           value={String(value ?? "")}
           onChange={(e) => updateField(field.key, e.target.value)}
           disabled={saving}
-          className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all disabled:opacity-50"
+          className="w-full px-4 py-3 rounded-xl border-0 focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/35 transition-all disabled:opacity-50"
           style={commonStyle}
         >
           {(field.options || []).map((option) => (
@@ -200,14 +201,17 @@ export default function DynamicModuleEditPage({
 
     if (field.type === "checkbox") {
       return (
-        <label className="inline-flex items-center gap-3 px-4 py-3 rounded-xl border" style={commonStyle}>
+        <label
+          className="inline-flex items-center gap-3 rounded-xl px-4 py-3 border-0 focus-within:ring-2 focus-within:ring-[#7c3aed]/35"
+          style={{ ...commonStyle, background: "#f1f5f9" }}
+        >
           <input
             type="checkbox"
             checked={Boolean(value)}
             onChange={(e) => updateField(field.key, e.target.checked)}
             disabled={saving}
           />
-          <span>{field.label}</span>
+          <span style={{ color: "#0f172a" }}>{field.label}</span>
         </label>
       )
     }
@@ -219,7 +223,7 @@ export default function DynamicModuleEditPage({
         onChange={(e) => updateField(field.key, e.target.value)}
         placeholder={field.placeholder}
         disabled={saving}
-        className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all disabled:opacity-50"
+        className="w-full px-4 py-3 rounded-xl border-0 focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/35 transition-all disabled:opacity-50 placeholder:text-slate-500"
         style={commonStyle}
       />
     )
@@ -281,9 +285,9 @@ export default function DynamicModuleEditPage({
                 </div>
               ) : null}
 
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-x-10">
                 {fields.map((field) => (
-                  <div key={field.key} className={field.type === "textarea" || field.type === "checkbox" ? "md:col-span-2" : ""}>
+                  <div key={field.key} className={field.type === "textarea" || field.type === "checkbox" || field.key === "issueDate" ? "md:col-span-2" : ""}>
                     {field.type !== "checkbox" ? (
                       <label className="mb-2 block text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
                         {field.label}

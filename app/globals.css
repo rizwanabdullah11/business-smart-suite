@@ -54,6 +54,11 @@ body {
   @apply mx-auto max-w-6xl px-5 py-8 sm:px-8 lg:px-10;
 }
 
+/* Task/document detail: wider content, lighter symmetric side padding */
+.ui-task-detail-shell {
+  @apply mx-auto w-full max-w-7xl px-3 py-6 sm:px-5 sm:py-8 lg:px-6 xl:max-w-[min(92rem,calc(100vw-2rem))];
+}
+
 .ui-display-title {
   @apply text-3xl font-bold tracking-tight sm:text-4xl;
   letter-spacing: -0.03em;
@@ -74,7 +79,17 @@ body {
   @apply rounded-xl px-4 py-3 text-[0.9375rem] font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.85)];
   border: 1px solid var(--ui-well-border);
   background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
-  color: var(--foreground);
+  /* Always dark on light wells (avoids light --foreground when OS dark mode is on) */
+  color: #0f172a;
+}
+
+/* Borderless read-only values (document detail / summaries) */
+.ui-value-plain {
+  @apply rounded-xl py-2 text-[0.9375rem] font-semibold leading-snug;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  color: #0f172a;
 }
 
 .ui-card-main {

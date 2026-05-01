@@ -10,6 +10,34 @@ import { useAuth } from "@/contexts/auth-context"
 const FULL_TABS = ["Details", "Document", "Version history", "Reviews", "Permissions", "Audits"] as const
 const EMPLOYEE_TABS = ["Details", "Document", "Version history", "Reviews", "Audits"] as const
 
+/** Tinted panels for dynamic detail rows (cycles for variety) */
+const DETAIL_FIELD_PANEL_STYLES = [
+  {
+    shell: "border-violet-200/80 bg-gradient-to-br from-violet-50 via-fuchsia-50/50 to-white",
+    label: "text-violet-800",
+    value: "text-slate-900",
+  },
+  {
+    shell: "border-sky-200/75 bg-gradient-to-br from-sky-50 via-cyan-50/40 to-white",
+    label: "text-sky-800",
+    value: "text-slate-900",
+  },
+  {
+    shell: "border-amber-200/70 bg-gradient-to-br from-amber-50 via-orange-50/40 to-white",
+    label: "text-amber-900",
+    value: "text-slate-900",
+  },
+  {
+    shell: "border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-teal-50/40 to-white",
+    label: "text-emerald-900",
+    value: "text-slate-900",
+  },
+] as const
+
+function detailPanelStyle(idx: number) {
+  return DETAIL_FIELD_PANEL_STYLES[idx % DETAIL_FIELD_PANEL_STYLES.length]
+}
+
 function toTitle(moduleSlug: string) {
   if (!moduleSlug) return "Task"
   return moduleSlug
@@ -183,6 +211,11 @@ function sortDetailEntries(entries: [string, unknown][]): [string, unknown][] {
     if (pa !== pb) return pa - pb
     return a[0].localeCompare(b[0])
   })
+}
+
+function isWideDetailKey(key: string) {
+  const k = key.toLowerCase()
+  return k.includes("description") || k.includes("notes") || k.includes("content") || k.includes("remark") || k.includes("summary")
 }
 
 function formatDetailFieldValue(key: string, value: unknown): string {
@@ -413,6 +446,11 @@ export default function UniversalTaskDetailPage() {
     })
   }, [item])
 
+  const rawAudits = useMemo(
+    () => (Array.isArray(item?.audits) ? item.audits : []),
+    [item]
+  )
+
   const assignedPeople = useMemo(() => {
     const merged = new Map<
       string,
@@ -460,8 +498,47 @@ export default function UniversalTaskDetailPage() {
       })
     })
 
+    rawAudits.forEach((entry: Record<string, unknown>, idx: number) => {
+      const rawId = entry?.auditorUserId
+      let userId = ""
+      if (rawId != null && typeof rawId !== "object") userId = String(rawId).trim()
+      else if (rawId && typeof rawId === "object") {
+        const oid = (rawId as { toString?: () => string }).toString?.()
+        if (oid) userId = oid.trim()
+      }
+      const emailRaw = String(entry.auditorEmail || "").trim()
+      const displayName = String(entry.auditor || "").trim()
+      if (!userId && !emailRaw && !displayName) return
+
+      const emailKey = emailRaw.toLowerCase()
+      const key = (userId || emailKey || displayName.toLowerCase() || `audit-${idx}`).toLowerCase()
+
+      const auditType = entry.auditType ? String(entry.auditType) : ""
+      const auditStatus =
+        entry.status != null && String(entry.status).trim() !== "" ? String(entry.status) : ""
+      const auditDate = entry.auditDate ? String(entry.auditDate) : undefined
+      const createdAt = entry.createdAt ? String(entry.createdAt) : undefined
+      const auditLabel =
+        [auditType && `${auditType} audit`, auditStatus].filter(Boolean).join(" · ") || "Auditor"
+
+      const existing = merged.get(key)
+      const prevLevel = existing?.accessLevel
+      const parts = prevLevel ? prevLevel.split(" · ") : []
+      if (auditLabel && !parts.includes(auditLabel)) parts.push(auditLabel)
+      const accessLevel = parts.length ? parts.join(" · ") : undefined
+
+      merged.set(key, {
+        userId: existing?.userId || userId || undefined,
+        name: existing?.name || displayName || emailRaw || `Auditor ${idx + 1}`,
+        email: existing?.email || emailRaw || undefined,
+        dueDate: existing?.dueDate || auditDate,
+        assignedAt: existing?.assignedAt || createdAt,
+        accessLevel,
+      })
+    })
+
     return Array.from(merged.values())
-  }, [permissionsHistory, taskAssigneesList])
+  }, [permissionsHistory, taskAssigneesList, rawAudits])
 
   const auditsSortedDesc = useMemo(() => {
     if (!Array.isArray(item?.audits)) return []
@@ -907,27 +984,22 @@ export default function UniversalTaskDetailPage() {
       className="min-h-screen bg-gradient-to-br from-slate-100 via-[#eef1f7] to-slate-200/90 pb-14"
       style={{ fontFamily: "var(--font-app-sans), ui-sans-serif, system-ui, sans-serif" }}
     >
-      <div className="ui-page-shell">
-        <div className="mb-8">
+      <div className="ui-task-detail-shell">
+        <div className="mb-5">
           <Link
             href={backPath}
-            className="group inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-md transition hover:bg-white hover:shadow-lg"
-            style={{
-              background: "rgba(255,255,255,0.88)",
-              border: `1px solid ${COLORS.border}`,
-              boxShadow: "0 10px 30px -12px rgba(15, 23, 42, 0.12)",
-            }}
+            aria-label={`Back to ${toTitle(backPath.replace("/", ""))}`}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full text-violet-700 transition hover:bg-white/90 hover:text-violet-900 hover:shadow-md"
           >
-            <ArrowLeft className="h-4 w-4 transition group-hover:-translate-x-0.5" />
-            Back to {toTitle(backPath.replace("/", ""))}
+            <ArrowLeft className="h-5 w-5" strokeWidth={2.25} aria-hidden />
           </Link>
         </div>
 
         <article
-          className="ui-card-main overflow-hidden rounded-3xl border border-white/80 bg-white/95 shadow-2xl backdrop-blur-[2px]"
-          style={{ boxShadow: `${COLORS.shadowLg}, 0 0 0 1px rgba(124,58,237,0.06)` }}
+          className="ui-card-main w-full overflow-hidden rounded-3xl border-x-0 border-t-0 border-b border-slate-200/75 bg-white/95 pb-px shadow-2xl backdrop-blur-[2px]"
+          style={{ boxShadow: "0 24px 56px -26px rgba(15, 23, 42, 0.22)" }}
         >
-          <header className="relative border-b border-slate-200/70 px-6 py-10 sm:px-10">
+          <header className="relative border-b border-slate-200/70 px-4 py-9 sm:px-6 sm:py-10">
             <div className="pointer-events-none absolute inset-0 opacity-95 bg-[linear-gradient(125deg,#faf5ff_0%,#f8fafc_38%,#eff6ff_100%)]" />
             <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-violet-400/15 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-28 left-12 h-48 w-48 rounded-full bg-indigo-400/10 blur-3xl" />
@@ -938,38 +1010,37 @@ export default function UniversalTaskDetailPage() {
                 >
                   {modulePretty.replace(/s$/, "")}
                 </span>
-                <span className="text-[0.8125rem] font-semibold tracking-tight text-slate-500">
+                <span className="text-[0.8125rem] font-semibold tracking-tight text-violet-600">
                   Controlled document overview
                 </span>
               </div>
-              <h1 className="ui-display-title max-w-[min(52rem,100%)] text-slate-900">{title}</h1>
+              <h1 className="ui-display-title max-w-[min(52rem,100%)] bg-gradient-to-r from-violet-700 via-fuchsia-700 to-indigo-700 bg-clip-text text-transparent">
+                {title}
+              </h1>
               <div
-                className="mt-6 inline-flex max-w-full flex-wrap items-center gap-2 rounded-2xl border border-violet-100/80 px-5 py-3 text-[0.8125rem] font-medium leading-snug text-slate-600 shadow-inner"
-                style={{
-                  background: "linear-gradient(180deg,#ffffff,#fafbfc)",
-                }}
+                className="mt-6 inline-flex max-w-full flex-wrap items-center gap-2 rounded-2xl border border-violet-200/90 bg-gradient-to-r from-violet-50 via-indigo-50/90 to-fuchsia-50/80 px-5 py-3 text-[0.8125rem] font-medium leading-snug text-violet-950 shadow-sm"
               >
                 {isEmployee ? (
                   <>
                     <span className="font-semibold text-violet-900">{user?.name || currentUserName}</span>
-                    {categoryLabel ? <span className="text-slate-400">·</span> : null}
-                    {categoryLabel ? <span>{categoryLabel}</span> : null}
-                    <span className="text-slate-400">·</span>
-                    <span>{modulePretty.replace(/s$/, "")} record</span>
+                    {categoryLabel ? <span className="text-violet-400">·</span> : null}
+                    {categoryLabel ? <span className="text-indigo-900">{categoryLabel}</span> : null}
+                    <span className="text-violet-400">·</span>
+                    <span className="text-fuchsia-950/90">{modulePretty.replace(/s$/, "")} record</span>
                   </>
                 ) : (
                   <>
-                    <span>Open session —</span>
-                    <span>{new Date().toLocaleString()}</span>
-                    <span className="text-slate-400">·</span>
-                    <span>{currentUserName}</span>
+                    <span className="font-semibold text-violet-900">Open session —</span>
+                    <span className="text-violet-800/90">{new Date().toLocaleString()}</span>
+                    <span className="text-violet-400">·</span>
+                    <span className="font-medium text-indigo-900">{currentUserName}</span>
                   </>
                 )}
               </div>
             </div>
           </header>
 
-          <div className="flex flex-wrap items-center gap-2 border-b border-slate-200/70 bg-gradient-to-b from-slate-50 to-slate-50/40 px-3 py-3 sm:gap-3 sm:px-5">
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-200/70 bg-gradient-to-b from-slate-50 to-slate-50/40 px-3 py-3 sm:gap-3 sm:px-6">
             {visibleTabs.map((tab) => (
               <button
                 key={tab}
@@ -992,13 +1063,13 @@ export default function UniversalTaskDetailPage() {
             </button>
           </div>
 
-          <div className="px-5 py-8 sm:px-10 sm:py-11">
+          <div className="px-4 py-8 sm:px-6 sm:py-10">
             {activeTab === "Details" && (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 lg:gap-x-10">
+            <div className="grid grid-cols-1 gap-8 text-slate-900 md:grid-cols-2 md:gap-x-12 md:gap-y-8">
               {!isEmployee && categoryLabel ? (
-                <div>
-                  <p className="ui-label mb-2">Category</p>
-                  <div className="ui-value-well">{categoryLabel}</div>
+                <div className="min-w-0 rounded-2xl border border-violet-200/85 bg-gradient-to-br from-violet-100/90 via-fuchsia-50/50 to-indigo-50/80 p-5 shadow-sm">
+                  <p className="mb-2 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-violet-700">Category</p>
+                  <div className={`text-base font-semibold ${detailPanelStyle(0).value}`}>{categoryLabel}</div>
                 </div>
               ) : null}
 
@@ -1006,8 +1077,8 @@ export default function UniversalTaskDetailPage() {
               item?.workflowStatus !== undefined &&
               item?.workflowStatus !== null &&
               String(item.workflowStatus).trim() !== "" ? (
-                <div>
-                  <p className="ui-label mb-2">Workflow status</p>
+                <div className="min-w-0 rounded-2xl border border-fuchsia-200/70 bg-gradient-to-br from-fuchsia-50/90 to-white p-5 shadow-sm">
+                  <p className="mb-2 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-fuchsia-800">Workflow status</p>
                   <div className="inline-flex items-center px-3 py-1.5 rounded-lg border text-sm font-semibold" style={workflowStatusStyle(String(item.workflowStatus))}>
                     {humanizeWorkflowStatus(item.workflowStatus)}
                   </div>
@@ -1018,8 +1089,8 @@ export default function UniversalTaskDetailPage() {
               item?.status !== undefined &&
               item?.status !== null &&
               String(item.status).trim() !== "" ? (
-                <div>
-                  <p className="ui-label mb-2">Status</p>
+                <div className="min-w-0 rounded-2xl border border-sky-200/75 bg-gradient-to-br from-sky-50/95 to-cyan-50/40 p-5 shadow-sm">
+                  <p className="mb-2 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-sky-800">Status</p>
                   <div className="inline-flex items-center px-3 py-1.5 rounded-lg border text-sm font-semibold" style={workflowStatusStyle(String(item.status))}>
                     {humanizeWorkflowStatus(item.status)}
                   </div>
@@ -1028,36 +1099,34 @@ export default function UniversalTaskDetailPage() {
 
               {!isEmployee && assignedPeople.length > 0 ? (
                 <div className="md:col-span-2">
-                  <p className="ui-label mb-3">Assigned ({assignedPeople.length})</p>
-                  <div
-                    className="mb-3 rounded-lg border px-4 py-3"
-                    style={{ borderColor: COLORS.border, background: COLORS.bgGray }}
-                  >
-                    <p className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+                  <p className="mb-3 text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-emerald-800">Assigned ({assignedPeople.length})</p>
+                  <div className="mb-4 rounded-2xl border border-emerald-200/80 bg-gradient-to-r from-emerald-100/85 via-teal-50/90 to-cyan-50/50 px-5 py-4 shadow-sm">
+                    <p className="text-sm font-semibold text-emerald-950">
                       {assignedPeople.length} {assignedPeople.length === 1 ? "person" : "people"} assigned
                     </p>
-                    <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+                    <p className="mt-1 text-sm leading-relaxed text-emerald-900/90">
                       {assignedPeople
                         .map((a: Record<string, unknown>) => String(a.name || a.email || "Assignee"))
                         .join(", ")}
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {assignedPeople.map((a: Record<string, unknown>, idx: number) => (
                       <div
                         key={`${String(a.userId ?? idx)}-${idx}`}
-                        className="flex-1 min-w-[200px] max-w-md px-4 py-3 rounded-lg border"
-                        style={{ borderColor: COLORS.border, background: COLORS.bgGray }}
+                        className={`min-w-0 rounded-2xl border p-5 shadow-sm ${
+                          idx % 2 === 0
+                            ? "border-sky-200/75 bg-gradient-to-br from-sky-50 to-blue-50/80"
+                            : "border-rose-200/70 bg-gradient-to-br from-rose-50 to-orange-50/70"
+                        }`}
                       >
-                        <p className="font-semibold" style={{ color: COLORS.textPrimary }}>
+                        <p className="font-semibold text-slate-900">
                           {String(a.name || a.email || "Assignee")}
                         </p>
                         {a.email ? (
-                          <p className="text-sm mt-0.5" style={{ color: COLORS.textSecondary }}>
-                            {String(a.email)}
-                          </p>
+                          <p className="mt-0.5 text-sm text-slate-800">{String(a.email)}</p>
                         ) : null}
-                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: COLORS.textSecondary }}>
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-700">
                           {a.dueDate ? <span>Due: {formatDate(String(a.dueDate))}</span> : null}
                           {a.assignedAt ? <span>Assigned: {formatDateTime(String(a.assignedAt))}</span> : null}
                           {a.accessLevel ? <span>Access: {String(a.accessLevel)}</span> : null}
@@ -1068,14 +1137,20 @@ export default function UniversalTaskDetailPage() {
                 </div>
               ) : null}
 
-              {detailEntries.map(([key, value]) => (
-                <div key={key}>
-                  <p className="ui-label mb-2">{humanizeFieldKey(key)}</p>
-                  <div className="ui-value-well whitespace-pre-wrap break-words">
-                    {formatDetailFieldValue(key, value)}
+              {detailEntries.map(([key, value], idx) => {
+                const pane = detailPanelStyle(idx)
+                return (
+                  <div
+                    key={key}
+                    className={`min-w-0 rounded-2xl border p-5 shadow-sm ${pane.shell} ${isWideDetailKey(key) ? "md:col-span-2" : ""}`}
+                  >
+                    <p className={`mb-2 text-[0.6875rem] font-bold uppercase tracking-[0.12em] ${pane.label}`}>{humanizeFieldKey(key)}</p>
+                    <div className={`whitespace-pre-wrap break-words text-[0.9375rem] font-medium leading-relaxed ${pane.value}`}>
+                      {formatDetailFieldValue(key, value)}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
             )}
 
