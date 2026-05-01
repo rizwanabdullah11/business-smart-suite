@@ -28,7 +28,7 @@ export function DashboardHeader({ onAddFolder, user, onLogout }: DashboardHeader
                 </p>
             </div>
             <div className="flex items-center gap-4 flex-wrap">
-                <Link href="/analytics">
+                <Link href="/dashboard/analytics">
                     <button
                         className="font-bold px-8 py-4 rounded-lg text-lg transition-all duration-200 focus:outline-none focus:ring-2"
                         style={{
@@ -47,7 +47,7 @@ export function DashboardHeader({ onAddFolder, user, onLogout }: DashboardHeader
                             e.currentTarget.style.transform = 'translateY(0)'
                         }}
                     >
-                        Analytics
+                        Analytics & PDF
                     </button>
                 </Link>
                 <button

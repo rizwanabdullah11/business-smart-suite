@@ -83,9 +83,9 @@ export function ModuleHubContent({ onAddFolder }: ModuleHubContentProps = {}) {
                     <p className="text-purple-200 text-xl drop-shadow">Your comprehensive business management portal</p>
                   </div>
                   <div className="flex items-center gap-4">
-                    <Link href="/analytics">
+                    <Link href="/dashboard/analytics">
                       <button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-400/50 backdrop-blur-sm">
-                        Analytics Dashboard
+                        Analytics & PDF
                       </button>
                     </Link>
                     <button
