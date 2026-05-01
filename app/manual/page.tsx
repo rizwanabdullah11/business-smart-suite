@@ -12,13 +12,13 @@ import {
   X,
   Star,
   Pause,
+  ArrowUpDown,
   Calendar,
-  ChevronDown,
-  ChevronRight,
   Copy,
   Download,
   ArrowLeft,
   Bot,
+  GripVertical,
 } from "lucide-react"
 import Link from "next/link"
 import { COLORS } from "@/constant/colors"
@@ -1117,8 +1117,9 @@ export default function ManualPage() {
                 onClick={() => setShowArchived(false)}
                 className="rounded-lg px-4 py-2 text-sm font-semibold transition-all"
                 style={{
-                  background: !showArchived ? COLORS.purple700 : "transparent",
-                  color: !showArchived ? COLORS.textWhite : COLORS.textSecondary,
+                  background: !showArchived ? COLORS.purple700 : COLORS.purple50,
+                  color: !showArchived ? COLORS.textWhite : COLORS.purple700,
+                  border: `1px solid ${!showArchived ? COLORS.purple700 : COLORS.purple200}`,
                 }}
               >
                 Active
@@ -1128,8 +1129,9 @@ export default function ManualPage() {
                 onClick={() => setShowArchived(true)}
                 className="rounded-lg px-4 py-2 text-sm font-semibold transition-all"
                 style={{
-                  background: showArchived ? COLORS.purple700 : "transparent",
-                  color: showArchived ? COLORS.textWhite : COLORS.textSecondary,
+                  background: showArchived ? COLORS.purple700 : COLORS.purple50,
+                  color: showArchived ? COLORS.textWhite : COLORS.purple700,
+                  border: `1px solid ${showArchived ? COLORS.purple700 : COLORS.purple200}`,
                 }}
               >
                 Archived
@@ -1213,55 +1215,46 @@ export default function ManualPage() {
             const emptyState = getEmptyStateText(currentItemView)
 
             return (
-              <div
-                key={category.id}
-                className="overflow-hidden rounded-2xl shadow-sm"
-                style={{
-                  background: COLORS.bgWhite,
-                  border: `1px solid #ececf3`,
-                  boxShadow: "0 10px 30px rgba(31, 41, 55, 0.05)",
-                }}
-              >
+              <div key={category.id} className="mb-4">
                 <div
-                  className="flex flex-col gap-3 px-4 py-1.5 sm:flex-row sm:items-center sm:justify-between"
-                  style={{
-                    background: "#341746",
-                    color: COLORS.textWhite,
-                  }}
+                  className="flex cursor-pointer items-center justify-between rounded-sm bg-[#2d1e3e] p-3 text-white"
+                  onClick={() => toggleCategory(category.id)}
                 >
-                  <button
-                    type="button"
-                    onClick={() => toggleCategory(category.id)}
-                    className="flex items-center gap-3 text-left"
-                  >
-                    <div
-                      className="flex h-7 w-7 items-center justify-center rounded-md"
-                      style={{ background: "rgba(255,255,255,0.14)" }}
-                    >
-                      {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                    </div>
-                    <div>
-                      <div className="text-base font-semibold">{category.title}</div>
-                      <div className="text-xs text-white/70">
-                        {currentManuals.length} manual{currentManuals.length === 1 ? "" : "s"} in view
-                      </div>
-                    </div>
-                  </button>
-
-                  <div className="flex items-center gap-1.5">
-                    {/* Drag/grip handle */}
-                    <div className="mr-1 flex h-7 w-5 items-center justify-center opacity-50">
-                      <svg width="12" height="14" viewBox="0 0 12 14" fill="white">
-                        <circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/>
-                        <circle cx="3" cy="7" r="1.5"/><circle cx="9" cy="7" r="1.5"/>
-                        <circle cx="3" cy="12" r="1.5"/><circle cx="9" cy="12" r="1.5"/>
-                      </svg>
-                    </div>
-                    {/* White toggle square */}
-                    <div
-                      className="h-6 w-6 rounded"
-                      style={{ background: "rgba(255,255,255,0.92)", border: "1px solid rgba(255,255,255,0.4)" }}
-                    />
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 shrink-0" aria-hidden />
+                    <span className="font-semibold">{category.title}</span>
+                  </div>
+                  <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                    {!showArchived ? (
+                      <>
+                        <div className="mr-1 flex h-7 w-5 items-center justify-center opacity-50">
+                          <svg width="12" height="14" viewBox="0 0 12 14" fill="white">
+                            <circle cx="3" cy="2" r="1.5" />
+                            <circle cx="9" cy="2" r="1.5" />
+                            <circle cx="3" cy="7" r="1.5" />
+                            <circle cx="9" cy="7" r="1.5" />
+                            <circle cx="3" cy="12" r="1.5" />
+                            <circle cx="9" cy="12" r="1.5" />
+                          </svg>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => toggleSort("name")}
+                          className="flex h-6 w-6 items-center justify-center rounded-md border-none bg-white/10 text-white transition-all hover:brightness-110"
+                          title="Sort by Name"
+                        >
+                          <ArrowUpDown className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleSort("date")}
+                          className="flex h-6 w-6 items-center justify-center rounded-md border-none bg-white/10 text-white transition-all hover:brightness-110"
+                          title="Sort by Date"
+                        >
+                          <Calendar className="h-3 w-3" />
+                        </button>
+                      </>
+                    ) : null}
 
                     {!isEmployee ? (
                       <button
@@ -1270,11 +1263,10 @@ export default function ManualPage() {
                           e.stopPropagation()
                           startEditCategory(category.id, category.title)
                         }}
-                        className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
-                        style={{ background: "#22c55e" }}
+                        className="flex h-6 w-6 items-center justify-center rounded-md border-none bg-gray-600 text-white transition-all hover:brightness-110"
                         title="Edit Category"
                       >
-                        <Edit className="h-3.5 w-3.5 text-white" />
+                        <Edit className="h-3 w-3" />
                       </button>
                     ) : null}
 
@@ -1291,11 +1283,10 @@ export default function ManualPage() {
                             setExpandedCategories([category.id])
                           }
                         }}
-                        className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
-                        style={{ background: "#22c55e" }}
+                        className="flex h-6 w-6 items-center justify-center rounded-md border-none bg-green-500 text-white transition-all hover:brightness-110"
                         title="Add Manual"
                       >
-                        <Plus className="h-3.5 w-3.5 text-white" />
+                        <Plus className="h-3 w-3" />
                       </button>
                     ) : null}
 
@@ -1307,11 +1298,10 @@ export default function ManualPage() {
                             e.stopPropagation()
                             unarchiveCategory(category.id)
                           }}
-                          className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
-                          style={{ background: "#f59e0b" }}
+                          className="flex h-6 w-6 items-center justify-center rounded-md border-none bg-green-600 text-white transition-all hover:brightness-110"
                           title="Unarchive Category"
                         >
-                          <Archive className="h-3.5 w-3.5 text-white" />
+                          <Archive className="h-3 w-3" />
                         </button>
                       ) : (
                         <button
@@ -1320,11 +1310,10 @@ export default function ManualPage() {
                             e.stopPropagation()
                             archiveCategory(category.id)
                           }}
-                          className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
-                          style={{ background: "#f59e0b" }}
+                          className="flex h-6 w-6 items-center justify-center rounded-md border-none bg-gray-600 text-white transition-all hover:brightness-110"
                           title="Archive Category"
                         >
-                          <Archive className="h-3.5 w-3.5 text-white" />
+                          <Archive className="h-3 w-3" />
                         </button>
                       )
                     ) : null}
@@ -1336,11 +1325,10 @@ export default function ManualPage() {
                           e.stopPropagation()
                           deleteCategory(category.id)
                         }}
-                        className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
-                        style={{ background: "#ef4444" }}
+                        className="flex h-6 w-6 items-center justify-center rounded-md border-none bg-red-500 text-white transition-all hover:brightness-110"
                         title="Delete Category"
                       >
-                        <X className="h-3.5 w-3.5 text-white" />
+                        <X className="h-3 w-3" />
                       </button>
                     ) : null}
                   </div>
@@ -1404,66 +1392,42 @@ export default function ManualPage() {
                   <div className="p-4 sm:p-5">
                     <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                       <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCategoryItemView((prev) => ({ ...prev, [category.id]: "active" }))
-                          }
-                          className="rounded-lg px-3 py-2 text-sm font-semibold"
-                          style={{
-                            background: currentItemView === "active" ? "#faf5ff" : COLORS.bgWhite,
-                            color: currentItemView === "active" ? COLORS.purple700 : COLORS.textSecondary,
-                            border: `1px solid ${currentItemView === "active" ? COLORS.purple200 : "#ececf3"}`,
-                          }}
-                        >
-                          Active ({(category.manuals || []).length})
-                        </button>
-                        {!isEmployee ? (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setCategoryItemView((prev) => ({ ...prev, [category.id]: "archived" }))
-                            }
-                            className="rounded-lg px-3 py-2 text-sm font-semibold"
-                            style={{
-                              background: currentItemView === "archived" ? "#faf5ff" : COLORS.bgWhite,
-                              color: currentItemView === "archived" ? COLORS.purple700 : COLORS.textSecondary,
-                              border: `1px solid ${currentItemView === "archived" ? COLORS.purple200 : "#ececf3"}`,
-                            }}
-                          >
-                            Archived ({(category.archivedManuals || []).length})
-                          </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCategoryItemView((prev) => ({ ...prev, [category.id]: "completed" }))
-                          }
-                          className="rounded-lg px-3 py-2 text-sm font-semibold"
-                          style={{
-                            background: currentItemView === "completed" ? "#faf5ff" : COLORS.bgWhite,
-                            color: currentItemView === "completed" ? COLORS.purple700 : COLORS.textSecondary,
-                            border: `1px solid ${currentItemView === "completed" ? COLORS.purple200 : "#ececf3"}`,
-                          }}
-                        >
-                          Done ({(category.completedManuals || []).length})
-                        </button>
-                        {!isEmployee ? (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setCategoryItemView((prev) => ({ ...prev, [category.id]: "highlighted" }))
-                            }
-                            className="rounded-lg px-3 py-2 text-sm font-semibold"
-                            style={{
-                              background: currentItemView === "highlighted" ? "#faf5ff" : COLORS.bgWhite,
-                              color: currentItemView === "highlighted" ? COLORS.purple700 : COLORS.textSecondary,
-                              border: `1px solid ${currentItemView === "highlighted" ? COLORS.purple200 : "#ececf3"}`,
-                            }}
-                          >
-                            Starred ({(category.highlightedManuals || []).length})
-                          </button>
-                        ) : null}
+                        {(["active", "archived", "completed", "highlighted"] as const)
+                          .filter((v) => v !== "archived" || !isEmployee)
+                          .filter((v) => v !== "highlighted" || !isEmployee)
+                          .map((view) => {
+                            const count =
+                              view === "archived"
+                                ? (category.archivedManuals || []).length
+                                : view === "completed"
+                                  ? (category.completedManuals || []).length
+                                  : view === "highlighted"
+                                    ? (category.highlightedManuals || []).length
+                                    : (category.manuals || []).length
+                            const label =
+                              view === "archived"
+                                ? "Archived"
+                                : view === "completed"
+                                  ? "Done"
+                                  : view === "highlighted"
+                                    ? "Starred"
+                                    : "Active"
+                            return (
+                              <button
+                                key={view}
+                                type="button"
+                                onClick={() => setCategoryItemView((prev) => ({ ...prev, [category.id]: view }))}
+                                className="rounded-lg px-3 py-2 text-sm font-semibold"
+                                style={{
+                                  background: currentItemView === view ? "#faf5ff" : COLORS.bgWhite,
+                                  color: currentItemView === view ? COLORS.purple700 : COLORS.textSecondary,
+                                  border: `1px solid ${currentItemView === view ? COLORS.purple200 : "#ececf3"}`,
+                                }}
+                              >
+                                {label} ({count})
+                              </button>
+                            )
+                          })}
                       </div>
 
                       <div className="text-xs sm:text-sm" style={{ color: COLORS.textSecondary }}>
@@ -1603,15 +1567,12 @@ export default function ManualPage() {
                         </p>
                       </div>
                     ) : (
-                      <div
-                        className="overflow-hidden rounded-2xl"
-                        style={{ border: `1px solid #efeff5`, background: "#fcfcff" }}
-                      >
-                        <div className="overflow-x-auto p-3">
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div className="overflow-x-auto">
                           <table className="min-w-full text-left">
-                            <thead style={{ background: "#ffffff" }}>
-                              <tr style={{ color: "#707685" }}>
-                                <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wide">
+                            <thead className="bg-gray-50">
+                              <tr style={{ color: COLORS.textPrimary }}>
+                                <th className="pl-4 pr-0 py-3 text-base font-medium">
                                   <input
                                     type="checkbox"
                                     className="h-4 w-4 rounded cursor-pointer"
@@ -1625,35 +1586,23 @@ export default function ManualPage() {
                                     }}
                                   />
                                 </th>
-                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Manual</th>
-                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Issue Level</th>
-                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Issue Date</th>
-                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Location</th>
-                                <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide">Status</th>
-                                <th className="px-2 py-2 text-right text-[11px] font-semibold uppercase tracking-wide">Actions</th>
+                                <th className="pl-0 pr-4 py-3 text-base font-medium">Manual</th>
+                                <th className="px-4 py-3 text-base font-medium">Version</th>
+                                <th className="px-4 py-3 text-base font-medium">Issue Date</th>
+                                <th className="px-4 py-3 text-base font-medium">Location</th>
+                                <th className="px-4 py-3 text-base font-medium">Status</th>
+                                <th className="px-4 py-3 text-base font-medium text-right">Actions</th>
                               </tr>
                             </thead>
-                            <tbody>
-                              {sortedManuals.map((manual, index) => {
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {sortedManuals.map((manual) => {
                                 const statusTone = getStatusTone(manual)
                                 return (
-                                  <tr
-                                    key={manual.id}
-                                    style={{
-                                      background:
-                                        manual.paused
-                                          ? "#fffaf2"
-                                          : manual.highlighted
-                                            ? "#faf7ff"
-                                            : "#ffffff",
-                                      borderTop: index === 0 ? "none" : "1px solid #efeff5",
-                                      borderBottom: index === sortedManuals.length - 1 ? "1px solid #efeff5" : "none",
-                                    }}
-                                  >
-                                    <td className="px-2 py-1 align-top">
+                                  <tr key={manual.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="pl-4 pr-0 py-3 align-middle">
                                       <input
                                         type="checkbox"
-                                        className="mt-1 h-4 w-4 rounded cursor-pointer"
+                                        className="h-4 w-4 rounded cursor-pointer"
                                         checked={selectedManuals[category.id]?.has(manual.id) ?? false}
                                         onChange={(e) => {
                                           setSelectedManuals((prev) => {
@@ -1665,56 +1614,38 @@ export default function ManualPage() {
                                         }}
                                       />
                                     </td>
-                                    <td className="px-2 py-1 align-top">
-                                      <div className="flex items-start gap-3">
-                                        <div
-                                          className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg"
-                                          style={{
-                                            background: "#faf5ff",
-                                            color: COLORS.purple700,
-                                            border: `1px solid ${COLORS.purple200}`,
-                                          }}
-                                        >
-                                          <FileText className="h-4 w-4" />
+                                    <td className="pl-0 pr-4 py-3 align-middle">
+                                      <div className="flex items-center gap-1">
+                                        <div className="flex h-8 w-8 items-center justify-center bg-blue-100 rounded" style={{ minWidth: "32px" }}>
+                                          <FileText className="h-4 w-4 text-blue-600" aria-hidden="true" />
                                         </div>
-                                        <div className="min-w-0">
+                                        <div className="min-w-0 flex-1">
                                           <Link
                                             href={`/task/manuals/${manual.id}?back=${encodeURIComponent("/manual")}`}
-                                            className="block text-sm font-semibold hover:underline sm:text-[15px] break-words"
-                                            style={{ color: COLORS.purple700 }}
+                                            className="text-blue-600 hover:underline text-base"
                                           >
                                             {manual.title}
                                           </Link>
                                           {manual.fileName ? (
-                                            <div className="mt-1 flex items-center gap-1 text-xs" style={{ color: "#73788a" }}>
-                                              <FileText className="h-3 w-3 shrink-0" style={{ color: COLORS.purple700 }} />
-                                              <span className="max-w-[160px] truncate" title={manual.fileName}>{manual.fileName}</span>
-                                            </div>
-                                          ) : null}
-                                          {(manual.highlighted || manual.paused) ? (
-                                            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs" style={{ color: "#73788a" }}>
-                                              {manual.highlighted ? <span>Starred</span> : null}
-                                              {manual.paused ? <span>Paused</span> : null}
+                                            <div className="mt-0.5 truncate text-xs text-gray-500" title={manual.fileName}>
+                                              {manual.fileName}
                                             </div>
                                           ) : null}
                                         </div>
                                       </div>
                                     </td>
-                                    <td className="px-2 py-1 align-top text-sm" style={{ color: COLORS.textPrimary }}>
-                                      {manual.version || "1.0"}
+                                    <td className="px-4 py-3 align-middle text-base" style={{ color: COLORS.textPrimary }}>
+                                      {manual.version || "—"}
                                     </td>
-                                    <td className="px-2 py-1 align-top text-sm" style={{ color: COLORS.textPrimary }}>
-                                      <div className="flex items-center gap-2">
-                                        <Calendar className="h-4 w-4" style={{ color: COLORS.textLight }} />
-                                        {formatDisplayDate(manual.issueDate)}
-                                      </div>
+                                    <td className="px-4 py-3 align-middle text-base" style={{ color: COLORS.textPrimary }}>
+                                      {formatDisplayDate(manual.issueDate)}
                                     </td>
-                                    <td className="px-2 py-1 align-top text-sm" style={{ color: COLORS.textPrimary }}>
-                                      {manual.location || "Default Location"}
+                                    <td className="px-4 py-3 align-middle text-base" style={{ color: COLORS.textPrimary }}>
+                                      {manual.location || "—"}
                                     </td>
-                                    <td className="px-2 py-1 align-top">
+                                    <td className="px-4 py-3 align-middle">
                                       <span
-                                        className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                                        className="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold"
                                         style={{
                                           background: statusTone.background,
                                           color: statusTone.color,
@@ -1724,147 +1655,131 @@ export default function ManualPage() {
                                         {statusTone.label}
                                       </span>
                                     </td>
-                                    <td className="px-2 py-1">
-                                      <div className="flex items-center justify-end gap-1">
-                                        {/* Drag handle */}
-                                        <div className="mr-1 flex h-6 w-5 cursor-move items-center justify-center opacity-30 hover:opacity-60">
-                                          <svg width="10" height="14" viewBox="0 0 10 14" fill="#374151">
-                                            <circle cx="2.5" cy="2" r="1.5"/><circle cx="7.5" cy="2" r="1.5"/>
-                                            <circle cx="2.5" cy="7" r="1.5"/><circle cx="7.5" cy="7" r="1.5"/>
-                                            <circle cx="2.5" cy="12" r="1.5"/><circle cx="7.5" cy="12" r="1.5"/>
-                                          </svg>
+                                    <td className="px-4 py-3 align-middle">
+                                      {isEmployee ? (
+                                        <div className="flex gap-1 justify-end">
+                                          <button
+                                            type="button"
+                                            onClick={() => toggleApprove(category.id, manual.id, manual.approved)}
+                                            disabled={loadingAction === `approve-${manual.id}`}
+                                            className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50 border-none bg-green-500 text-white"
+                                            title={manual.approved ? "Reopen" : "Mark done"}
+                                          >
+                                            <Check className="h-3 w-3" />
+                                          </button>
+                                          <Link href={`/manual/${manual.id}/edit`}>
+                                            <button
+                                              type="button"
+                                              className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-indigo-600 text-white border-none"
+                                              title="Edit"
+                                            >
+                                              <Edit className="h-3 w-3" />
+                                            </button>
+                                          </Link>
+                                          <button
+                                            type="button"
+                                            onClick={() => downloadManual(manual)}
+                                            disabled={loadingAction === `download-${manual.id}`}
+                                            className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50 bg-indigo-500 text-white border-none"
+                                            title="Download"
+                                          >
+                                            <Download className="h-3 w-3" />
+                                          </button>
                                         </div>
-
-                                        {isEmployee ? (
-                                          <>
+                                      ) : (
+                                        <div className="flex gap-1 justify-end">
+                                          <button
+                                            type="button"
+                                            className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-gray-400 text-white border-none cursor-grab"
+                                            title="Drag"
+                                          >
+                                            <GripVertical className="h-3 w-3" />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => toggleHighlight(category.id, manual.id, manual.highlighted)}
+                                            disabled={loadingAction === `highlight-${manual.id}`}
+                                            className={`flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50 border-none ${manual.highlighted ? "bg-gray-200 text-amber-600" : "bg-yellow-500 text-white"}`}
+                                            title={manual.highlighted ? "Remove Highlight" : "Highlight"}
+                                          >
+                                            <Star className={`h-3 w-3 ${manual.highlighted ? "fill-amber-500" : ""}`} />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => toggleApprove(category.id, manual.id, manual.approved)}
+                                            disabled={loadingAction === `approve-${manual.id}`}
+                                            className={`flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50 border-none ${manual.approved ? "bg-gray-200" : "bg-green-500 text-white"}`}
+                                            title={manual.approved ? "Mark as Incomplete" : "Mark as Completed"}
+                                          >
+                                            <Check className={`h-3 w-3 ${manual.approved ? "text-green-700" : "text-white"}`} />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => togglePause(category.id, manual.id, manual.paused)}
+                                            disabled={loadingAction === `pause-${manual.id}`}
+                                            className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50 bg-orange-500 text-white border-none"
+                                            title={manual.paused ? "Resume" : "Pause"}
+                                          >
+                                            <Pause className="h-3 w-3" />
+                                          </button>
+                                          <Link href={`/manual/${manual.id}/edit`}>
                                             <button
                                               type="button"
-                                              onClick={() => toggleApprove(category.id, manual.id, manual.approved)}
-                                              disabled={loadingAction === `approve-${manual.id}`}
-                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                                              style={{ background: "#22c55e" }}
-                                              title={manual.approved ? "Reopen" : "Mark done"}
+                                              className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-indigo-600 text-white border-none"
+                                              title="Edit"
                                             >
-                                              <Check className="h-3.5 w-3.5 text-white" />
+                                              <Edit className="h-3 w-3" />
                                             </button>
-                                            <Link href={`/manual/${manual.id}/edit`}>
-                                              <button
-                                                type="button"
-                                                className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
-                                                style={{ background: "#4f46e5" }}
-                                                title="Edit"
-                                              >
-                                                <Edit className="h-3.5 w-3.5 text-white" />
-                                              </button>
-                                            </Link>
+                                          </Link>
+                                          <button
+                                            type="button"
+                                            onClick={() => copyManual(category.id, manual.id)}
+                                            disabled={loadingAction === `copy-${manual.id}`}
+                                            className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50 bg-indigo-500 text-white border-none"
+                                            title="Duplicate"
+                                          >
+                                            <Copy className="h-3 w-3" />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => downloadManual(manual)}
+                                            disabled={loadingAction === `download-${manual.id}`}
+                                            className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50 bg-indigo-500 text-white border-none"
+                                            title="Download"
+                                          >
+                                            <Download className="h-3 w-3" />
+                                          </button>
+                                          {!isViewingArchivedItems ? (
                                             <button
                                               type="button"
-                                              onClick={() => downloadManual(manual)}
-                                              disabled={loadingAction === `download-${manual.id}`}
-                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                                              style={{ background: "#6366f1" }}
-                                              title="Download"
+                                              onClick={() => archiveManual(category.id, manual.id)}
+                                              disabled={loadingAction === `archive-${manual.id}`}
+                                              className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50 bg-gray-600 text-white border-none"
+                                              title="Archive"
                                             >
-                                              <Download className="h-3.5 w-3.5 text-white" />
+                                              <Archive className="h-3 w-3" />
                                             </button>
-                                          </>
-                                        ) : (
-                                          <>
+                                          ) : (
                                             <button
                                               type="button"
-                                              onClick={() => toggleHighlight(category.id, manual.id, manual.highlighted)}
-                                              disabled={loadingAction === `highlight-${manual.id}`}
-                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                                              style={{ background: "#f59e0b" }}
-                                              title={manual.highlighted ? "Remove Highlight" : "Highlight"}
+                                              onClick={() => unarchiveManual(category.id, manual.id)}
+                                              disabled={loadingAction === `unarchive-${manual.id}`}
+                                              className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:opacity-50 bg-green-600 text-white border-none"
+                                              title="Unarchive"
                                             >
-                                              <Star className={`h-3.5 w-3.5 text-white ${manual.highlighted ? "fill-white" : ""}`} />
+                                              <Archive className="h-3 w-3" />
                                             </button>
-                                            <button
-                                              type="button"
-                                              onClick={() => toggleApprove(category.id, manual.id, manual.approved)}
-                                              disabled={loadingAction === `approve-${manual.id}`}
-                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                                              style={{ background: "#22c55e" }}
-                                              title={manual.approved ? "Mark as Incomplete" : "Mark as Completed"}
-                                            >
-                                              <Check className="h-3.5 w-3.5 text-white" />
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={() => togglePause(category.id, manual.id, manual.paused)}
-                                              disabled={loadingAction === `pause-${manual.id}`}
-                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                                              style={{ background: "#f97316" }}
-                                              title={manual.paused ? "Resume" : "Pause"}
-                                            >
-                                              <Pause className="h-3.5 w-3.5 text-white" />
-                                            </button>
-                                            <Link href={`/manual/${manual.id}/edit`}>
-                                              <button
-                                                type="button"
-                                                className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
-                                                style={{ background: "#4f46e5" }}
-                                                title="Edit"
-                                              >
-                                                <Edit className="h-3.5 w-3.5 text-white" />
-                                              </button>
-                                            </Link>
-                                            <button
-                                              type="button"
-                                              onClick={() => copyManual(category.id, manual.id)}
-                                              disabled={loadingAction === `copy-${manual.id}`}
-                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                                              style={{ background: "#6366f1" }}
-                                              title="Duplicate"
-                                            >
-                                              <Copy className="h-3.5 w-3.5 text-white" />
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={() => downloadManual(manual)}
-                                              disabled={loadingAction === `download-${manual.id}`}
-                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                                              style={{ background: "#6366f1" }}
-                                              title="Download"
-                                            >
-                                              <Download className="h-3.5 w-3.5 text-white" />
-                                            </button>
-                                            {!isViewingArchivedItems ? (
-                                              <button
-                                                type="button"
-                                                onClick={() => archiveManual(category.id, manual.id)}
-                                                disabled={loadingAction === `archive-${manual.id}`}
-                                                className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                                                style={{ background: "#f59e0b" }}
-                                                title="Archive"
-                                              >
-                                                <Archive className="h-3.5 w-3.5 text-white" />
-                                              </button>
-                                            ) : (
-                                              <button
-                                                type="button"
-                                                onClick={() => unarchiveManual(category.id, manual.id)}
-                                                disabled={loadingAction === `unarchive-${manual.id}`}
-                                                className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                                                style={{ background: "#22c55e" }}
-                                                title="Unarchive"
-                                              >
-                                                <Archive className="h-3.5 w-3.5 text-white" />
-                                              </button>
-                                            )}
-                                            <button
-                                              type="button"
-                                              onClick={() => deleteManual(category.id, manual.id)}
-                                              className="flex h-7 w-7 items-center justify-center rounded-md transition-all hover:brightness-110"
-                                              style={{ background: "#ef4444" }}
-                                              title="Delete"
-                                            >
-                                              <Trash2 className="h-3.5 w-3.5 text-white" />
-                                            </button>
-                                          </>
-                                        )}
-                                      </div>
+                                          )}
+                                          <button
+                                            type="button"
+                                            onClick={() => deleteManual(category.id, manual.id)}
+                                            className="flex h-6 w-6 items-center justify-center rounded-md transition-all hover:brightness-110 bg-red-500 text-white border-none"
+                                            title="Delete"
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                          </button>
+                                        </div>
+                                      )}
                                     </td>
                                   </tr>
                                 )
