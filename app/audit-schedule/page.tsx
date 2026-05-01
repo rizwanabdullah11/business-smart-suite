@@ -663,6 +663,7 @@ export default function AuditSchedulePage() {
       icon={CalendarCheck}
       newItemHref="/audit-schedule/new"
       itemHrefPrefix="/audit-schedule"
+      workflowHrefPrefix="/audit-schedule"
       dateFieldKey="scheduledDate"
       formFields={[
         { key: "title", label: "Title", required: true, placeholder: "Enter audit title..." },

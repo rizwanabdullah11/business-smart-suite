@@ -218,7 +218,7 @@ function parseVersionNumber(input: unknown) {
 export default function UniversalTaskDetailPage() {
   const params = useParams<{ module: string; id: string }>()
   const searchParams = useSearchParams()
-  const { isEmployee, user } = useAuth()
+  const { isEmployee, user, isAuditor, isAdmin, isOrganization } = useAuth()
   const moduleSlug = params?.module || ""
   const id = params?.id || ""
   const backPath = searchParams.get("back") || `/${moduleSlug}`
@@ -239,6 +239,10 @@ export default function UniversalTaskDetailPage() {
   const [employeeUsers, setEmployeeUsers] = useState<Array<{ id: string; name: string; role: string; email: string }>>([])
   const [selectedPermissionUserId, setSelectedPermissionUserId] = useState("")
   const [permissionUsersLoading, setPermissionUsersLoading] = useState(false)
+  const [auditorPickerUsers, setAuditorPickerUsers] = useState<
+    Array<{ id: string; name: string; role: string; email: string }>
+  >([])
+  const [auditorPickerLoading, setAuditorPickerLoading] = useState(false)
   const [showAuditModal, setShowAuditModal] = useState(false)
   const [savingAudit, setSavingAudit] = useState(false)
   const [currentUserName, setCurrentUserName] = useState("Current User")
@@ -264,6 +268,7 @@ export default function UniversalTaskDetailPage() {
     auditType: "Internal",
     auditDate: "",
     auditor: "",
+    auditorUserId: "",
     status: "Open",
     findings: "",
   })
@@ -458,7 +463,7 @@ export default function UniversalTaskDetailPage() {
     return Array.from(merged.values())
   }, [permissionsHistory, taskAssigneesList])
 
-  const audits = useMemo(() => {
+  const auditsSortedDesc = useMemo(() => {
     if (!Array.isArray(item?.audits)) return []
     return [...item.audits].sort((a: any, b: any) => {
       const aTime = new Date(a?.auditDate || a?.createdAt || 0).getTime()
@@ -466,6 +471,33 @@ export default function UniversalTaskDetailPage() {
       return bTime - aTime
     })
   }, [item])
+
+  /** Organization, employees (incl. read-only viewers), and admins see all document audits; assigned auditors see only their rows. */
+  const audits = useMemo(() => {
+    if (!isAuditor || isAdmin) return auditsSortedDesc
+
+    const uid = user?.id != null ? String(user.id).trim() : ""
+    const myEmail = String(user?.email || "").trim().toLowerCase()
+    const myName = String(user?.name || "").trim().toLowerCase()
+
+    return auditsSortedDesc.filter((a: Record<string, unknown>) => {
+      const rawId = a?.auditorUserId
+      let aid = rawId != null ? String(rawId).trim() : ""
+      if (rawId && typeof rawId === "object") {
+        const oid = (rawId as { toString?: () => string }).toString?.()
+        if (oid) aid = oid
+      }
+      if (uid && aid && uid === aid) return true
+
+      const email = String(a?.auditorEmail || "").trim().toLowerCase()
+      if (myEmail && email && email === myEmail) return true
+
+      const name = String(a?.auditor || "").trim().toLowerCase()
+      if (myName && name && name === myName) return true
+
+      return false
+    })
+  }, [auditsSortedDesc, isAuditor, isAdmin, user?.id, user?.email, user?.name])
 
   const reviewSummary = useMemo(() => {
     const overdue = reviews.filter((review: any) => getReviewRealtimeState(review?.nextReviewDate).label === "Overdue").length
@@ -753,6 +785,33 @@ export default function UniversalTaskDetailPage() {
     }
   }
 
+  const loadAuditorsForAuditModal = async () => {
+    try {
+      setAuditorPickerLoading(true)
+      const token = localStorage.getItem("token")
+      const response = await fetch("/api/users?role=auditor", {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (!response.ok) throw new Error("Failed to load auditors")
+      const data = await response.json()
+      const normalized = (Array.isArray(data) ? data : [])
+        .map((u: any) => ({
+          id: String(u?._id || u?.id || ""),
+          name: String(u?.name || "Unknown User"),
+          role: String(u?.role || "Auditor"),
+          email: String(u?.email || ""),
+        }))
+        .filter((u: { id: string }) => Boolean(u.id))
+      setAuditorPickerUsers(normalized.filter((u) => String(u.role).toLowerCase() === "auditor"))
+    } catch (err) {
+      console.error("Failed to load auditors:", err)
+      setAuditorPickerUsers([])
+    } finally {
+      setAuditorPickerLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!showPermissionModal) return
     loadPermissionUsers()
@@ -760,14 +819,15 @@ export default function UniversalTaskDetailPage() {
 
   useEffect(() => {
     if (!showAuditModal) return
-    loadPermissionUsers()
+    void loadAuditorsForAuditModal()
   }, [showAuditModal])
 
   const handleSaveAudit = async () => {
-    if (!auditForm.auditor.trim() || !auditForm.auditDate) {
-      alert("Auditor and Audit Date are required")
+    if (!auditForm.auditorUserId.trim() || !auditForm.auditDate) {
+      alert("Please select an auditor (from your organization) and an audit date.")
       return
     }
+    const selectedAuditor = auditorPickerUsers.find((u) => u.id === auditForm.auditorUserId.trim())
     const now = new Date().toISOString()
     setSavingAudit(true)
     try {
@@ -776,7 +836,9 @@ export default function UniversalTaskDetailPage() {
         {
           auditType: auditForm.auditType,
           auditDate: auditForm.auditDate,
-          auditor: auditForm.auditor.trim(),
+          auditor: String(selectedAuditor?.name || auditForm.auditor || "").trim(),
+          auditorUserId: auditForm.auditorUserId.trim(),
+          auditorEmail: selectedAuditor?.email?.trim() || undefined,
           status: auditForm.status,
           findings: auditForm.findings.trim(),
           updatedBy: currentUserName,
@@ -789,6 +851,7 @@ export default function UniversalTaskDetailPage() {
         auditType: "Internal",
         auditDate: "",
         auditor: "",
+        auditorUserId: "",
         status: "Open",
         findings: "",
       })
@@ -1197,7 +1260,7 @@ export default function UniversalTaskDetailPage() {
                 </div>
               </div>
 
-              {!isEmployee ? (
+              {(isOrganization || isAdmin) ? (
                 <button
                   onClick={() => setShowAuditModal(true)}
                   className="px-4 py-2 rounded-lg font-medium"
@@ -1209,7 +1272,9 @@ export default function UniversalTaskDetailPage() {
 
               {audits.length === 0 ? (
                 <div className="py-10 text-center" style={{ color: COLORS.textSecondary }}>
-                  No audits available for this document.
+                  {isAuditor && !isAdmin
+                    ? "No audits on this document are assigned to you yet. Your organization assigns auditors when they add an audit."
+                    : "No audits available for this document."}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1536,7 +1601,7 @@ export default function UniversalTaskDetailPage() {
           </div>
         )}
 
-        {showAuditModal && !isEmployee && (
+        {showAuditModal && (isOrganization || isAdmin) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.5)" }}>
             <div className="w-full max-w-xl rounded-2xl p-6" style={{ background: COLORS.bgWhite }}>
               <div className="flex items-center justify-between mb-4">
@@ -1570,25 +1635,33 @@ export default function UniversalTaskDetailPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: COLORS.textPrimary }}>Employee Auditor</label>
+                  <label className="block text-sm font-medium mb-1" style={{ color: COLORS.textPrimary }}>Auditor</label>
                   <select
-                    value={auditForm.auditor}
-                    onChange={(e) => setAuditForm((prev) => ({ ...prev, auditor: e.target.value }))}
+                    value={auditForm.auditorUserId}
+                    onChange={(e) => {
+                      const nextId = e.target.value
+                      const u = auditorPickerUsers.find((x) => x.id === nextId)
+                      setAuditForm((prev) => ({
+                        ...prev,
+                        auditorUserId: nextId,
+                        auditor: u?.name ?? "",
+                      }))
+                    }}
                     className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
                     style={{ borderColor: COLORS.border, color: COLORS.textPrimary, background: COLORS.bgWhite }}
                   >
                     <option value="">
-                      {permissionUsersLoading ? "Loading employees..." : "Select employee auditor"}
+                      {auditorPickerLoading ? "Loading auditors..." : "Select organization auditor"}
                     </option>
-                    {employeeUsers.map((u) => (
-                      <option key={u.id} value={u.name}>
+                    {auditorPickerUsers.map((u) => (
+                      <option key={u.id} value={u.id}>
                         {u.name} ({u.email})
                       </option>
                     ))}
                   </select>
-                  {!permissionUsersLoading && employeeUsers.length === 0 ? (
+                  {!auditorPickerLoading && auditorPickerUsers.length === 0 ? (
                     <p className="text-xs mt-1" style={{ color: COLORS.textSecondary }}>
-                      No employees found for this organization.
+                      No auditors in your organization. Create an Auditor user under User management.
                     </p>
                   ) : null}
                 </div>

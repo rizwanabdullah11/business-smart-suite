@@ -48,6 +48,8 @@ type DynamicModulePageProps = {
   icon: LucideIcon
   newItemHref: string
   itemHrefPrefix: string
+  /** e.g. "/audit-schedule" → Workflow link `/audit-schedule/:id/workflow` (shown next to titles for all roles) */
+  workflowHrefPrefix?: string
   categoryType?: string
   titleFieldKey?: string
   dateFieldKey?: string
@@ -84,6 +86,7 @@ export default function DynamicModulePage({
   icon: Icon,
   newItemHref,
   itemHrefPrefix,
+  workflowHrefPrefix,
   categoryType,
   titleFieldKey = "title",
   dateFieldKey = "issueDate",
@@ -1019,6 +1022,14 @@ export default function DynamicModulePage({
                                         <Link href={`${itemHrefPrefix}/${item.id}`} className="text-blue-600 hover:underline text-base">
                                           {getItemTitle(item)}
                                         </Link>
+                                        {workflowHrefPrefix ? (
+                                          <Link
+                                            href={`${workflowHrefPrefix}/${item.id}/workflow`}
+                                            className="ml-2 text-xs font-semibold text-violet-600 hover:underline whitespace-nowrap"
+                                          >
+                                            Workflow
+                                          </Link>
+                                        ) : null}
                                       </div>
                                     </td>
                                     {displayKeys.slice(0, -1).map((key) => (

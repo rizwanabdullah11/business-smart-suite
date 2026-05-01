@@ -49,7 +49,7 @@ export function middleware(request: NextRequest) {
   if (!mappedModule) return NextResponse.next()
 
   // Only rewrite plain detail pages (/module/:id), not known non-id slugs.
-  const reserved = new Set(["new", "create", "edit", "upload", "documents", "document"])
+  const reserved = new Set(["new", "create", "edit", "upload", "documents", "document", "workflow"])
   if (reserved.has(maybeId.toLowerCase())) return NextResponse.next()
 
   url.pathname = `/task/${mappedModule}/${maybeId}`
