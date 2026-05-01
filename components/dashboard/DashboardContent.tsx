@@ -212,6 +212,20 @@ export function DashboardContent() {
 
   useEffect(() => {
     if (authLoading || !isAuthenticated) return
+    setExportEndDate((prev) => {
+      if (prev) return prev
+      return new Date().toISOString().slice(0, 10)
+    })
+    setExportStartDate((prev) => {
+      if (prev) return prev
+      const d = new Date()
+      d.setDate(d.getDate() - 30)
+      return d.toISOString().slice(0, 10)
+    })
+  }, [authLoading, isAuthenticated])
+
+  useEffect(() => {
+    if (authLoading || !isAuthenticated) return
 
     let cancelled = false
     const activeOrganizationId = localStorage.getItem("activeOrganizationId") || "no-org"
