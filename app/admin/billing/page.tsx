@@ -53,6 +53,14 @@ export default function BillingPage() {
       const token = localStorage.getItem("token")
       const res = await fetch("/api/billing/plan", { headers: { Authorization: `Bearer ${token}` } })
       const data = await res.json()
+      if (data?.needsOrganization) {
+        // Clear stale selection and show empty state until user selects an org.
+        localStorage.removeItem(ORG_STORAGE_KEY)
+        setSelectedOrgId("")
+        setEnabledModules([])
+        setPlan("starter")
+        return
+      }
       if (!res.ok) throw new Error(data?.message || data?.error || "Failed to load plan settings")
 
       const nextPlan = (String(data?.plan || "starter") as SubscriptionPlan) || "starter"
@@ -73,7 +81,8 @@ export default function BillingPage() {
   }
 
   useEffect(() => {
-    if (can(Permission.VIEW_ORGANIZATION)) {
+    // For admin, only load after an org is selected.
+    if (can(Permission.VIEW_ORGANIZATION) && (!isAdmin || Boolean(selectedOrgId))) {
       void loadPlanSettings()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -122,13 +131,24 @@ export default function BillingPage() {
   return (
     <div className="min-h-screen p-6" style={{ background: COLORS.bgGray }}>
       <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold" style={{ color: COLORS.textPrimary }}>
-            Billing & Plan
-          </h1>
-          <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
-            Set your subscription plan and enabled platform modules.
-          </p>
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-bold" style={{ color: COLORS.textPrimary }}>
+              Billing & Plan
+            </h1>
+            <p className="text-sm mt-1" style={{ color: COLORS.textSecondary }}>
+              Set your subscription plan and enabled platform modules.
+            </p>
+          </div>
+          <a
+            href="/pricing"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-md"
+            style={{ background: COLORS.bgWhite, color: COLORS.purple700, border: `1px solid ${COLORS.purple200}` }}
+          >
+            View public pricing page →
+          </a>
         </div>
 
         {isAdmin ? (

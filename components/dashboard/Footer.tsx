@@ -5,10 +5,12 @@ import { COLORS } from "@/constant/colors"
 import { Mail, Phone, MapPin, Globe } from "lucide-react"
 
 const QUICK_LINKS: { label: string; href: string }[] = [
-  { label: "Home", href: "/dashboard" },
-  { label: "Dashboard", href: "/dashboard/analytics" },
-  { label: "Policies", href: "/policies" },
-  { label: "Procedures", href: "/procedures" },
+  { label: "Dashboard", href: "/dashboard" },
+  { label: "Pricing", href: "/pricing" },
+  { label: "Features", href: "/features" },
+  { label: "Modules", href: "/modules" },
+  { label: "Getting Started", href: "/guides/getting-started" },
+  { label: "ISO Standards", href: "/guides/iso-standards" },
   { label: "Support", href: "mailto:support@businesssmart.com" },
 ]
 

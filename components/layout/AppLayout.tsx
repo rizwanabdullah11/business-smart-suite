@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { COLORS } from "@/constant/colors"
@@ -13,17 +13,42 @@ interface AppLayoutProps {
     children: React.ReactNode
 }
 
+/**
+ * Routes rendered without the authenticated app chrome.
+ * Public marketing pages render their own header/footer via MarketingShell,
+ * so AppLayout simply forwards children and skips the login redirect.
+ */
+const PUBLIC_ROUTES = new Set<string>([
+    '/login',
+    '/welcome',
+    '/pricing',
+    '/features',
+    '/modules',
+])
+
+function isPublicPath(pathname: string | null): boolean {
+    if (!pathname) return false
+    if (PUBLIC_ROUTES.has(pathname)) return true
+    // Allow nested public routes (e.g. /pricing#anchor would never hit here, but future /modules/[slug] would).
+    for (const base of PUBLIC_ROUTES) {
+        if (base !== '/login' && pathname.startsWith(base + '/')) return true
+    }
+    return false
+}
+
 export function AppLayout({ children }: AppLayoutProps) {
     const router = useRouter()
     const pathname = usePathname()
     const { toast } = useToast()
     const { user, loading, isAuthenticated, logout: authLogout } = useAuth()
 
+    const publicPath = isPublicPath(pathname)
+
     useEffect(() => {
-        if (!loading && !isAuthenticated && pathname !== '/login') {
+        if (!loading && !isAuthenticated && !publicPath) {
             router.push('/login')
         }
-    }, [loading, isAuthenticated, pathname, router])
+    }, [loading, isAuthenticated, publicPath, router])
 
     const handleLogout = async () => {
         await authLogout()
@@ -35,6 +60,10 @@ export function AppLayout({ children }: AppLayoutProps) {
     }
 
     if (pathname === '/login') {
+        return <>{children}</>
+    }
+
+    if (publicPath) {
         return <>{children}</>
     }
 

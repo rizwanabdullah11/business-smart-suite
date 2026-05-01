@@ -24,6 +24,17 @@ export const GET = withAuth(
           ? getActiveOrganizationIdFromRequest(request, user)
           : user.organizationId || null
 
+    // Admin must select an organization scope before reading plan settings.
+    if (user.role === "admin" && (!activeOrganizationId || !mongoose.Types.ObjectId.isValid(activeOrganizationId))) {
+      return NextResponse.json({
+        needsOrganization: true,
+        message: "Select an organization to view plan settings.",
+        plan: "starter",
+        enabledModules: [],
+        modules: PLATFORM_MODULES.map((m) => ({ key: m.key, label: m.label, availableIn: m.availableIn })),
+      })
+    }
+
     if (!activeOrganizationId || !mongoose.Types.ObjectId.isValid(activeOrganizationId)) {
       return NextResponse.json(
         { error: "Bad request", message: "Active organization is required to view plan settings" },
@@ -39,6 +50,16 @@ export const GET = withAuth(
       .lean()
 
     if (!org) {
+      // Admin often has stale activeOrganizationId in storage; guide them to reselect.
+      if (user.role === "admin") {
+        return NextResponse.json({
+          needsOrganization: true,
+          message: "Selected organization was not found. Please select an organization again.",
+          plan: "starter",
+          enabledModules: [],
+          modules: PLATFORM_MODULES.map((m) => ({ key: m.key, label: m.label, availableIn: m.availableIn })),
+        })
+      }
       return NextResponse.json({ error: "Organization not found" }, { status: 404 })
     }
 
