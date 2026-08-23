@@ -6,7 +6,6 @@ import { Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Instagram } from "luc
 const PRODUCT_LINKS = [
   { label: "All Modules", href: "/modules" },
   { label: "Features", href: "/features" },
-  { label: "Pricing", href: "/pricing" },
   { label: "Getting Started", href: "/guides/getting-started" },
   { label: "ISO Standards", href: "/guides/iso-standards" },
 ]
@@ -16,12 +15,6 @@ const COMPANY_LINKS = [
   { label: "Customer Stories", href: "/welcome#stories" },
   { label: "Privacy Policy", href: "#" },
   { label: "Terms & Conditions", href: "#" },
-]
-
-const PLAN_LINKS = [
-  { label: "Starter", href: "/pricing#starter" },
-  { label: "Growth", href: "/pricing#growth" },
-  { label: "Enterprise", href: "/pricing#enterprise" },
 ]
 
 export function MarketingFooter() {
@@ -79,23 +72,6 @@ export function MarketingFooter() {
             <h4 className="mb-4 text-sm font-bold uppercase tracking-wider text-white">Product</h4>
             <ul className="space-y-2.5">
               {PRODUCT_LINKS.map((l) => (
-                <li key={l.href}>
-                  <Link
-                    href={l.href}
-                    className="text-sm transition-colors hover:text-white"
-                    style={{ color: "rgba(255,255,255,0.55)" }}
-                  >
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="mb-4 text-sm font-bold uppercase tracking-wider text-white">Plans</h4>
-            <ul className="space-y-2.5">
-              {PLAN_LINKS.map((l) => (
                 <li key={l.href}>
                   <Link
                     href={l.href}

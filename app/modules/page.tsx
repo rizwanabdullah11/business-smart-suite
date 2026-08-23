@@ -366,13 +366,13 @@ export default function ModulesPage() {
                     </div>
                   </div>
 
-                  <Link
+                  {/* <Link
                     href="/pricing"
                     className="mt-5 inline-flex items-center gap-1.5 text-xs font-bold text-purple-700 group-hover:text-purple-900"
                   >
                     See plans that include this
                     <ArrowRight className="h-3 w-3" />
-                  </Link>
+                  </Link> */}
                 </div>
               ))}
             </div>
@@ -389,13 +389,13 @@ export default function ModulesPage() {
             Pick the modules you need today. Add more as your business grows.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link
+            {/* <Link
               href="/pricing"
               className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-bold text-purple-700 shadow-lg hover:-translate-y-0.5 transition-all"
             >
               See Pricing
               <ArrowRight className="h-4 w-4" />
-            </Link>
+            </Link> */}
             <Link
               href="/features"
               className="inline-flex items-center gap-2 rounded-xl bg-white/10 backdrop-blur-sm px-6 py-3 text-sm font-bold text-white border border-white/20 hover:bg-white/15 transition-all"

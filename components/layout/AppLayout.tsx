@@ -21,7 +21,6 @@ interface AppLayoutProps {
 const PUBLIC_ROUTES = new Set<string>([
     '/login',
     '/welcome',
-    '/pricing',
     '/features',
     '/modules',
 ])
@@ -29,7 +28,7 @@ const PUBLIC_ROUTES = new Set<string>([
 function isPublicPath(pathname: string | null): boolean {
     if (!pathname) return false
     if (PUBLIC_ROUTES.has(pathname)) return true
-    // Allow nested public routes (e.g. /pricing#anchor would never hit here, but future /modules/[slug] would).
+    // Allow nested public routes for future module pages.
     for (const base of PUBLIC_ROUTES) {
         if (base !== '/login' && pathname.startsWith(base + '/')) return true
     }

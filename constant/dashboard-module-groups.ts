@@ -133,7 +133,6 @@ export const DASHBOARD_MODULE_GROUPS: DashboardModuleGroup[] = [
       { icon: Users, label: "Users", href: "/admin/users", permission: Permission.VIEW_USERS },
       { icon: Users, label: "Permissions", href: "/admin/permissions", permission: Permission.MANAGE_ROLES },
       { icon: BarChart2, label: "Diagnostics", href: "/admin/diagnostics", permission: Permission.MANAGE_ROLES },
-      { icon: Settings, label: "Billing & Plan", href: "/admin/billing", permission: Permission.MANAGE_ORGANIZATION_SETTINGS },
     ],
   },
 ]

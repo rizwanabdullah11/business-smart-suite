@@ -6,7 +6,6 @@ import { Mail, Phone, Globe } from "lucide-react"
 
 const QUICK_LINKS: { label: string; href: string }[] = [
   { label: "Dashboard", href: "/dashboard" },
-  { label: "Pricing", href: "/pricing" },
   { label: "Features", href: "/features" },
   { label: "Modules", href: "/modules" },
   { label: "Getting Started", href: "/guides/getting-started" },

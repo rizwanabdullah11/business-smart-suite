@@ -10,7 +10,7 @@ export const SUGGESTED_CUSTOMER_FEEDBACK_CATEGORIES = [
   "Service Experience",
   "Support & Response",
   "Delivery & Timelines",
-  "Billing & Pricing",
+  // "Billing & Pricing",
   "Website & Portal",
   "General Feedback",
 ] as const
