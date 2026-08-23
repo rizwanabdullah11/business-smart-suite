@@ -9,7 +9,6 @@ const NAV_LINKS: { label: string; href: string }[] = [
   { label: "Home", href: "/welcome" },
   { label: "Modules", href: "/modules" },
   { label: "Features", href: "/features" },
-  { label: "Pricing", href: "/pricing" },
   { label: "Guides", href: "/guides/getting-started" },
 ]
 
@@ -68,7 +67,7 @@ export function MarketingHeader() {
               Login
             </Link>
             <Link
-              href="/pricing"
+              href="/login"
               className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
               style={{ background: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)" }}
             >
@@ -113,7 +112,7 @@ export function MarketingHeader() {
                   Login
                 </Link>
                 <Link
-                  href="/pricing"
+                  href="/login"
                   onClick={() => setOpen(false)}
                   className="rounded-xl px-3 py-2.5 text-sm font-semibold text-center text-white shadow-sm"
                   style={{ background: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)" }}
