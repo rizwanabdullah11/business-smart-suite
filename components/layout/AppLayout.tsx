@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { AppPurpleHeader } from "@/components/dashboard/AppPurpleHeader"
 import { Footer } from "@/components/dashboard/Footer"
+import { ModuleGuide } from "@/components/guide/ModuleGuide"
 
 interface AppLayoutProps {
     children: React.ReactNode
@@ -96,6 +97,9 @@ export function AppLayout({ children }: AppLayoutProps) {
             </main>
 
             {!isHome ? <Footer /> : null}
+
+            {/* "How to use" guide for the current module */}
+            <ModuleGuide />
         </div>
     )
 }

@@ -28,6 +28,13 @@ type AISuggestProps = {
   titleLabel?: string
   /** When the category is already chosen (e.g. adding inside a category card), tell the AI */
   categoryName?: string
+  /**
+   * "New category" mode: suggest NEW category names only and pass the picked name back
+   * (e.g. to fill a "Create New Category" input). Overrides title/category selection.
+   */
+  onPickCategoryName?: (name: string) => void
+  /** What the user typed in the category name box so far (category mode) */
+  currentCategory?: string
 }
 
 function categoryId(option: CategoryOption) {
@@ -49,6 +56,8 @@ export function AISuggest({
   field = "both",
   titleLabel = "Title ideas",
   categoryName,
+  onPickCategoryName,
+  currentCategory = "",
 }: AISuggestProps) {
   const { isAdmin, isOrganization } = useAuth()
   const [loading, setLoading] = useState(false)
@@ -56,7 +65,8 @@ export function AISuggest({
   const [result, setResult] = useState<AiSuggestions | null>(null)
   const [creating, setCreating] = useState<string | null>(null)
 
-  const effectiveField = onSelectCategory ? field : "title"
+  const categoryNameMode = Boolean(onPickCategoryName)
+  const effectiveField = categoryNameMode ? "category" : onSelectCategory ? field : "title"
 
   const runSuggest = async () => {
     setLoading(true)
@@ -66,8 +76,10 @@ export function AISuggest({
         module: moduleSlug,
         categoryType,
         field: effectiveField,
-        currentTitle: currentTitle.trim() || undefined,
+        currentTitle: categoryNameMode ? undefined : currentTitle.trim() || undefined,
         categoryName: categoryName?.trim() || undefined,
+        currentCategory: categoryNameMode ? currentCategory.trim() || undefined : undefined,
+        newCategoriesOnly: categoryNameMode || undefined,
       })
       setResult(data)
     } catch (err) {
@@ -164,7 +176,29 @@ export function AISuggest({
             </div>
           )}
 
-          {result.categories.length > 0 && onSelectCategory && (
+          {categoryNameMode && result.categories.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Category name ideas</p>
+              <div className="flex flex-wrap gap-2">
+                {result.categories.map((cat) => (
+                  <button
+                    key={cat.name}
+                    type="button"
+                    onClick={() => onPickCategoryName?.(cat.name)}
+                    className={`rounded-full border px-3 py-1 text-sm transition ${
+                      currentCategory.trim() === cat.name
+                        ? "border-violet-500 bg-violet-600 text-white"
+                        : "border-slate-200 bg-white text-slate-800 hover:border-violet-300 hover:bg-violet-50"
+                    }`}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!categoryNameMode && result.categories.length > 0 && onSelectCategory && (
             <div>
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Category ideas</p>
               <div className="flex flex-wrap gap-2">
@@ -198,7 +232,7 @@ export function AISuggest({
           )}
 
           {result.titles.length === 0 && result.categories.length === 0 && (
-            <p className="text-sm text-slate-600">No new ideas — try typing a few words in the title first.</p>
+            <p className="text-sm text-slate-600">No new ideas — try typing a few words first.</p>
           )}
 
           {!result.hasProfile && (

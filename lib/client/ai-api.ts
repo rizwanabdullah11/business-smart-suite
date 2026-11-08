@@ -38,6 +38,8 @@ export async function fetchAiSuggestions(input: {
   field?: "title" | "category" | "both"
   currentTitle?: string
   categoryName?: string
+  currentCategory?: string
+  newCategoriesOnly?: boolean
 }): Promise<AiSuggestions> {
   const response = await fetch("/api/ai/suggest", {
     method: "POST",

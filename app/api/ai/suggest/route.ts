@@ -61,6 +61,8 @@ export const POST = withAuth(
       const categoryType = clean(body?.categoryType || moduleSlug, 60).toLowerCase()
       const currentTitle = clean(body?.currentTitle, 200)
       const categoryName = clean(body?.categoryName, 80)
+      const currentCategory = clean(body?.currentCategory, 80)
+      const newCategoriesOnly = body?.newCategoriesOnly === true
 
       const isManuals = moduleSlug === "manuals"
       if (!isManuals && !isSupportedModule(moduleSlug)) {
@@ -123,7 +125,9 @@ Category guidance: ${brief.categoryGuidance}
 ${categoryName ? `The ${brief.itemLabel} will be filed in the category "${categoryName}" — titles must fit that category.` : ""}
 ${currentTitle ? `The user has started typing this title: "${currentTitle}". Improve/complete it and suggest close alternatives, and pick categories that fit it.` : ""}
 
-Existing categories (prefer reusing one when it fits, spelled exactly the same): ${existingCategories.map((c) => c.name).join(" | ") || "(none yet)"}
+${currentCategory ? `The user has started typing this category name: "${currentCategory}". Improve/complete it and suggest close alternatives.` : ""}
+${newCategoriesOnly ? "The user is CREATING A NEW CATEGORY: suggest only NEW category names that are NOT in the existing list below and that cover gaps for this business." : ""}
+Existing categories (${newCategoriesOnly ? "do NOT repeat these" : "prefer reusing one when it fits, spelled exactly the same"}): ${existingCategories.map((c) => c.name).join(" | ") || "(none yet)"}
 Existing titles (do NOT repeat these): ${existingTitles.slice(0, 60).join(" | ") || "(none yet)"}
 
 Rules:
@@ -147,17 +151,20 @@ Return ONLY JSON: {"titles": string[${MAX_TITLES}], "categories": string[${MAX_C
           .slice(0, 3)
           .map((service) => `${service} ${brief.itemLabel.replace(/\b\w/g, (ch) => ch.toUpperCase())}`)
         titles = [...serviceTitles, ...brief.fallbackTitles]
-        categoryNames = [...existingCategories.map((c) => c.name), ...brief.fallbackCategories]
+        categoryNames = newCategoriesOnly
+          ? [...brief.fallbackCategories]
+          : [...existingCategories.map((c) => c.name), ...brief.fallbackCategories]
       }
 
       const finalTitles =
         field === "category" ? [] : uniqueCaseInsensitive(titles, existingTitleKeys).slice(0, MAX_TITLES)
 
       const existingByName = new Map(existingCategories.map((c) => [c.name.toLowerCase(), c.id]))
+      const existingCategoryKeys = new Set(existingCategories.map((c) => c.name.toLowerCase()))
       const finalCategories: CategorySuggestion[] =
         field === "title"
           ? []
-          : uniqueCaseInsensitive(categoryNames)
+          : uniqueCaseInsensitive(categoryNames, newCategoriesOnly ? existingCategoryKeys : new Set())
               .slice(0, MAX_CATEGORIES)
               .map((name) => ({ name, existingId: existingByName.get(name.toLowerCase()) || null }))
 

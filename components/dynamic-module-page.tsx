@@ -848,6 +848,12 @@ export default function DynamicModulePage({
                 Cancel
               </button>
             </div>
+            <AISuggest
+              moduleSlug={apiPath}
+              categoryType={effectiveCategoryType}
+              currentCategory={newCategoryTitle}
+              onPickCategoryName={setNewCategoryTitle}
+            />
           </div>
         )}
 
