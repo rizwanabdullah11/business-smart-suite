@@ -6,6 +6,8 @@ import { Permission } from "@/lib/types/permissions"
 import { useRouter } from "next/navigation"
 import { Users, Plus, Edit, Trash2, Building2, User } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import { BusinessProfileEditor, BusinessProfileFields } from "@/components/ai/BusinessProfileEditor"
+import { saveBusinessProfile } from "@/lib/client/ai-api"
 
 interface User {
   _id: string
@@ -444,6 +446,9 @@ function AddUserModal({ isAdmin, isOrganization, onClose, onSuccess }: AddUserMo
   })
   const [organizations, setOrganizations] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  // AI business profile (only used when creating an Organization)
+  const [profileText, setProfileText] = useState("")
+  const [profileFile, setProfileFile] = useState<File | null>(null)
 
   useEffect(() => {
     // Load organizations when component mounts and user can create employees
@@ -515,6 +520,20 @@ function AddUserModal({ isAdmin, isOrganization, onClose, onSuccess }: AddUserMo
       })
 
       if (response.ok) {
+        const created = await response.json().catch(() => null)
+        const createdId = created?._id ? String(created._id) : ""
+        if (formData.role === "Organization" && createdId && (profileText.trim() || profileFile)) {
+          try {
+            await saveBusinessProfile({ organizationId: createdId, text: profileText, file: profileFile })
+          } catch (profileError) {
+            console.error("Business profile error:", profileError)
+            alert(
+              `Organization created, but the AI business profile failed: ${
+                profileError instanceof Error ? profileError.message : "Unknown error"
+              }\nYou can add it later from Edit or the Business Profile page.`
+            )
+          }
+        }
         onSuccess()
       } else {
         const error = await response.json()
@@ -531,7 +550,7 @@ function AddUserModal({ isAdmin, isOrganization, onClose, onSuccess }: AddUserMo
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div
-        className="rounded-xl shadow-xl w-full max-w-md"
+        className="rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto"
         style={{ background: COLORS.bgWhite }}
       >
         <div
@@ -612,6 +631,24 @@ function AddUserModal({ isAdmin, isOrganization, onClose, onSuccess }: AddUserMo
               <p className="text-sm" style={{ color: COLORS.textSecondary }}>
                 <strong>Note:</strong> The name and email you entered above will be used as the organization's details.
               </p>
+            </div>
+          )}
+
+          {formData.role === "Organization" && isAdmin && (
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: COLORS.textPrimary }}>
+                Business description for AI (optional)
+              </label>
+              <p className="text-xs mb-2" style={{ color: COLORS.textSecondary }}>
+                Every module will use this to suggest titles and categories that fit this business.
+              </p>
+              <BusinessProfileFields
+                text={profileText}
+                onTextChange={setProfileText}
+                file={profileFile}
+                onFileChange={setProfileFile}
+                disabled={loading}
+              />
             </div>
           )}
 
@@ -761,7 +798,7 @@ function EditUserModal({ user, isAdmin, isOrganization, onClose, onSuccess }: Ed
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div
-        className="rounded-xl shadow-xl w-full max-w-md"
+        className="rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto"
         style={{ background: COLORS.bgWhite }}
       >
         <div
@@ -884,6 +921,17 @@ function EditUserModal({ user, isAdmin, isOrganization, onClose, onSuccess }: Ed
             </button>
           </div>
         </form>
+
+        {isAdmin && String(user.role || "").toLowerCase() === "organization" && (
+          <div className="px-6 pb-6">
+            <div className="pt-4 border-t" style={{ borderColor: COLORS.border }}>
+              <h3 className="text-lg font-semibold mb-3" style={{ color: COLORS.textPrimary }}>
+                Business profile (AI)
+              </h3>
+              <BusinessProfileEditor organizationId={user._id} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import { AISuggest } from "@/components/ai/AISuggest"
 
 export default function NewSoAControlPage() {
     const router = useRouter()
@@ -142,6 +143,16 @@ export default function NewSoAControlPage() {
                                         borderColor: COLORS.border,
                                         color: COLORS.textPrimary,
                                     }}
+                                />
+                                <AISuggest
+                                  moduleSlug="statement-of-applicability"
+                                  categoryType="statement-of-applicability"
+                                  currentTitle={title}
+                                  categories={categories}
+                                  onSelectTitle={setTitle}
+                                  onSelectCategory={setDomain}
+                                  onCategoryCreated={(created) => setCategories((prev) => [{ id: created.id, name: created.name }, ...prev])}
+                                  titleLabel="Control ideas"
                                 />
                             </div>
 

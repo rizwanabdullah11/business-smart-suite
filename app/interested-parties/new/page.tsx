@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import { AISuggest } from "@/components/ai/AISuggest"
 
 export default function NewInterestedPartyPage() {
     const router = useRouter()
@@ -144,6 +145,16 @@ export default function NewInterestedPartyPage() {
                                         borderColor: COLORS.border,
                                         color: COLORS.textPrimary,
                                     }}
+                                />
+                                <AISuggest
+                                  moduleSlug="interested-parties"
+                                  categoryType="interested-parties"
+                                  currentTitle={name}
+                                  categories={categories}
+                                  onSelectTitle={setName}
+                                  onSelectCategory={setCategory}
+                                  onCategoryCreated={(created) => setCategories((prev) => [{ id: created.id, name: created.name }, ...prev])}
+                                  titleLabel="Name ideas"
                                 />
                             </div>
 

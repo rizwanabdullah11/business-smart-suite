@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import { AISuggest } from "@/components/ai/AISuggest"
 
 export default function NewLegalRegisterPage() {
   const router = useRouter()
@@ -141,6 +142,16 @@ export default function NewLegalRegisterPage() {
                     borderColor: COLORS.border,
                     color: COLORS.textPrimary,
                   }}
+                />
+                <AISuggest
+                  moduleSlug="legal-register"
+                  categoryType="legal-register"
+                  currentTitle={title}
+                  categories={categories}
+                  onSelectTitle={setTitle}
+                  onSelectCategory={setCategory}
+                  onCategoryCreated={(created) => setCategories((prev) => [{ id: created.id, name: created.name }, ...prev])}
+                  titleLabel="Legislation ideas"
                 />
               </div>
 

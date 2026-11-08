@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { BarChart2, ChevronRight, LayoutDashboard, LogOut } from "lucide-react"
+import { BarChart2, ChevronRight, LayoutDashboard, LogOut, Sparkles } from "lucide-react"
 import { usePermissions } from "@/hooks/use-permissions"
 import { DASHBOARD_MODULE_GROUPS } from "@/constant/dashboard-module-groups"
 
@@ -14,7 +14,7 @@ type AppNavigationDrawerProps = {
 }
 
 export function AppNavigationDrawer({ open, onClose, user, onLogout }: AppNavigationDrawerProps) {
-  const { can, loading, isModuleEnabled } = usePermissions()
+  const { can, loading, isModuleEnabled, isAdmin, isOrganization } = usePermissions()
   const [openSection, setOpenSection] = useState<string | null>(null)
 
   const userInitial = String(user?.name || user?.email || "U").charAt(0).toUpperCase()
@@ -114,6 +114,17 @@ export function AppNavigationDrawer({ open, onClose, user, onLogout }: AppNaviga
               <span className="text-sm font-semibold">Dashboard</span>
             </div>
           </Link>
+          {(isAdmin || isOrganization) && (
+            <Link href="/business-profile" onClick={onClose}>
+              <div
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl mb-3 -mt-2 transition-all hover:bg-white/10"
+                style={{ color: "rgba(255,255,255,0.85)" }}
+              >
+                <Sparkles className="w-4 h-4 shrink-0" style={{ color: "#a855f7" }} />
+                <span className="text-sm font-semibold">Business Profile (AI)</span>
+              </div>
+            </Link>
+          )}
 
           {loading ? (
             <div className="px-3 py-2 text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>

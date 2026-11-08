@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Loader2 } from "lucide-react"
+import { AISuggest } from "@/components/ai/AISuggest"
 
 const fieldClass =
   "w-full rounded-xl border border-slate-200/90 bg-white px-4 py-3.5 text-[0.9375rem] font-medium text-slate-900 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)] transition focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-500/20 disabled:cursor-not-allowed disabled:opacity-50"
@@ -193,6 +194,15 @@ export default function NewPolicyPage() {
                   placeholder="Enter policy title..."
                   className={fieldClass}
                   autoComplete="off"
+                />
+                <AISuggest
+                  moduleSlug="policies"
+                  categoryType="policy"
+                  currentTitle={title}
+                  categories={categories}
+                  onSelectTitle={setTitle}
+                  onSelectCategory={setCategory}
+                  onCategoryCreated={(created) => setCategories((prev) => [{ id: created.id, name: created.name }, ...prev])}
                 />
               </div>
 

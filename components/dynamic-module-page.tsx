@@ -26,6 +26,7 @@ import { COLORS } from "@/constant/colors"
 import { useAuth } from "@/contexts/auth-context"
 import { moduleKeyForSlug } from "@/lib/platform/plans"
 import { readModulePageCache, writeModulePageCache } from "@/lib/client/module-page-cache"
+import { AISuggest } from "@/components/ai/AISuggest"
 
 type SortType = "name" | "date"
 type FieldType = "text" | "number" | "date" | "textarea" | "select" | "checkbox"
@@ -1132,6 +1133,15 @@ export default function DynamicModulePage({
                             <div key={field.key} className={field.type === "textarea" ? "md:col-span-2" : ""}>
                               <label className="mb-2 block text-sm font-semibold" style={{ color: COLORS.textPrimary }}>{field.label}{field.required ? " *" : ""}</label>
                               {renderInputField(field)}
+                              {field.key === titleFieldKey && (
+                                <AISuggest
+                                  moduleSlug={apiPath}
+                                  categoryType={effectiveCategoryType}
+                                  categoryName={String(category.name || "")}
+                                  currentTitle={String(newItemData[titleFieldKey] || "")}
+                                  onSelectTitle={(title) => setNewItemData((prev) => ({ ...prev, [titleFieldKey]: title }))}
+                                />
+                              )}
                             </div>
                           ))}
                         </div>

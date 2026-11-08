@@ -4,6 +4,8 @@ import { Permission } from "@/lib/types/permissions"
 import { connectToDatabase } from "@/lib/server/db"
 import Manual from "@/lib/server/models/Manual"
 import mongoose from "mongoose"
+import { buildModuleAccessFilter } from "@/lib/server/organization-context"
+import { generateText } from "@/lib/server/ai/gemini"
 
 type ManualSummary = {
   id: string
@@ -41,38 +43,9 @@ function localSummary(items: ManualSummary[]) {
     .join("\n")
 }
 
-async function askGemini(prompt: string) {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) return null
-
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: prompt }],
-          },
-        ],
-      }),
-    }
-  )
-
-  if (!response.ok) {
-    const message = await response.text()
-    throw new Error(`Gemini request failed: ${message}`)
-  }
-
-  const data = await response.json()
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
-  return typeof text === "string" && text.trim() ? text.trim() : null
-}
 
 export const POST = withAuth(
-  async (request: NextRequest) => {
+  async (request: NextRequest, user) => {
     try {
       const body = await request.json()
       const action = String(body?.action || "summarize-all")
@@ -81,13 +54,16 @@ export const POST = withAuth(
       const categoryId = body?.categoryId ? String(body.categoryId) : null
 
       await connectToDatabase()
+      // Only read manuals the current user is allowed to see (organization scope).
+      const { filter: accessFilter } = await buildModuleAccessFilter(request, user)
+      const scope = Object.keys(accessFilter || {}).length ? [accessFilter] : []
 
       let docs: any[] = []
       if (action === "ask-one" && manualId) {
         if (!mongoose.Types.ObjectId.isValid(manualId)) {
           return NextResponse.json({ error: "Invalid manual id" }, { status: 400 })
         }
-        const doc = await Manual.findById(manualId).lean()
+        const doc = await Manual.findOne({ $and: [{ _id: new mongoose.Types.ObjectId(manualId) }, ...scope] }).lean()
         docs = doc ? [doc] : []
       } else {
         const query: Record<string, unknown> = {}
@@ -105,7 +81,7 @@ export const POST = withAuth(
           }
         }
 
-        docs = await Manual.find(query)
+        docs = await Manual.find(scope.length ? { $and: [query, ...scope] } : query)
           .sort({ updatedAt: -1 })
           .limit(200)
           .lean()
@@ -123,7 +99,7 @@ export const POST = withAuth(
             ? `You are an assistant for ISO documentation.\nThese manuals are from one category.\nManuals JSON:\n${JSON.stringify(manuals, null, 2)}\n\nUser question: ${question || "Summarize this category tasks with title."}\n\nAnswer clearly and concisely.`
             : `You are an assistant for ISO documentation.\nGenerate a concise summary list for ${categoryId ? "the selected category tasks" : "all manual tasks"}.\nEach line must include title and a short summary.\nManuals JSON:\n${JSON.stringify(manuals, null, 2)}`
 
-      const geminiAnswer = await askGemini(prompt)
+      const geminiAnswer = await generateText(prompt)
 
       return NextResponse.json({
         answer: geminiAnswer || localSummary(manuals),

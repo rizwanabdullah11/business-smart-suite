@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
 import { loadCustomerFeedbackCategories } from "@/lib/client/customer-feedback-categories"
+import { AISuggest } from "@/components/ai/AISuggest"
 
 export default function NewCustomerFeedbackPage() {
   const router = useRouter()
@@ -153,6 +154,16 @@ export default function NewCustomerFeedbackPage() {
               <div>
                 <label className={labelCls} style={{ color: COLORS.textPrimary }}>Feedback Title</label>
                 <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Feedback summary…" className={inputCls} style={inputStyle} />
+                <AISuggest
+                  moduleSlug="customer-feedback"
+                  categoryType="customer-feedback"
+                  currentTitle={title}
+                  categories={categories}
+                  onSelectTitle={setTitle}
+                  onSelectCategory={setCategory}
+                  onCategoryCreated={(created) => setCategories((prev) => [{ id: created.id, name: created.name }, ...prev])}
+                  titleLabel="Feedback summary ideas"
+                />
               </div>
 
               {/* Feedback Type */}
