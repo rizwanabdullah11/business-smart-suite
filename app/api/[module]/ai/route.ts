@@ -4,6 +4,9 @@ import { withAuth } from "@/lib/middleware/auth-middleware"
 import { Permission } from "@/lib/types/permissions"
 import { connectToDatabase } from "@/lib/server/db"
 import { getModuleModel, isSupportedModule } from "@/lib/server/models/module-item"
+import { buildModuleAccessFilter } from "@/lib/server/organization-context"
+import { isModuleEnabledForUser } from "@/lib/server/module-access"
+import { generateText } from "@/lib/server/ai/gemini"
 
 type EntrySummary = {
   id: string
@@ -48,41 +51,15 @@ function localSummary(items: EntrySummary[]) {
     .join("\n")
 }
 
-async function askGemini(prompt: string) {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) return null
-
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: prompt }],
-          },
-        ],
-      }),
-    }
-  )
-
-  if (!response.ok) {
-    const message = await response.text()
-    throw new Error(`Gemini request failed: ${message}`)
-  }
-
-  const data = await response.json()
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
-  return typeof text === "string" && text.trim() ? text.trim() : null
-}
 
 export const POST = withAuth(
-  async (request: NextRequest, _user, { params }: { params: { module: string } }) => {
+  async (request: NextRequest, user, { params }: { params: { module: string } }) => {
     try {
       const moduleSlug = params.module
       if (!isSupportedModule(moduleSlug)) return unsupportedModule(moduleSlug)
+      if (!isModuleEnabledForUser(user, moduleSlug)) {
+        return NextResponse.json({ error: "Module is not enabled for your plan" }, { status: 403 })
+      }
 
       const body = await request.json()
       const action = String(body?.action || "summarize-all")
@@ -92,13 +69,18 @@ export const POST = withAuth(
 
       await connectToDatabase()
       const Model = getModuleModel(moduleSlug)
+      // Only read entries the current user is allowed to see (organization scope).
+      const { filter: accessFilter } = await buildModuleAccessFilter(request, user)
+      const scope = Object.keys(accessFilter || {}).length ? [accessFilter] : []
 
       let docs: unknown[] = []
       if (action === "ask-one" && itemId) {
         if (!mongoose.Types.ObjectId.isValid(itemId)) {
           return NextResponse.json({ error: "Invalid item id" }, { status: 400 })
         }
-        const doc = await Model.findById(itemId).populate("category", "name").lean()
+        const doc = await Model.findOne({ $and: [{ _id: new mongoose.Types.ObjectId(itemId) }, ...scope] })
+          .populate("category", "name")
+          .lean()
         docs = doc ? [doc] : []
       } else {
         const query: Record<string, unknown> = {}
@@ -115,7 +97,7 @@ export const POST = withAuth(
             query.$or = [{ category: categoryId }, { categoryId: categoryId }]
           }
         }
-        docs = await Model.find(query).populate("category", "name").sort({ updatedAt: -1 }).limit(200).lean()
+        docs = await Model.find(scope.length ? { $and: [query, ...scope] } : query).populate("category", "name").sort({ updatedAt: -1 }).limit(200).lean()
       }
 
       const summaries = docs.map(toSummary)
@@ -130,7 +112,7 @@ export const POST = withAuth(
             ? `You are an assistant for business compliance tasks.\nThese tasks are from one category.\nTasks JSON:\n${JSON.stringify(summaries, null, 2)}\nUser question: ${question || "Summarize this category tasks with title."}\nKeep the answer concise and practical.`
             : `You are an assistant for business compliance tasks.\nGenerate a concise summary list for ${categoryId ? "the selected category tasks" : "all tasks"}.\nEach line must include task title and a short summary.\nTasks JSON:\n${JSON.stringify(summaries, null, 2)}`
 
-      const geminiAnswer = await askGemini(prompt)
+      const geminiAnswer = await generateText(prompt)
 
       return NextResponse.json({
         answer: geminiAnswer || localSummary(summaries),

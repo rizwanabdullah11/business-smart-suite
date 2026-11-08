@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import { AISuggest } from "@/components/ai/AISuggest"
 
 export default function NewProcedurePage() {
   const router = useRouter()
@@ -159,6 +160,15 @@ export default function NewProcedurePage() {
                     borderColor: COLORS.border,
                     color: COLORS.textPrimary,
                   }}
+                />
+                <AISuggest
+                  moduleSlug="procedures"
+                  categoryType="procedure"
+                  currentTitle={title}
+                  categories={categories}
+                  onSelectTitle={setTitle}
+                  onSelectCategory={setCategory}
+                  onCategoryCreated={(created) => setCategories((prev) => [{ id: created.id, name: created.name }, ...prev])}
                 />
               </div>
 

@@ -11,6 +11,8 @@ export interface IUser extends mongoose.Document {
   organizationEmail?: string | null
   subscriptionPlan?: string | null
   enabledModules?: string[]
+  /** AI business profile (Organization records only). See lib/server/ai/business-profile.ts */
+  businessProfile?: Record<string, unknown> | null
   isActive: boolean
   createdAt: Date
   updatedAt: Date
@@ -61,6 +63,10 @@ const userSchema = new Schema<IUser>(
     enabledModules: {
       type: [String],
       default: [],
+    },
+    businessProfile: {
+      type: Schema.Types.Mixed,
+      default: null,
     },
     isActive: {
       type: Boolean,

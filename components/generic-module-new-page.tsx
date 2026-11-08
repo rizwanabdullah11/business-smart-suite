@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import { AISuggest } from "@/components/ai/AISuggest"
 
 type Props = {
   moduleSlug: string
@@ -164,6 +165,15 @@ export default function GenericModuleNewPage({ moduleSlug, pageTitle, createLabe
                     borderColor: COLORS.border,
                     color: COLORS.textPrimary,
                   }}
+                />
+                <AISuggest
+                  moduleSlug={moduleSlug}
+                  categoryType={moduleSlug}
+                  currentTitle={title}
+                  categories={categories}
+                  onSelectTitle={setTitle}
+                  onSelectCategory={setCategory}
+                  onCategoryCreated={(created) => setCategories((prev) => [{ id: created.id, name: created.name }, ...prev])}
                 />
               </div>
 

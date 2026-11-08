@@ -1,0 +1,287 @@
+/**
+ * Per-module AI briefs.
+ *
+ * Each module gets its own "specialist" instructions so suggestions fit what the module is for.
+ * `fallbackTitles` / `fallbackCategories` are used when no AI key is configured.
+ *
+ * To tune a module's AI, edit its entry here — no other code changes needed.
+ */
+
+export type ModuleBrief = {
+  label: string
+  itemLabel: string
+  purpose: string
+  titleGuidance: string
+  categoryGuidance: string
+  fallbackTitles: string[]
+  fallbackCategories: string[]
+}
+
+const DEFAULT_BRIEF: ModuleBrief = {
+  label: "Records",
+  itemLabel: "record",
+  purpose: "General compliance records for an ISO management system.",
+  titleGuidance: "Short, specific record titles (3-8 words).",
+  categoryGuidance: "Broad groupings of 1-3 words.",
+  fallbackTitles: ["General Compliance Record", "Annual Review Record", "Process Control Record"],
+  fallbackCategories: ["General", "Operations", "Compliance"],
+}
+
+export const MODULE_BRIEFS: Record<string, ModuleBrief> = {
+  manuals: {
+    label: "Manuals",
+    itemLabel: "manual",
+    purpose: "Controlled manuals that describe how the business runs its management system and key operations (ISO 9001 clause 7.5).",
+    titleGuidance: "Manual titles such as '<Core service> Operations Manual', 'Quality Management System Manual', 'Health & Safety Manual'. Tie them to the company's real services and equipment.",
+    categoryGuidance: "Manual groupings like 'Quality', 'Operations', 'Health & Safety', 'Environmental', 'HR'.",
+    fallbackTitles: ["Quality Management System Manual", "Operations Manual", "Health & Safety Manual"],
+    fallbackCategories: ["Quality", "Operations", "Health & Safety"],
+  },
+  policies: {
+    label: "Policies",
+    itemLabel: "policy",
+    purpose: "Top-level policy statements (quality, environmental, H&S, information security, HR) required by ISO standards.",
+    titleGuidance: "Policy titles like 'Quality Policy', 'Working at Height Policy', 'Customer Data Protection Policy'. Choose policies this specific business actually needs.",
+    categoryGuidance: "Policy areas like 'Quality', 'Health & Safety', 'Environmental', 'HR', 'Information Security'.",
+    fallbackTitles: ["Quality Policy", "Health & Safety Policy", "Environmental Policy"],
+    fallbackCategories: ["Quality", "Health & Safety", "Environmental"],
+  },
+  procedures: {
+    label: "Procedures",
+    itemLabel: "procedure",
+    purpose: "Step-by-step documented procedures for key processes.",
+    titleGuidance: "Procedure titles starting with the process, e.g. '<Service> Job Procedure', 'Customer Complaint Handling Procedure', 'Equipment Pre-Use Check Procedure'.",
+    categoryGuidance: "Process groups like 'Operations', 'Customer Service', 'Safety', 'Admin'.",
+    fallbackTitles: ["Document Control Procedure", "Customer Complaint Handling Procedure", "Internal Audit Procedure"],
+    fallbackCategories: ["Operations", "Customer Service", "Quality"],
+  },
+  forms: {
+    label: "Forms",
+    itemLabel: "form",
+    purpose: "Forms, checklists and logs staff fill in as evidence.",
+    titleGuidance: "Form titles like '<Equipment> Daily Checklist', 'Job Completion Sign-Off Form', 'Site Risk Check Form'.",
+    categoryGuidance: "Form groups like 'Checklists', 'Inspections', 'Customer Forms', 'HR Forms'.",
+    fallbackTitles: ["Job Completion Form", "Daily Equipment Checklist", "Incident Report Form"],
+    fallbackCategories: ["Checklists", "Inspections", "Customer Forms"],
+  },
+  certificates: {
+    label: "Certificates",
+    itemLabel: "certificate",
+    purpose: "Certificates the business holds (insurance, accreditations, licences, ISO certificates, qualifications).",
+    titleGuidance: "Certificate titles like 'Public Liability Insurance Certificate', 'Waste Carrier Licence', 'ISO 9001 Certificate'. Pick ones relevant to this industry.",
+    categoryGuidance: "Groups like 'Insurance', 'Licences', 'Accreditations', 'Staff Qualifications'.",
+    fallbackTitles: ["Public Liability Insurance Certificate", "Employers' Liability Insurance Certificate", "ISO 9001 Certificate"],
+    fallbackCategories: ["Insurance", "Accreditations", "Licences"],
+  },
+  "business-continuity": {
+    label: "Business Continuity",
+    itemLabel: "business continuity plan",
+    purpose: "Plans for keeping the business running during disruption.",
+    titleGuidance: "Plan titles like 'Key Vehicle Breakdown Continuity Plan', 'Severe Weather Plan', 'IT / Booking System Outage Plan'.",
+    categoryGuidance: "Groups like 'Operations', 'IT', 'People', 'Suppliers', 'Premises'.",
+    fallbackTitles: ["IT System Outage Plan", "Key Staff Absence Plan", "Severe Weather Plan"],
+    fallbackCategories: ["Operations", "IT", "People"],
+  },
+  "management-reviews": {
+    label: "Management Reviews",
+    itemLabel: "management review",
+    purpose: "Records of periodic top-management reviews of the management system (ISO 9001 clause 9.3).",
+    titleGuidance: "Titles like 'Q1 2026 Management Review', 'Annual Management Review 2026'.",
+    categoryGuidance: "Groups like 'Quarterly', 'Annual', 'Ad-hoc'.",
+    fallbackTitles: ["Quarterly Management Review", "Annual Management Review", "Post-Audit Management Review"],
+    fallbackCategories: ["Quarterly", "Annual", "Ad-hoc"],
+  },
+  "job-descriptions": {
+    label: "Job Descriptions",
+    itemLabel: "job description",
+    purpose: "Role descriptions with responsibilities and competencies.",
+    titleGuidance: "Real job titles this business would employ, e.g. '<Service> Technician', 'Operations Manager', 'Office Administrator'.",
+    categoryGuidance: "Departments like 'Field Operations', 'Management', 'Office', 'Sales'.",
+    fallbackTitles: ["Operations Manager", "Field Technician", "Office Administrator"],
+    fallbackCategories: ["Management", "Field Operations", "Office"],
+  },
+  "work-instructions": {
+    label: "Work Instructions",
+    itemLabel: "work instruction",
+    purpose: "Detailed task-level instructions for frontline staff.",
+    titleGuidance: "Task instructions like 'How to Set Up the <Equipment>', '<Task> Step-by-Step', 'End-of-Job Clean Down'.",
+    categoryGuidance: "Groups by equipment or task type.",
+    fallbackTitles: ["Equipment Set-Up Instruction", "Job Site Clean-Down Instruction", "Vehicle Loading Instruction"],
+    fallbackCategories: ["Equipment", "On-Site Tasks", "Vehicles"],
+  },
+  "risk-assessments": {
+    label: "Risk Assessments",
+    itemLabel: "risk assessment",
+    purpose: "Health & safety and operational risk assessments.",
+    titleGuidance: "Hazard- or activity-based titles specific to this work, e.g. '<Activity> Risk Assessment', 'Lone Working Risk Assessment'.",
+    categoryGuidance: "Groups like 'Site Safety', 'Equipment', 'Vehicles', 'Office', 'Lone Working'.",
+    fallbackTitles: ["Manual Handling Risk Assessment", "Lone Working Risk Assessment", "Vehicle Use Risk Assessment"],
+    fallbackCategories: ["Site Safety", "Equipment", "Vehicles"],
+  },
+  coshh: {
+    label: "COSHH",
+    itemLabel: "COSHH assessment",
+    purpose: "Control of Substances Hazardous to Health assessments for chemicals the business uses.",
+    titleGuidance: "Name the actual substance types this business would use (e.g. biocides, detergents, fuels, solvents).",
+    categoryGuidance: "Groups like 'Cleaning Chemicals', 'Fuels & Oils', 'Biocides', 'Office Products'.",
+    fallbackTitles: ["Detergent COSHH Assessment", "Fuel & Oil COSHH Assessment", "Disinfectant COSHH Assessment"],
+    fallbackCategories: ["Cleaning Chemicals", "Fuels & Oils", "Office Products"],
+  },
+  "technical-file": {
+    label: "Technical File",
+    itemLabel: "technical file",
+    purpose: "Technical documentation for products, equipment or services (specs, manuals, test records).",
+    titleGuidance: "Titles naming the equipment or product, e.g. '<Equipment> Technical Specification'.",
+    categoryGuidance: "Groups like 'Equipment', 'Products', 'Test Records'.",
+    fallbackTitles: ["Main Equipment Technical Specification", "Product Test Record", "Equipment User Manual"],
+    fallbackCategories: ["Equipment", "Products", "Test Records"],
+  },
+  "ims-aspects-impacts": {
+    label: "Environmental Aspects & Impacts",
+    itemLabel: "aspect",
+    purpose: "Environmental aspects of activities and their impacts (ISO 14001 clause 6.1.2).",
+    titleGuidance: "Aspect titles like 'Vehicle Fuel Emissions', 'Waste Disposal from Jobs', 'Water Use', 'Noise on Site'.",
+    categoryGuidance: "Groups like 'Emissions', 'Waste', 'Resources', 'Noise', 'Water'.",
+    fallbackTitles: ["Vehicle Fuel Emissions", "Waste Generation", "Electricity Use"],
+    fallbackCategories: ["Emissions", "Waste", "Resources"],
+  },
+  "audit-schedule": {
+    label: "Audit Schedule",
+    itemLabel: "audit",
+    purpose: "Planned internal and external audits of processes and ISO clauses.",
+    titleGuidance: "Audit titles like 'Internal Audit – <Process>', 'ISO 9001 Clause 8 Operations Audit', 'Supplier Audit – <type>'.",
+    categoryGuidance: "Groups like 'Internal', 'External', 'Supplier', 'Process'.",
+    fallbackTitles: ["Internal Audit – Operations", "Internal Audit – Document Control", "External Certification Audit"],
+    fallbackCategories: ["Internal", "External", "Supplier"],
+  },
+  "interested-parties": {
+    label: "Interested Parties",
+    itemLabel: "interested party",
+    purpose: "Stakeholders and their needs/expectations (ISO 9001 clause 4.2).",
+    titleGuidance: "Stakeholder names/types relevant to this business, e.g. 'Residential Customers', 'Letting Agents', 'Local Council', 'Insurers'.",
+    categoryGuidance: "Groups like 'Customers', 'Regulators', 'Suppliers', 'Employees', 'Community'.",
+    fallbackTitles: ["Customers", "Employees", "Regulators"],
+    fallbackCategories: ["Customers", "Regulators", "Suppliers"],
+  },
+  "organisational-context": {
+    label: "Organisational Context",
+    itemLabel: "context issue",
+    purpose: "Internal and external issues affecting the business (ISO 9001 clause 4.1, SWOT/PESTLE).",
+    titleGuidance: "Issue titles like 'Seasonal Demand Swings', 'Competition from Local Firms', 'Rising Fuel Costs', 'Skilled Staff Shortage'.",
+    categoryGuidance: "Groups like 'Internal', 'External', 'SWOT – Strength', 'PESTLE – Economic'.",
+    fallbackTitles: ["Rising Operating Costs", "Skilled Staff Availability", "Changing Customer Expectations"],
+    fallbackCategories: ["Internal", "External", "Economic"],
+  },
+  objectives: {
+    label: "Objectives",
+    itemLabel: "objective",
+    purpose: "Measurable quality / business objectives with targets (ISO 9001 clause 6.2).",
+    titleGuidance: "Measurable objectives, e.g. 'Achieve 95% On-Time Job Completion', 'Reduce Complaints by 20%', 'Grow Repeat Customers to 40%'.",
+    categoryGuidance: "Groups like 'Customer', 'Operations', 'Financial', 'People', 'Environmental'.",
+    fallbackTitles: ["Achieve 95% Customer Satisfaction", "Reduce Complaints by 20%", "Complete All Staff Training On Time"],
+    fallbackCategories: ["Customer", "Operations", "People"],
+  },
+  maintenance: {
+    label: "Maintenance",
+    itemLabel: "maintenance record",
+    purpose: "Planned maintenance and servicing of equipment and vehicles.",
+    titleGuidance: "Name the actual equipment/vehicles, e.g. '<Equipment> Monthly Service', 'Van Annual Service & MOT'.",
+    categoryGuidance: "Groups like 'Equipment', 'Vehicles', 'Tools', 'Premises'.",
+    fallbackTitles: ["Vehicle Annual Service", "Equipment Monthly Inspection", "PAT Testing"],
+    fallbackCategories: ["Equipment", "Vehicles", "Premises"],
+  },
+  "improvement-register": {
+    label: "Improvement Register",
+    itemLabel: "improvement",
+    purpose: "Corrective actions, preventive actions and improvement ideas (CAPA, ISO 9001 clause 10).",
+    titleGuidance: "Specific improvement/CAPA titles, e.g. 'Reduce Missed Appointments', 'Add Before/After Photo Check', 'Fix Repeat Blockage Call-Backs'.",
+    categoryGuidance: "Groups like 'Corrective Action', 'Preventive Action', 'Improvement Idea', 'Customer Complaint'.",
+    fallbackTitles: ["Reduce Missed Appointments", "Improve Job Sign-Off Evidence", "Faster Complaint Response"],
+    fallbackCategories: ["Corrective Action", "Preventive Action", "Improvement Idea"],
+  },
+  "statement-of-applicability": {
+    label: "Statement of Applicability",
+    itemLabel: "control",
+    purpose: "ISO 27001 Annex A controls and whether each applies.",
+    titleGuidance: "Annex A control names relevant to this business's data and IT, e.g. 'A.5.15 Access Control', 'A.8.13 Information Backup'.",
+    categoryGuidance: "Annex A themes: 'Organisational', 'People', 'Physical', 'Technological'.",
+    fallbackTitles: ["A.5.15 Access Control", "A.8.13 Information Backup", "A.6.3 Security Awareness Training"],
+    fallbackCategories: ["Organisational", "People", "Technological"],
+  },
+  "legal-register": {
+    label: "Legal Register",
+    itemLabel: "legal requirement",
+    purpose: "Laws and regulations that apply to the business (UK unless the profile says otherwise).",
+    titleGuidance: "Real legislation names with year, chosen for this industry, e.g. 'Health and Safety at Work etc. Act 1974', 'Work at Height Regulations 2005', 'UK GDPR / Data Protection Act 2018'.",
+    categoryGuidance: "Groups like 'Health & Safety', 'Environmental', 'Data Protection', 'Employment', 'Consumer'.",
+    fallbackTitles: ["Health and Safety at Work etc. Act 1974", "Data Protection Act 2018", "Environmental Protection Act 1990"],
+    fallbackCategories: ["Health & Safety", "Data Protection", "Environmental"],
+  },
+  suppliers: {
+    label: "Suppliers",
+    itemLabel: "supplier",
+    purpose: "Approved suppliers and subcontractors.",
+    titleGuidance: "Supplier TYPES this business relies on (not invented company names), e.g. 'Equipment Supplier', 'Van Leasing Company', 'Waste Disposal Contractor'.",
+    categoryGuidance: "Groups like 'Equipment', 'Vehicles', 'Consumables', 'Services', 'Subcontractors'.",
+    fallbackTitles: ["Equipment Supplier", "Vehicle Leasing Supplier", "Waste Disposal Contractor"],
+    fallbackCategories: ["Equipment", "Vehicles", "Services"],
+  },
+  training: {
+    label: "Training",
+    itemLabel: "training course",
+    purpose: "Staff training and competency records.",
+    titleGuidance: "Training courses this team needs, e.g. '<Equipment> Operation Training', 'Manual Handling', 'Customer Service Basics', 'First Aid at Work'.",
+    categoryGuidance: "Groups like 'Health & Safety', 'Equipment Competency', 'Customer Service', 'Induction'.",
+    fallbackTitles: ["New Starter Induction", "Manual Handling Training", "First Aid at Work"],
+    fallbackCategories: ["Induction", "Health & Safety", "Equipment Competency"],
+  },
+  "energy-consumption": {
+    label: "Energy Consumption",
+    itemLabel: "energy reading",
+    purpose: "Energy and fuel use readings (electricity, gas, vehicle fuel).",
+    titleGuidance: "Reading titles like 'Office Electricity – <Month>', 'Van Fleet Diesel – <Month>'.",
+    categoryGuidance: "Meter / energy types like 'Electricity', 'Gas', 'Vehicle Fuel', 'Water'.",
+    fallbackTitles: ["Office Electricity Reading", "Vehicle Fuel Usage", "Gas Meter Reading"],
+    fallbackCategories: ["Electricity", "Vehicle Fuel", "Gas"],
+  },
+  "customer-feedback": {
+    label: "Customer Feedback",
+    itemLabel: "feedback entry",
+    purpose: "Customer compliments, complaints and suggestions.",
+    titleGuidance: "Short feedback summaries typical for this business, e.g. 'Praise for Tidy Finish', 'Late Arrival Complaint'.",
+    categoryGuidance: "Groups like 'Product Quality', 'Service Experience', 'Support & Response', 'Delivery & Timelines'.",
+    fallbackTitles: ["Positive Service Feedback", "Late Arrival Complaint", "Request for Follow-Up Visit"],
+    fallbackCategories: ["Service Experience", "Delivery & Timelines", "General Feedback"],
+  },
+  "asset-management": {
+    label: "Asset Management",
+    itemLabel: "asset",
+    purpose: "Register of company assets (equipment, vehicles, IT).",
+    titleGuidance: "Asset names this business owns, e.g. '<Equipment> Unit 1', 'Company Van 1', 'Office Laptop'.",
+    categoryGuidance: "Groups like 'Equipment', 'Vehicles', 'IT Hardware', 'Tools'.",
+    fallbackTitles: ["Company Vehicle", "Main Work Equipment", "Office Laptop"],
+    fallbackCategories: ["Equipment", "Vehicles", "IT Hardware"],
+  },
+  "it-risk-management": {
+    label: "IT Risk Management",
+    itemLabel: "IT risk",
+    purpose: "Information security and IT risks.",
+    titleGuidance: "IT risks like 'Phishing of Office Email', 'Loss of Booking System Data', 'Lost or Stolen Phone'.",
+    categoryGuidance: "Groups like 'Cyber Security', 'Data Protection', 'Hardware', 'Third-Party Systems'.",
+    fallbackTitles: ["Phishing Attack", "Customer Data Loss", "Lost Mobile Device"],
+    fallbackCategories: ["Cyber Security", "Data Protection", "Hardware"],
+  },
+  "obligations-register": {
+    label: "Obligations Register",
+    itemLabel: "obligation",
+    purpose: "Compliance obligations beyond law: contracts, customer requirements, codes of practice, accreditation rules.",
+    titleGuidance: "Obligation titles like 'Trade Association Code of Practice', 'Insurance Policy Conditions', 'Key Customer Contract Terms'.",
+    categoryGuidance: "Groups like 'Contracts', 'Codes of Practice', 'Accreditation', 'Insurance'.",
+    fallbackTitles: ["Insurance Policy Conditions", "Trade Body Code of Practice", "Customer Contract Terms"],
+    fallbackCategories: ["Contracts", "Codes of Practice", "Insurance"],
+  },
+}
+
+export function getModuleBrief(moduleSlug: string): ModuleBrief {
+  return MODULE_BRIEFS[moduleSlug] || DEFAULT_BRIEF
+}

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Loader } from "lucide-react"
 import { COLORS } from "@/constant/colors"
+import { AISuggest } from "@/components/ai/AISuggest"
 
 interface Category {
   _id: string
@@ -185,6 +186,15 @@ export default function NewManualPage() {
                     color: COLORS.textPrimary,
                     background: COLORS.bgGrayLight,
                   }}
+                />
+                <AISuggest
+                  moduleSlug="manuals"
+                  categoryType="manual"
+                  currentTitle={title}
+                  categories={categories}
+                  onSelectTitle={setTitle}
+                  onSelectCategory={setCategory}
+                  onCategoryCreated={(created) => setCategories((prev) => [{ _id: created.id, name: created.name }, ...prev])}
                 />
               </div>
 
